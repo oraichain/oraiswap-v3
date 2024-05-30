@@ -1,0 +1,43 @@
+[package]
+name = "raydium-amm-v3"
+version = "0.1.0"
+description = "Anchor client and source for Raydium concentrated liquidity AMM"
+edition = "2021"
+keywords = ["solana", "anchor", "raydium"]
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "raydium_amm_v3"
+doctest = false
+
+[features]
+no-entrypoint = []
+no-idl = []
+cpi = ["no-entrypoint"]
+default = []
+client = []
+no-log-ix-name = []
+init_if_needed = []
+enable-log = []
+devnet = []
+paramset = []
+
+[dependencies]
+# anchor-lang = { version = "0.29.0", features = ["init-if-needed"] }
+# anchor-spl = { version = "0.29.0", features = ["metadata"] }
+# solana-program = "<1.17.0"
+# spl-memo = "4.0.0"
+uint = "0.9.3"
+# mpl-token-metadata = { version = "^1.11.0", features = ["no-entrypoint"] }
+bytemuck = { version = "1.4.0", features = ["derive", "min_const_generics"] }
+arrayref = { version = "0.3.6" }
+
+cosmwasm-std = { version = "=1.2" }
+cosmwasm-schema = { version = "=1.2" }
+cosmwasm-storage = { version = "=1.2" }
+thiserror = "1.0.61"
+
+[dev-dependencies]
+quickcheck = "0.9"
+proptest = "1.0"
+rand = "0.8.5"

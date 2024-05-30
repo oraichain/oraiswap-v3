@@ -1,0 +1,16 @@
+
+.anchor
+.DS_Store
+target
+KeyPairs
+*.json
+client/target
+**/*.rs.bk
+node_modules
+tests/dist
+test-ledger
+yarn.lock
+Makefile
+sdk/node_modules
+sdk/tools
+programs/amm/proptest-regressions
