@@ -105,4 +105,13 @@ pub enum ContractError {
     MissingTickArrayBitmapExtensionAccount,
     #[error("Insufficient liquidity for this direction")]
     InsufficientLiquidityForDirection,
+
+    #[error("SqrtPrice Lower Than Min")]
+    SplM,
+    #[error("SqrtPrice Lower Than Current")]
+    SplC,
+    #[error("SqrtPrice Upper Than Max")]
+    SpuM,
+    #[error("SqrtPrice Upper Than Current")]
+    SpuC,
 }

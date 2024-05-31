@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::Addr;
 
-use crate::libraries::tick_math;
+use crate::{error::ContractError, libraries::tick_math};
 
 // use super::pool::PoolState;
 // use crate::error::ErrorCode;
@@ -284,17 +284,16 @@ pub struct TickState {
 impl TickState {
     pub const LEN: usize = 4 + 16 + 16 + 16 + 16 + 16 * REWARD_NUM + 16 + 16 + 8 + 8 + 4;
 
-    //     pub fn initialize(&mut self, tick: i32, tick_spacing: u16) -> Result<()> {
-    //         if TickState::check_is_out_of_boundary(tick) {
-    //             return err!(ErrorCode::InvaildTickIndex);
-    //         }
-    //         require!(
-    //             tick % i32::from(tick_spacing) == 0,
-    //             ErrorCode::TickAndSpacingNotMatch
-    //         );
-    //         self.tick = tick;
-    //         Ok(())
-    //     }
+    pub fn initialize(&mut self, tick: i32, tick_spacing: u16) -> Result<(), ContractError> {
+        if TickState::check_is_out_of_boundary(tick) {
+            return Err(ContractError::InvaildTickIndex);
+        }
+        if tick % i32::from(tick_spacing) != 0 {
+            return Err(ContractError::TickAndSpacingNotMatch);
+        }
+        self.tick = tick;
+        Ok(())
+    }
     //     /// Updates a tick and returns true if the tick was flipped from initialized to uninitialized
     //     pub fn update(
     //         &mut self,
