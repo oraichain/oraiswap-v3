@@ -1,10 +1,14 @@
-use crate::libraries::{big_num::U128, fixed_point_64, full_math::MulDiv};
-use crate::Result;
-use anchor_lang::error::ErrorCode as anchorErrorCode;
+use crate::{
+    error::ContractError,
+    libraries::{big_num::U128, fixed_point_64, full_math::MulDiv},
+};
+// use crate::Result;
+// use anchor_lang::error::ErrorCode as anchorErrorCode;
 /// Oracle provides price data useful for a wide variety of system designs
 ///
-use anchor_lang::prelude::*;
+// use anchor_lang::prelude::*;
 use arrayref::array_ref;
+use cosmwasm_std::Addr;
 use std::cell::RefMut;
 use std::ops::DerefMut;
 #[cfg(test)]
@@ -15,9 +19,9 @@ pub const OBSERVATION_SEED: &str = "observation";
 pub const OBSERVATION_NUM: usize = 1000;
 
 /// The element of observations in ObservationState
-#[zero_copy(unsafe)]
-#[repr(packed)]
-#[derive(Default, Debug)]
+// #[zero_copy(unsafe)]
+// #[repr(packed)]
+#[derive(Debug, Clone, Copy)]
 pub struct Observation {
     /// The block timestamp of the observation
     pub block_timestamp: u32,
@@ -32,26 +36,36 @@ impl Observation {
     pub const LEN: usize = 4 + 16 + 16 + 16;
 }
 
-#[account(zero_copy(unsafe))]
-#[repr(packed)]
-#[cfg_attr(feature = "client", derive(Debug))]
+impl Default for Observation {
+    fn default() -> Self {
+        Self {
+            block_timestamp: 0,
+            sqrt_price_x64: 0,
+            cumulative_time_price_x64: 0,
+            padding: 0,
+        }
+    }
+}
+
+// #[account(zero_copy(unsafe))]
+// #[repr(packed)]
+#[derive(Debug)]
 pub struct ObservationState {
     /// Whether the ObservationState is initialized
     pub initialized: bool,
-    pub pool_id: Pubkey,
+    pub pool_id: Vec<u8>,
     /// observation array
-    pub observations: [Observation; OBSERVATION_NUM],
+    pub observations: Vec<Observation>,
     /// padding for feature update
     pub padding: [u128; 5],
 }
 
 impl Default for ObservationState {
-    #[inline]
     fn default() -> ObservationState {
         ObservationState {
             initialized: false,
-            pool_id: Pubkey::default(),
-            observations: [Observation::default(); OBSERVATION_NUM],
+            pool_id: vec![],
+            observations: vec![],
             padding: [0u128; 5],
         }
     }
@@ -64,41 +78,41 @@ impl ObservationState {
         [122, 174, 197, 53, 129, 9, 165, 132]
     }
 
-    fn load_init_mut<'a>(account_info: &'a AccountInfo) -> Result<RefMut<'a, Self>> {
-        if account_info.owner != &crate::id() {
-            return Err(Error::from(anchorErrorCode::AccountOwnedByWrongProgram)
-                .with_pubkeys((*account_info.owner, crate::id())));
-        }
-        if !account_info.is_writable {
-            return Err(anchorErrorCode::AccountNotMutable.into());
-        }
-        require_eq!(account_info.data_len(), ObservationState::LEN);
+    // fn load_init_mut<'a>(account_info: &'a AccountInfo) -> Result<RefMut<'a, Self>> {
+    //     if account_info.owner != &crate::id() {
+    //         return Err(Error::from(anchorErrorCode::AccountOwnedByWrongProgram)
+    //             .with_pubkeys((*account_info.owner, crate::id())));
+    //     }
+    //     if !account_info.is_writable {
+    //         return Err(anchorErrorCode::AccountNotMutable.into());
+    //     }
+    //     require_eq!(account_info.data_len(), ObservationState::LEN);
 
-        let mut data = account_info.try_borrow_mut_data()?;
-        let disc_bytes = array_ref![data, 0, 8];
+    //     let mut data = account_info.try_borrow_mut_data()?;
+    //     let disc_bytes = array_ref![data, 0, 8];
 
-        let discriminator = u64::from_le_bytes(*disc_bytes);
-        if discriminator != 0 {
-            // the account is in use
-            return Err(anchorErrorCode::AccountDiscriminatorAlreadySet.into());
-        }
-        // write discriminator
-        data[..8].copy_from_slice(&ObservationState::discriminator());
+    //     let discriminator = u64::from_le_bytes(*disc_bytes);
+    //     if discriminator != 0 {
+    //         // the account is in use
+    //         return Err(anchorErrorCode::AccountDiscriminatorAlreadySet.into());
+    //     }
+    //     // write discriminator
+    //     data[..8].copy_from_slice(&ObservationState::discriminator());
 
-        Ok(RefMut::map(data, |data| {
-            bytemuck::from_bytes_mut(
-                &mut data.deref_mut()[8..std::mem::size_of::<ObservationState>() + 8],
-            )
-        }))
-    }
+    //     Ok(RefMut::map(data, |data| {
+    //         bytemuck::from_bytes_mut(
+    //             &mut data.deref_mut()[8..std::mem::size_of::<ObservationState>() + 8],
+    //         )
+    //     }))
+    // }
 
-    pub fn initialize(account_info: &AccountInfo, pool_id: Pubkey) -> Result<()> {
-        let observation_state = &mut Self::load_init_mut(account_info)?;
-        require_eq!(observation_state.initialized, false);
-        require_keys_eq!(observation_state.pool_id, Pubkey::default());
-        observation_state.pool_id = pool_id;
-        Ok(())
-    }
+    // pub fn initialize(account_info: &AccountInfo, pool_id: Pubkey) -> Result<()> {
+    //     let observation_state = &mut Self::load_init_mut(account_info)?;
+    //     require_eq!(observation_state.initialized, false);
+    //     require_keys_eq!(observation_state.pool_id, Pubkey::default());
+    //     observation_state.pool_id = pool_id;
+    //     Ok(())
+    // }
 
     // Writes an oracle observation to the account, returning the next observation_index.
     /// Writable at most once per second. Index represents the most recently written element.
@@ -120,7 +134,7 @@ impl ObservationState {
         sqrt_price_x64: u128,
         observation_index: u16,
         observation_update_duration: u32,
-    ) -> Result<Option<u16>> {
+    ) -> Result<Option<u16>, ContractError> {
         if !self.initialized {
             self.initialized = true;
             self.observations[observation_index as usize].block_timestamp = block_timestamp;
@@ -159,11 +173,11 @@ impl ObservationState {
     }
 }
 
-/// Returns the block timestamp truncated to 32 bits, i.e. mod 2**32
-///
-pub fn block_timestamp() -> u32 {
-    Clock::get().unwrap().unix_timestamp as u32 // truncation is desired
-}
+// /// Returns the block timestamp truncated to 32 bits, i.e. mod 2**32
+// ///
+// pub fn block_timestamp() -> u32 {
+//     Clock::get().unwrap().unix_timestamp as u32 // truncation is desired
+// }
 
 #[cfg(test)]
 pub fn block_timestamp_mock() -> u64 {

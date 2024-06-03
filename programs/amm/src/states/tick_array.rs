@@ -18,13 +18,27 @@ pub const TICK_ARRAY_SIZE_USIZE: usize = 60;
 pub const TICK_ARRAY_SIZE: i32 = 60;
 pub const MIN_TICK_ARRAY_START_INDEX: i32 = -443636;
 pub const MAX_TICK_ARRAY_START_INDEX: i32 = 306600;
+
+#[derive(Clone)]
 pub struct TickArrayState {
-    pub pool_id: Addr,
+    pub pool_id: Vec<u8>,
     pub start_tick_index: i32,
     pub ticks: [TickState; TICK_ARRAY_SIZE_USIZE],
     pub initialized_tick_count: u8,
     // Unused bytes for future upgrades.
     pub padding: [u8; 115],
+}
+
+impl Default for TickArrayState {
+    fn default() -> Self {
+        Self {
+            pool_id: vec![],
+            start_tick_index: Default::default(),
+            ticks: [Default::default(); TICK_ARRAY_SIZE_USIZE],
+            initialized_tick_count: Default::default(),
+            padding: [0; 115],
+        }
+    }
 }
 
 impl TickArrayState {
@@ -97,20 +111,20 @@ impl TickArrayState {
     //         Ok(tick_array_state)
     //     }
 
-    //     /**
-    //      * Initialize only can be called when first created
-    //      */
-    //     pub fn initialize(
-    //         &mut self,
-    //         start_index: i32,
-    //         tick_spacing: u16,
-    //         pool_key: Pubkey,
-    //     ) -> Result<()> {
-    //         TickArrayState::check_is_valid_start_index(start_index, tick_spacing);
-    //         self.start_tick_index = start_index;
-    //         self.pool_id = pool_key;
-    //         Ok(())
-    //     }
+    /**
+     * Initialize only can be called when first created
+     */
+    pub fn initialize(
+        &mut self,
+        start_index: i32,
+        tick_spacing: u16,
+        pool_key: Vec<u8>,
+    ) -> Result<(), ContractError> {
+        TickArrayState::check_is_valid_start_index(start_index, tick_spacing);
+        self.start_tick_index = start_index;
+        self.pool_id = pool_key;
+        Ok(())
+    }
 
     //     pub fn update_initialized_tick_count(&mut self, add: bool) -> Result<()> {
     //         if add {
@@ -142,17 +156,19 @@ impl TickArrayState {
     //     }
 
     //     /// Get tick's offset in current tick array, tick must be include in tick array， otherwise throw an error
-    //     fn get_tick_offset_in_array(self, tick_index: i32, tick_spacing: u16) -> Result<usize> {
-    //         let start_tick_index = TickArrayState::get_array_start_index(tick_index, tick_spacing);
-    //         require_eq!(
-    //             start_tick_index,
-    //             self.start_tick_index,
-    //             ErrorCode::InvalidTickArray
-    //         );
-    //         let offset_in_array =
-    //             ((tick_index - self.start_tick_index) / i32::from(tick_spacing)) as usize;
-    //         Ok(offset_in_array)
-    //     }
+    fn get_tick_offset_in_array(
+        self,
+        tick_index: i32,
+        tick_spacing: u16,
+    ) -> Result<usize, ContractError> {
+        let start_tick_index = TickArrayState::get_array_start_index(tick_index, tick_spacing);
+        if start_tick_index != self.start_tick_index {
+            return Err(ContractError::InvalidTickArray);
+        }
+        let offset_in_array =
+            ((tick_index - self.start_tick_index) / i32::from(tick_spacing)) as usize;
+        Ok(offset_in_array)
+    }
 
     //     /// Base on swap directioin, return the first initialized tick in the tick array.
     //     pub fn first_initialized_tick(&mut self, zero_for_one: bool) -> Result<&mut TickState> {
@@ -263,6 +279,7 @@ impl TickArrayState {
 // }
 
 #[cw_serde]
+#[derive(Copy, Default)]
 pub struct TickState {
     pub tick: i32,
     /// Amount of net liquidity added (subtracted) when tick is crossed from left to right (right to left)
@@ -512,794 +529,794 @@ impl TickState {
 //     Ok(())
 // }
 
-// #[cfg(test)]
-// pub mod tick_array_test {
-//     use super::*;
-//     use std::cell::RefCell;
-
-//     pub struct TickArrayInfo {
-//         pub start_tick_index: i32,
-//         pub ticks: Vec<TickState>,
-//     }
-
-//     pub fn build_tick_array(
-//         start_index: i32,
-//         tick_spacing: u16,
-//         initialized_tick_offsets: Vec<usize>,
-//     ) -> RefCell<TickArrayState> {
-//         let mut new_tick_array = TickArrayState::default();
-//         new_tick_array
-//             .initialize(start_index, tick_spacing, Pubkey::default())
-//             .unwrap();
-
-//         for offset in initialized_tick_offsets {
-//             let mut new_tick = TickState::default();
-//             // Indicates tick is initialized
-//             new_tick.liquidity_gross = 1;
-//             new_tick.tick = start_index + (offset * tick_spacing as usize) as i32;
-//             new_tick_array.ticks[offset] = new_tick;
-//         }
-//         RefCell::new(new_tick_array)
-//     }
-
-//     pub fn build_tick_array_with_tick_states(
-//         pool_id: Pubkey,
-//         start_index: i32,
-//         tick_spacing: u16,
-//         tick_states: Vec<TickState>,
-//     ) -> RefCell<TickArrayState> {
-//         let mut new_tick_array = TickArrayState::default();
-//         new_tick_array
-//             .initialize(start_index, tick_spacing, pool_id)
-//             .unwrap();
-
-//         for tick_state in tick_states {
-//             assert!(tick_state.tick != 0);
-//             let offset = new_tick_array
-//                 .get_tick_offset_in_array(tick_state.tick, tick_spacing)
-//                 .unwrap();
-//             new_tick_array.ticks[offset] = tick_state;
-//         }
-//         RefCell::new(new_tick_array)
-//     }
-
-//     pub fn build_tick(tick: i32, liquidity_gross: u128, liquidity_net: i128) -> RefCell<TickState> {
-//         let mut new_tick = TickState::default();
-//         new_tick.tick = tick;
-//         new_tick.liquidity_gross = liquidity_gross;
-//         new_tick.liquidity_net = liquidity_net;
-//         RefCell::new(new_tick)
-//     }
-
-//     fn build_tick_with_fee_reward_growth(
-//         tick: i32,
-//         fee_growth_outside_0_x64: u128,
-//         fee_growth_outside_1_x64: u128,
-//         reward_growths_outside_x64: u128,
-//     ) -> RefCell<TickState> {
-//         let mut new_tick = TickState::default();
-//         new_tick.tick = tick;
-//         new_tick.fee_growth_outside_0_x64 = fee_growth_outside_0_x64;
-//         new_tick.fee_growth_outside_1_x64 = fee_growth_outside_1_x64;
-//         new_tick.reward_growths_outside_x64 = [reward_growths_outside_x64, 0, 0];
-//         RefCell::new(new_tick)
-//     }
-
-//     mod tick_array_test {
-//         use super::*;
-//         use std::convert::identity;
-
-//         #[test]
-//         fn get_array_start_index_test() {
-//             assert_eq!(TickArrayState::get_array_start_index(120, 3), 0);
-//             assert_eq!(TickArrayState::get_array_start_index(1002, 30), 0);
-//             assert_eq!(TickArrayState::get_array_start_index(-120, 3), -180);
-//             assert_eq!(TickArrayState::get_array_start_index(-1002, 30), -1800);
-//             assert_eq!(TickArrayState::get_array_start_index(-20, 10), -600);
-//             assert_eq!(TickArrayState::get_array_start_index(20, 10), 0);
-//             assert_eq!(TickArrayState::get_array_start_index(-1002, 10), -1200);
-//             assert_eq!(TickArrayState::get_array_start_index(-600, 10), -600);
-//             assert_eq!(TickArrayState::get_array_start_index(-30720, 1), -30720);
-//             assert_eq!(TickArrayState::get_array_start_index(30720, 1), 30720);
-//             assert_eq!(
-//                 TickArrayState::get_array_start_index(tick_math::MIN_TICK, 1),
-//                 -443640
-//             );
-//             assert_eq!(
-//                 TickArrayState::get_array_start_index(tick_math::MAX_TICK, 1),
-//                 443580
-//             );
-//             assert_eq!(
-//                 TickArrayState::get_array_start_index(tick_math::MAX_TICK, 60),
-//                 442800
-//             );
-//             assert_eq!(
-//                 TickArrayState::get_array_start_index(tick_math::MIN_TICK, 60),
-//                 -446400
-//             );
-//         }
-
-//         #[test]
-//         fn next_tick_arrary_start_index_test() {
-//             let tick_spacing = 15;
-//             let tick_array_ref = build_tick_array(-1800, tick_spacing, vec![]);
-//             // zero_for_one, next tickarray start_index < current
-//             assert_eq!(
-//                 -2700,
-//                 tick_array_ref
-//                     .borrow()
-//                     .next_tick_arrary_start_index(tick_spacing, true)
-//             );
-//             // one_for_zero, next tickarray start_index > current
-//             assert_eq!(
-//                 -900,
-//                 tick_array_ref
-//                     .borrow()
-//                     .next_tick_arrary_start_index(tick_spacing, false)
-//             );
-//         }
-
-//         #[test]
-//         fn get_tick_offset_in_array_test() {
-//             let tick_spacing = 4;
-//             // tick range [960, 1196]
-//             let tick_array_ref = build_tick_array(960, tick_spacing, vec![]);
-
-//             // not in tickarray
-//             assert_eq!(
-//                 tick_array_ref
-//                     .borrow()
-//                     .get_tick_offset_in_array(808, tick_spacing)
-//                     .unwrap_err(),
-//                 error!(ErrorCode::InvalidTickArray)
-//             );
-//             // first index is tickarray start tick
-//             assert_eq!(
-//                 tick_array_ref
-//                     .borrow()
-//                     .get_tick_offset_in_array(960, tick_spacing)
-//                     .unwrap(),
-//                 0
-//             );
-//             // tick_index % tick_spacing != 0
-//             assert_eq!(
-//                 tick_array_ref
-//                     .borrow()
-//                     .get_tick_offset_in_array(1105, tick_spacing)
-//                     .unwrap(),
-//                 36
-//             );
-//             // (1108-960) / tick_spacing
-//             assert_eq!(
-//                 tick_array_ref
-//                     .borrow()
-//                     .get_tick_offset_in_array(1108, tick_spacing)
-//                     .unwrap(),
-//                 37
-//             );
-//             // the end index of tickarray
-//             assert_eq!(
-//                 tick_array_ref
-//                     .borrow()
-//                     .get_tick_offset_in_array(1196, tick_spacing)
-//                     .unwrap(),
-//                 59
-//             );
-//         }
-
-//         #[test]
-//         fn first_initialized_tick_test() {
-//             let tick_spacing = 15;
-//             // initialized ticks[-300,-15]
-//             let tick_array_ref = build_tick_array(-900, tick_spacing, vec![40, 59]);
-//             let mut tick_array = tick_array_ref.borrow_mut();
-//             // one_for_zero, the price increase, tick from small to large
-//             let tick = tick_array.first_initialized_tick(false).unwrap().tick;
-//             assert_eq!(-300, tick);
-//             // zero_for_one, the price decrease, tick from large to small
-//             let tick = tick_array.first_initialized_tick(true).unwrap().tick;
-//             assert_eq!(-15, tick);
-//         }
-
-//         #[test]
-//         fn next_initialized_tick_when_tick_is_positive() {
-//             // init tick_index [0,30,105]
-//             let tick_array_ref = build_tick_array(0, 15, vec![0, 2, 7]);
-//             let mut tick_array = tick_array_ref.borrow_mut();
-
-//             // test zero_for_one
-//             let mut next_tick_state = tick_array.next_initialized_tick(0, 15, true).unwrap();
-//             assert_eq!(identity(next_tick_state.unwrap().tick), 0);
-
-//             next_tick_state = tick_array.next_initialized_tick(1, 15, true).unwrap();
-//             assert_eq!(identity(next_tick_state.unwrap().tick), 0);
-
-//             next_tick_state = tick_array.next_initialized_tick(29, 15, true).unwrap();
-//             assert_eq!(identity(next_tick_state.unwrap().tick), 0);
-//             next_tick_state = tick_array.next_initialized_tick(30, 15, true).unwrap();
-//             assert_eq!(identity(next_tick_state.unwrap().tick), 30);
-//             next_tick_state = tick_array.next_initialized_tick(31, 15, true).unwrap();
-//             assert_eq!(identity(next_tick_state.unwrap().tick), 30);
-
-//             // test one for zero
-//             let mut next_tick_state = tick_array.next_initialized_tick(0, 15, false).unwrap();
-//             assert_eq!(identity(next_tick_state.unwrap().tick), 30);
-
-//             next_tick_state = tick_array.next_initialized_tick(29, 15, false).unwrap();
-//             assert_eq!(identity(next_tick_state.unwrap().tick), 30);
-//             next_tick_state = tick_array.next_initialized_tick(30, 15, false).unwrap();
-//             assert_eq!(identity(next_tick_state.unwrap().tick), 105);
-//             next_tick_state = tick_array.next_initialized_tick(31, 15, false).unwrap();
-//             assert_eq!(identity(next_tick_state.unwrap().tick), 105);
-
-//             next_tick_state = tick_array.next_initialized_tick(105, 15, false).unwrap();
-//             assert!(next_tick_state.is_none());
-
-//             // tick not in tickarray
-//             next_tick_state = tick_array.next_initialized_tick(900, 15, false).unwrap();
-//             assert!(next_tick_state.is_none());
-//         }
-
-//         #[test]
-//         fn next_initialized_tick_when_tick_is_negative() {
-//             // init tick_index [-900,-870,-795]
-//             let tick_array_ref = build_tick_array(-900, 15, vec![0, 2, 7]);
-//             let mut tick_array = tick_array_ref.borrow_mut();
-
-//             // test zero for one
-//             let mut next_tick_state = tick_array.next_initialized_tick(-900, 15, true).unwrap();
-//             assert_eq!(identity(next_tick_state.unwrap().tick), -900);
-
-//             next_tick_state = tick_array.next_initialized_tick(-899, 15, true).unwrap();
-//             assert_eq!(identity(next_tick_state.unwrap().tick), -900);
-
-//             next_tick_state = tick_array.next_initialized_tick(-871, 15, true).unwrap();
-//             assert_eq!(identity(next_tick_state.unwrap().tick), -900);
-//             next_tick_state = tick_array.next_initialized_tick(-870, 15, true).unwrap();
-//             assert_eq!(identity(next_tick_state.unwrap().tick), -870);
-//             next_tick_state = tick_array.next_initialized_tick(-869, 15, true).unwrap();
-//             assert_eq!(identity(next_tick_state.unwrap().tick), -870);
-
-//             // test one for zero
-//             let mut next_tick_state = tick_array.next_initialized_tick(-900, 15, false).unwrap();
-//             assert_eq!(identity(next_tick_state.unwrap().tick), -870);
-
-//             next_tick_state = tick_array.next_initialized_tick(-871, 15, false).unwrap();
-//             assert_eq!(identity(next_tick_state.unwrap().tick), -870);
-//             next_tick_state = tick_array.next_initialized_tick(-870, 15, false).unwrap();
-//             assert_eq!(identity(next_tick_state.unwrap().tick), -795);
-//             next_tick_state = tick_array.next_initialized_tick(-869, 15, false).unwrap();
-//             assert_eq!(identity(next_tick_state.unwrap().tick), -795);
-
-//             next_tick_state = tick_array.next_initialized_tick(-795, 15, false).unwrap();
-//             assert!(next_tick_state.is_none());
-
-//             // tick not in tickarray
-//             next_tick_state = tick_array.next_initialized_tick(-10, 15, false).unwrap();
-//             assert!(next_tick_state.is_none());
-//         }
-//     }
-
-//     mod get_fee_growth_inside_test {
-//         use super::*;
-//         use crate::states::{
-//             pool::RewardInfo,
-//             tick_array::{get_fee_growth_inside, TickState},
-//         };
-
-//         fn fee_growth_inside_delta_when_price_move(
-//             init_fee_growth_global_0_x64: u128,
-//             init_fee_growth_global_1_x64: u128,
-//             fee_growth_global_delta: u128,
-//             mut tick_current: i32,
-//             target_tick_current: i32,
-//             tick_lower: &mut TickState,
-//             tick_upper: &mut TickState,
-//             cross_tick_lower: bool,
-//         ) -> (u128, u128) {
-//             let mut fee_growth_global_0_x64 = init_fee_growth_global_0_x64;
-//             let mut fee_growth_global_1_x64 = init_fee_growth_global_1_x64;
-//             let (fee_growth_inside_0_before, fee_growth_inside_1_before) = get_fee_growth_inside(
-//                 tick_lower,
-//                 tick_upper,
-//                 tick_current,
-//                 fee_growth_global_0_x64,
-//                 fee_growth_global_1_x64,
-//             );
-
-//             if fee_growth_global_0_x64 != 0 {
-//                 fee_growth_global_0_x64 = fee_growth_global_0_x64 + fee_growth_global_delta;
-//             }
-//             if fee_growth_global_1_x64 != 0 {
-//                 fee_growth_global_1_x64 = fee_growth_global_1_x64 + fee_growth_global_delta;
-//             }
-//             if cross_tick_lower {
-//                 tick_lower.cross(
-//                     fee_growth_global_0_x64,
-//                     fee_growth_global_1_x64,
-//                     &[RewardInfo::default(); 3],
-//                 );
-//             } else {
-//                 tick_upper.cross(
-//                     fee_growth_global_0_x64,
-//                     fee_growth_global_1_x64,
-//                     &[RewardInfo::default(); 3],
-//                 );
-//             }
-
-//             tick_current = target_tick_current;
-//             let (fee_growth_inside_0_after, fee_growth_inside_1_after) = get_fee_growth_inside(
-//                 tick_lower,
-//                 tick_upper,
-//                 tick_current,
-//                 fee_growth_global_0_x64,
-//                 fee_growth_global_1_x64,
-//             );
-
-//             println!(
-//                 "inside_delta_0:{},fee_growth_inside_0_after:{},fee_growth_inside_0_before:{}",
-//                 fee_growth_inside_0_after.wrapping_sub(fee_growth_inside_0_before),
-//                 fee_growth_inside_0_after,
-//                 fee_growth_inside_0_before
-//             );
-//             println!(
-//                 "inside_delta_1:{},fee_growth_inside_1_after:{},fee_growth_inside_1_before:{}",
-//                 fee_growth_inside_1_after.wrapping_sub(fee_growth_inside_1_before),
-//                 fee_growth_inside_1_after,
-//                 fee_growth_inside_1_before
-//             );
-//             (
-//                 fee_growth_inside_0_after.wrapping_sub(fee_growth_inside_0_before),
-//                 fee_growth_inside_1_after.wrapping_sub(fee_growth_inside_1_before),
-//             )
-//         }
-
-//         #[test]
-//         fn price_in_tick_range_move_to_right_test() {
-//             // one_for_zero, price move to right and token_1 fee growth
-
-//             // tick_lower and tick_upper all new create, and tick_lower initialize with fee_growth_global_1_x64(1000)
-//             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
-//                 fee_growth_inside_delta_when_price_move(
-//                     0,
-//                     1000,
-//                     500,
-//                     0,
-//                     11,
-//                     build_tick_with_fee_reward_growth(-10, 0, 1000, 0).get_mut(),
-//                     build_tick_with_fee_reward_growth(10, 0, 0, 0).get_mut(),
-//                     false,
-//                 );
-//             assert_eq!(fee_growth_inside_delta_0, 0);
-//             assert_eq!(fee_growth_inside_delta_1, 500);
-
-//             // tick_lower is initialized with fee_growth_outside_1_x64(100) and tick_upper is new create.
-//             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
-//                 fee_growth_inside_delta_when_price_move(
-//                     0,
-//                     1000,
-//                     500,
-//                     0,
-//                     11,
-//                     build_tick_with_fee_reward_growth(-10, 0, 100, 0).get_mut(),
-//                     build_tick_with_fee_reward_growth(10, 0, 0, 0).get_mut(),
-//                     false,
-//                 );
-//             assert_eq!(fee_growth_inside_delta_0, 0);
-//             assert_eq!(fee_growth_inside_delta_1, 500);
-
-//             // tick_lower is new create with fee_growth_global_1_x64(1000)  and tick_upper is initialized with fee_growth_outside_1_x64(100)
-//             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
-//                 fee_growth_inside_delta_when_price_move(
-//                     0,
-//                     1000,
-//                     500,
-//                     0,
-//                     11,
-//                     build_tick_with_fee_reward_growth(-10, 0, 1000, 0).get_mut(),
-//                     build_tick_with_fee_reward_growth(10, 0, 100, 0).get_mut(),
-//                     false,
-//                 );
-//             assert_eq!(fee_growth_inside_delta_0, 0);
-//             assert_eq!(fee_growth_inside_delta_1, 500);
-
-//             // tick_lower is initialized with fee_growth_outside_1_x64(50)  and tick_upper is initialized with fee_growth_outside_1_x64(100)
-//             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
-//                 fee_growth_inside_delta_when_price_move(
-//                     0,
-//                     1000,
-//                     500,
-//                     0,
-//                     11,
-//                     build_tick_with_fee_reward_growth(-10, 0, 50, 0).get_mut(),
-//                     build_tick_with_fee_reward_growth(10, 0, 100, 0).get_mut(),
-//                     false,
-//                 );
-//             assert_eq!(fee_growth_inside_delta_0, 0);
-//             assert_eq!(fee_growth_inside_delta_1, 500);
-//         }
-
-//         #[test]
-//         fn price_in_tick_range_move_to_left_test() {
-//             // zero_for_one, price move to left and token_0 fee growth
-
-//             // tick_lower and tick_upper all new create, and tick_lower initialize with fee_growth_global_0_x64(1000)
-//             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
-//                 fee_growth_inside_delta_when_price_move(
-//                     1000,
-//                     0,
-//                     500,
-//                     0,
-//                     -11,
-//                     build_tick_with_fee_reward_growth(-10, 1000, 0, 0).get_mut(),
-//                     build_tick_with_fee_reward_growth(10, 0, 0, 0).get_mut(),
-//                     true,
-//                 );
-//             assert_eq!(fee_growth_inside_delta_0, 500);
-//             assert_eq!(fee_growth_inside_delta_1, 0);
-
-//             // tick_lower is initialized with fee_growth_outside_0_x64(100) and tick_upper is new create.
-//             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
-//                 fee_growth_inside_delta_when_price_move(
-//                     1000,
-//                     0,
-//                     500,
-//                     0,
-//                     -11,
-//                     build_tick_with_fee_reward_growth(-10, 100, 0, 0).get_mut(),
-//                     build_tick_with_fee_reward_growth(10, 0, 0, 0).get_mut(),
-//                     true,
-//                 );
-//             assert_eq!(fee_growth_inside_delta_0, 500);
-//             assert_eq!(fee_growth_inside_delta_1, 0);
-
-//             // tick_lower is new create with fee_growth_global_0_x64(1000)  and tick_upper is initialized with fee_growth_outside_0_x64(100)
-//             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
-//                 fee_growth_inside_delta_when_price_move(
-//                     1000,
-//                     0,
-//                     500,
-//                     0,
-//                     -11,
-//                     build_tick_with_fee_reward_growth(-10, 1000, 0, 0).get_mut(),
-//                     build_tick_with_fee_reward_growth(10, 100, 0, 0).get_mut(),
-//                     true,
-//                 );
-//             assert_eq!(fee_growth_inside_delta_0, 500);
-//             assert_eq!(fee_growth_inside_delta_1, 0);
-
-//             // tick_lower is initialized with fee_growth_outside_0_x64(50)  and tick_upper is initialized with fee_growth_outside_0_x64(100)
-//             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
-//                 fee_growth_inside_delta_when_price_move(
-//                     1000,
-//                     0,
-//                     500,
-//                     0,
-//                     -11,
-//                     build_tick_with_fee_reward_growth(-10, 50, 0, 0).get_mut(),
-//                     build_tick_with_fee_reward_growth(10, 100, 0, 0).get_mut(),
-//                     true,
-//                 );
-//             assert_eq!(fee_growth_inside_delta_0, 500);
-//             assert_eq!(fee_growth_inside_delta_1, 0);
-//         }
-
-//         #[test]
-//         fn price_in_tick_range_left_move_to_right_test() {
-//             // one_for_zero, price move to right and token_1 fee growth
-
-//             // tick_lower and tick_upper all new create
-//             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
-//                 fee_growth_inside_delta_when_price_move(
-//                     0,
-//                     1000,
-//                     500,
-//                     -11,
-//                     0,
-//                     build_tick_with_fee_reward_growth(-10, 0, 0, 0).get_mut(),
-//                     build_tick_with_fee_reward_growth(10, 0, 0, 0).get_mut(),
-//                     true,
-//                 );
-//             assert_eq!(fee_growth_inside_delta_0, 0);
-//             assert_eq!(fee_growth_inside_delta_1, 0);
-
-//             // tick_lower is initialized with fee_growth_outside_1_x64(100) and tick_upper is new create.
-//             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
-//                 fee_growth_inside_delta_when_price_move(
-//                     0,
-//                     1000,
-//                     500,
-//                     -11,
-//                     0,
-//                     build_tick_with_fee_reward_growth(-10, 0, 100, 0).get_mut(),
-//                     build_tick_with_fee_reward_growth(10, 0, 0, 0).get_mut(),
-//                     true,
-//                 );
-//             assert_eq!(fee_growth_inside_delta_0, 0);
-//             assert_eq!(fee_growth_inside_delta_1, 0);
-
-//             // tick_lower is new create  and tick_upper is initialized with fee_growth_outside_1_x64(100)
-//             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
-//                 fee_growth_inside_delta_when_price_move(
-//                     0,
-//                     1000,
-//                     500,
-//                     -11,
-//                     0,
-//                     build_tick_with_fee_reward_growth(-10, 0, 0, 0).get_mut(),
-//                     build_tick_with_fee_reward_growth(10, 0, 100, 0).get_mut(),
-//                     true,
-//                 );
-//             assert_eq!(fee_growth_inside_delta_0, 0);
-//             assert_eq!(fee_growth_inside_delta_1, 0);
-
-//             // tick_lower is initialized with fee_growth_outside_1_x64(50)  and tick_upper is initialized with fee_growth_outside_1_x64(100)
-//             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
-//                 fee_growth_inside_delta_when_price_move(
-//                     0,
-//                     1000,
-//                     500,
-//                     -11,
-//                     0,
-//                     build_tick_with_fee_reward_growth(-10, 0, 50, 0).get_mut(),
-//                     build_tick_with_fee_reward_growth(10, 0, 100, 0).get_mut(),
-//                     true,
-//                 );
-//             assert_eq!(fee_growth_inside_delta_0, 0);
-//             assert_eq!(fee_growth_inside_delta_1, 0);
-//         }
-
-//         #[test]
-//         fn price_in_tick_range_right_move_to_left_test() {
-//             // zero_for_one, price move to left and token_0 fee growth
-
-//             // tick_lower and tick_upper all new create
-//             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
-//                 fee_growth_inside_delta_when_price_move(
-//                     1000,
-//                     0,
-//                     500,
-//                     11,
-//                     0,
-//                     build_tick_with_fee_reward_growth(-10, 1000, 0, 0).get_mut(),
-//                     build_tick_with_fee_reward_growth(10, 1000, 0, 0).get_mut(),
-//                     false,
-//                 );
-//             assert_eq!(fee_growth_inside_delta_0, 0);
-//             assert_eq!(fee_growth_inside_delta_1, 0);
-
-//             // tick_lower is initialized with fee_growth_outside_0_x64(100) and tick_upper is new create.
-//             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
-//                 fee_growth_inside_delta_when_price_move(
-//                     1000,
-//                     0,
-//                     500,
-//                     11,
-//                     0,
-//                     build_tick_with_fee_reward_growth(-10, 100, 0, 0).get_mut(),
-//                     build_tick_with_fee_reward_growth(10, 1000, 0, 0).get_mut(),
-//                     false,
-//                 );
-//             assert_eq!(fee_growth_inside_delta_0, 0);
-//             assert_eq!(fee_growth_inside_delta_1, 0);
-
-//             // tick_lower is new create with fee_growth_global_0_x64(1000)  and tick_upper is initialized with fee_growth_outside_0_x64(100)
-//             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
-//                 fee_growth_inside_delta_when_price_move(
-//                     1000,
-//                     0,
-//                     500,
-//                     11,
-//                     0,
-//                     build_tick_with_fee_reward_growth(-10, 1000, 0, 0).get_mut(),
-//                     build_tick_with_fee_reward_growth(10, 100, 0, 0).get_mut(),
-//                     false,
-//                 );
-//             assert_eq!(fee_growth_inside_delta_0, 0);
-//             assert_eq!(fee_growth_inside_delta_1, 0);
-
-//             // tick_lower is initialized with fee_growth_outside_0_x64(50)  and tick_upper is initialized with fee_growth_outside_0_x64(100)
-//             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
-//                 fee_growth_inside_delta_when_price_move(
-//                     1000,
-//                     0,
-//                     500,
-//                     11,
-//                     0,
-//                     build_tick_with_fee_reward_growth(-10, 50, 0, 0).get_mut(),
-//                     build_tick_with_fee_reward_growth(10, 100, 0, 0).get_mut(),
-//                     false,
-//                 );
-//             assert_eq!(fee_growth_inside_delta_0, 0);
-//             assert_eq!(fee_growth_inside_delta_1, 0);
-//         }
-//     }
-
-//     mod get_reward_growths_inside_test {
-//         use super::*;
-//         use crate::states::{
-//             pool::RewardInfo,
-//             tick_array::{get_reward_growths_inside, TickState},
-//         };
-//         use anchor_lang::prelude::Pubkey;
-
-//         fn build_reward_infos(reward_growth_global_x64: u128) -> [RewardInfo; 3] {
-//             [
-//                 RewardInfo {
-//                     token_mint: Pubkey::new_unique(),
-//                     reward_growth_global_x64,
-//                     ..Default::default()
-//                 },
-//                 RewardInfo::default(),
-//                 RewardInfo::default(),
-//             ]
-//         }
-
-//         fn reward_growth_inside_delta_when_price_move(
-//             init_reward_growth_global_x64: u128,
-//             reward_growth_global_delta: u128,
-//             mut tick_current: i32,
-//             target_tick_current: i32,
-//             tick_lower: &mut TickState,
-//             tick_upper: &mut TickState,
-//             cross_tick_lower: bool,
-//         ) -> u128 {
-//             let mut reward_growth_global_x64 = init_reward_growth_global_x64;
-//             let reward_growth_inside_before = get_reward_growths_inside(
-//                 tick_lower,
-//                 tick_upper,
-//                 tick_current,
-//                 &build_reward_infos(reward_growth_global_x64),
-//             )[0];
-
-//             reward_growth_global_x64 = reward_growth_global_x64 + reward_growth_global_delta;
-//             if cross_tick_lower {
-//                 tick_lower.cross(0, 0, &build_reward_infos(reward_growth_global_x64));
-//             } else {
-//                 tick_upper.cross(0, 0, &build_reward_infos(reward_growth_global_x64));
-//             }
-
-//             tick_current = target_tick_current;
-//             let reward_growth_inside_after = get_reward_growths_inside(
-//                 tick_lower,
-//                 tick_upper,
-//                 tick_current,
-//                 &build_reward_infos(reward_growth_global_x64),
-//             )[0];
-
-//             println!(
-//                 "inside_delta:{}, reward_growth_inside_after:{}, reward_growth_inside_before:{}",
-//                 reward_growth_inside_after.wrapping_sub(reward_growth_inside_before),
-//                 reward_growth_inside_after,
-//                 reward_growth_inside_before,
-//             );
-
-//             reward_growth_inside_after.wrapping_sub(reward_growth_inside_before)
-//         }
-
-//         #[test]
-//         fn uninitialized_reward_index_test() {
-//             let tick_current = 0;
-
-//             let tick_lower = &mut TickState {
-//                 tick: -10,
-//                 reward_growths_outside_x64: [1000, 0, 0],
-//                 ..Default::default()
-//             };
-//             let tick_upper = &mut TickState {
-//                 tick: 10,
-//                 reward_growths_outside_x64: [1000, 0, 0],
-//                 ..Default::default()
-//             };
-
-//             let reward_infos = &[RewardInfo::default(); 3];
-//             let reward_inside =
-//                 get_reward_growths_inside(tick_lower, tick_upper, tick_current, reward_infos);
-//             assert_eq!(reward_inside, [0; 3]);
-//         }
-
-//         #[test]
-//         fn price_in_tick_range_move_to_right_test() {
-//             // tick_lower and tick_upper all new create
-//             let reward_frowth_inside_delta = reward_growth_inside_delta_when_price_move(
-//                 1000,
-//                 500,
-//                 0,
-//                 11,
-//                 build_tick_with_fee_reward_growth(-10, 0, 0, 1000).get_mut(),
-//                 build_tick_with_fee_reward_growth(10, 0, 0, 0).get_mut(),
-//                 false,
-//             );
-//             assert_eq!(reward_frowth_inside_delta, 500);
-
-//             // tick_lower is initialized with reward_growths_outside_x64(100) and tick_upper is new create.
-//             let reward_frowth_inside_delta = reward_growth_inside_delta_when_price_move(
-//                 1000,
-//                 500,
-//                 0,
-//                 11,
-//                 build_tick_with_fee_reward_growth(-10, 0, 0, 100).get_mut(),
-//                 build_tick_with_fee_reward_growth(10, 0, 0, 0).get_mut(),
-//                 false,
-//             );
-//             assert_eq!(reward_frowth_inside_delta, 500);
-
-//             // tick_lower is new create with reward_growths_outside_x64(1000)  and tick_upper is initialized with reward_growths_outside_x64(100)
-//             let reward_frowth_inside_delta = reward_growth_inside_delta_when_price_move(
-//                 1000,
-//                 500,
-//                 0,
-//                 11,
-//                 build_tick_with_fee_reward_growth(-10, 0, 0, 1000).get_mut(),
-//                 build_tick_with_fee_reward_growth(10, 0, 0, 100).get_mut(),
-//                 false,
-//             );
-//             assert_eq!(reward_frowth_inside_delta, 500);
-
-//             // tick_lower is initialized with reward_growths_outside_x64(50)  and tick_upper is initialized with reward_growths_outside_x64(100)
-//             let reward_frowth_inside_delta = reward_growth_inside_delta_when_price_move(
-//                 1000,
-//                 500,
-//                 0,
-//                 11,
-//                 build_tick_with_fee_reward_growth(-10, 0, 0, 50).get_mut(),
-//                 build_tick_with_fee_reward_growth(10, 0, 0, 100).get_mut(),
-//                 false,
-//             );
-//             assert_eq!(reward_frowth_inside_delta, 500);
-//         }
-
-//         #[test]
-//         fn price_in_tick_range_move_to_left_test() {
-//             // zero_for_one, cross tick_lower
-
-//             // tick_lower and tick_upper all new create, and tick_lower initialize with reward_growths_outside_x64(1000)
-//             let reward_frowth_inside_delta = reward_growth_inside_delta_when_price_move(
-//                 1000,
-//                 500,
-//                 0,
-//                 -11,
-//                 build_tick_with_fee_reward_growth(-10, 0, 0, 1000).get_mut(),
-//                 build_tick_with_fee_reward_growth(10, 0, 0, 0).get_mut(),
-//                 true,
-//             );
-//             assert_eq!(reward_frowth_inside_delta, 500);
-
-//             // tick_lower is initialized with reward_growths_outside_x64(100) and tick_upper is new create.
-//             let reward_frowth_inside_delta = reward_growth_inside_delta_when_price_move(
-//                 1000,
-//                 500,
-//                 0,
-//                 -11,
-//                 build_tick_with_fee_reward_growth(-10, 0, 0, 100).get_mut(),
-//                 build_tick_with_fee_reward_growth(10, 0, 0, 0).get_mut(),
-//                 true,
-//             );
-//             assert_eq!(reward_frowth_inside_delta, 500);
-
-//             // tick_lower is new create with reward_growths_outside_x64(1000)  and tick_upper is initialized with reward_growths_outside_x64(100)
-//             let reward_frowth_inside_delta = reward_growth_inside_delta_when_price_move(
-//                 1000,
-//                 500,
-//                 0,
-//                 -11,
-//                 build_tick_with_fee_reward_growth(-10, 0, 0, 1000).get_mut(),
-//                 build_tick_with_fee_reward_growth(10, 0, 0, 100).get_mut(),
-//                 true,
-//             );
-//             assert_eq!(reward_frowth_inside_delta, 500);
-
-//             // tick_lower is initialized with reward_growths_outside_x64(50)  and tick_upper is initialized with reward_growths_outside_x64(100)
-//             let reward_frowth_inside_delta = reward_growth_inside_delta_when_price_move(
-//                 1000,
-//                 500,
-//                 0,
-//                 -11,
-//                 build_tick_with_fee_reward_growth(-10, 0, 0, 50).get_mut(),
-//                 build_tick_with_fee_reward_growth(10, 0, 0, 100).get_mut(),
-//                 true,
-//             );
-//             assert_eq!(reward_frowth_inside_delta, 500);
-//         }
-//     }
-// }
+#[cfg(test)]
+pub mod tick_array_test {
+    use super::*;
+    use std::cell::RefCell;
+
+    pub struct TickArrayInfo {
+        pub start_tick_index: i32,
+        pub ticks: Vec<TickState>,
+    }
+
+    pub fn build_tick_array(
+        start_index: i32,
+        tick_spacing: u16,
+        initialized_tick_offsets: Vec<usize>,
+    ) -> TickArrayState {
+        let mut new_tick_array = TickArrayState::default();
+        new_tick_array
+            .initialize(start_index, tick_spacing, vec![])
+            .unwrap();
+
+        for offset in initialized_tick_offsets {
+            let mut new_tick = TickState::default();
+            // Indicates tick is initialized
+            new_tick.liquidity_gross = 1;
+            new_tick.tick = start_index + (offset * tick_spacing as usize) as i32;
+            new_tick_array.ticks[offset] = new_tick;
+        }
+        new_tick_array
+    }
+
+    pub fn build_tick_array_with_tick_states(
+        pool_id: Vec<u8>,
+        start_index: i32,
+        tick_spacing: u16,
+        tick_states: Vec<TickState>,
+    ) -> TickArrayState {
+        let mut new_tick_array = TickArrayState::default();
+        new_tick_array
+            .initialize(start_index, tick_spacing, pool_id)
+            .unwrap();
+
+        for tick_state in tick_states {
+            assert!(tick_state.tick != 0);
+            let offset = new_tick_array
+                .get_tick_offset_in_array(tick_state.tick, tick_spacing)
+                .unwrap();
+            // new_tick_array.ticks[offset] = tick_state;
+        }
+        new_tick_array
+    }
+
+    pub fn build_tick(tick: i32, liquidity_gross: u128, liquidity_net: i128) -> RefCell<TickState> {
+        let mut new_tick = TickState::default();
+        new_tick.tick = tick;
+        new_tick.liquidity_gross = liquidity_gross;
+        new_tick.liquidity_net = liquidity_net;
+        RefCell::new(new_tick)
+    }
+
+    //     fn build_tick_with_fee_reward_growth(
+    //         tick: i32,
+    //         fee_growth_outside_0_x64: u128,
+    //         fee_growth_outside_1_x64: u128,
+    //         reward_growths_outside_x64: u128,
+    //     ) -> RefCell<TickState> {
+    //         let mut new_tick = TickState::default();
+    //         new_tick.tick = tick;
+    //         new_tick.fee_growth_outside_0_x64 = fee_growth_outside_0_x64;
+    //         new_tick.fee_growth_outside_1_x64 = fee_growth_outside_1_x64;
+    //         new_tick.reward_growths_outside_x64 = [reward_growths_outside_x64, 0, 0];
+    //         RefCell::new(new_tick)
+    //     }
+
+    //     mod tick_array_test {
+    //         use super::*;
+    //         use std::convert::identity;
+
+    //         #[test]
+    //         fn get_array_start_index_test() {
+    //             assert_eq!(TickArrayState::get_array_start_index(120, 3), 0);
+    //             assert_eq!(TickArrayState::get_array_start_index(1002, 30), 0);
+    //             assert_eq!(TickArrayState::get_array_start_index(-120, 3), -180);
+    //             assert_eq!(TickArrayState::get_array_start_index(-1002, 30), -1800);
+    //             assert_eq!(TickArrayState::get_array_start_index(-20, 10), -600);
+    //             assert_eq!(TickArrayState::get_array_start_index(20, 10), 0);
+    //             assert_eq!(TickArrayState::get_array_start_index(-1002, 10), -1200);
+    //             assert_eq!(TickArrayState::get_array_start_index(-600, 10), -600);
+    //             assert_eq!(TickArrayState::get_array_start_index(-30720, 1), -30720);
+    //             assert_eq!(TickArrayState::get_array_start_index(30720, 1), 30720);
+    //             assert_eq!(
+    //                 TickArrayState::get_array_start_index(tick_math::MIN_TICK, 1),
+    //                 -443640
+    //             );
+    //             assert_eq!(
+    //                 TickArrayState::get_array_start_index(tick_math::MAX_TICK, 1),
+    //                 443580
+    //             );
+    //             assert_eq!(
+    //                 TickArrayState::get_array_start_index(tick_math::MAX_TICK, 60),
+    //                 442800
+    //             );
+    //             assert_eq!(
+    //                 TickArrayState::get_array_start_index(tick_math::MIN_TICK, 60),
+    //                 -446400
+    //             );
+    //         }
+
+    //         #[test]
+    //         fn next_tick_arrary_start_index_test() {
+    //             let tick_spacing = 15;
+    //             let tick_array_ref = build_tick_array(-1800, tick_spacing, vec![]);
+    //             // zero_for_one, next tickarray start_index < current
+    //             assert_eq!(
+    //                 -2700,
+    //                 tick_array_ref
+    //                     .borrow()
+    //                     .next_tick_arrary_start_index(tick_spacing, true)
+    //             );
+    //             // one_for_zero, next tickarray start_index > current
+    //             assert_eq!(
+    //                 -900,
+    //                 tick_array_ref
+    //                     .borrow()
+    //                     .next_tick_arrary_start_index(tick_spacing, false)
+    //             );
+    //         }
+
+    //         #[test]
+    //         fn get_tick_offset_in_array_test() {
+    //             let tick_spacing = 4;
+    //             // tick range [960, 1196]
+    //             let tick_array_ref = build_tick_array(960, tick_spacing, vec![]);
+
+    //             // not in tickarray
+    //             assert_eq!(
+    //                 tick_array_ref
+    //                     .borrow()
+    //                     .get_tick_offset_in_array(808, tick_spacing)
+    //                     .unwrap_err(),
+    //                 error!(ErrorCode::InvalidTickArray)
+    //             );
+    //             // first index is tickarray start tick
+    //             assert_eq!(
+    //                 tick_array_ref
+    //                     .borrow()
+    //                     .get_tick_offset_in_array(960, tick_spacing)
+    //                     .unwrap(),
+    //                 0
+    //             );
+    //             // tick_index % tick_spacing != 0
+    //             assert_eq!(
+    //                 tick_array_ref
+    //                     .borrow()
+    //                     .get_tick_offset_in_array(1105, tick_spacing)
+    //                     .unwrap(),
+    //                 36
+    //             );
+    //             // (1108-960) / tick_spacing
+    //             assert_eq!(
+    //                 tick_array_ref
+    //                     .borrow()
+    //                     .get_tick_offset_in_array(1108, tick_spacing)
+    //                     .unwrap(),
+    //                 37
+    //             );
+    //             // the end index of tickarray
+    //             assert_eq!(
+    //                 tick_array_ref
+    //                     .borrow()
+    //                     .get_tick_offset_in_array(1196, tick_spacing)
+    //                     .unwrap(),
+    //                 59
+    //             );
+    //         }
+
+    //         #[test]
+    //         fn first_initialized_tick_test() {
+    //             let tick_spacing = 15;
+    //             // initialized ticks[-300,-15]
+    //             let tick_array_ref = build_tick_array(-900, tick_spacing, vec![40, 59]);
+    //             let mut tick_array = tick_array_ref.borrow_mut();
+    //             // one_for_zero, the price increase, tick from small to large
+    //             let tick = tick_array.first_initialized_tick(false).unwrap().tick;
+    //             assert_eq!(-300, tick);
+    //             // zero_for_one, the price decrease, tick from large to small
+    //             let tick = tick_array.first_initialized_tick(true).unwrap().tick;
+    //             assert_eq!(-15, tick);
+    //         }
+
+    //         #[test]
+    //         fn next_initialized_tick_when_tick_is_positive() {
+    //             // init tick_index [0,30,105]
+    //             let tick_array_ref = build_tick_array(0, 15, vec![0, 2, 7]);
+    //             let mut tick_array = tick_array_ref.borrow_mut();
+
+    //             // test zero_for_one
+    //             let mut next_tick_state = tick_array.next_initialized_tick(0, 15, true).unwrap();
+    //             assert_eq!(identity(next_tick_state.unwrap().tick), 0);
+
+    //             next_tick_state = tick_array.next_initialized_tick(1, 15, true).unwrap();
+    //             assert_eq!(identity(next_tick_state.unwrap().tick), 0);
+
+    //             next_tick_state = tick_array.next_initialized_tick(29, 15, true).unwrap();
+    //             assert_eq!(identity(next_tick_state.unwrap().tick), 0);
+    //             next_tick_state = tick_array.next_initialized_tick(30, 15, true).unwrap();
+    //             assert_eq!(identity(next_tick_state.unwrap().tick), 30);
+    //             next_tick_state = tick_array.next_initialized_tick(31, 15, true).unwrap();
+    //             assert_eq!(identity(next_tick_state.unwrap().tick), 30);
+
+    //             // test one for zero
+    //             let mut next_tick_state = tick_array.next_initialized_tick(0, 15, false).unwrap();
+    //             assert_eq!(identity(next_tick_state.unwrap().tick), 30);
+
+    //             next_tick_state = tick_array.next_initialized_tick(29, 15, false).unwrap();
+    //             assert_eq!(identity(next_tick_state.unwrap().tick), 30);
+    //             next_tick_state = tick_array.next_initialized_tick(30, 15, false).unwrap();
+    //             assert_eq!(identity(next_tick_state.unwrap().tick), 105);
+    //             next_tick_state = tick_array.next_initialized_tick(31, 15, false).unwrap();
+    //             assert_eq!(identity(next_tick_state.unwrap().tick), 105);
+
+    //             next_tick_state = tick_array.next_initialized_tick(105, 15, false).unwrap();
+    //             assert!(next_tick_state.is_none());
+
+    //             // tick not in tickarray
+    //             next_tick_state = tick_array.next_initialized_tick(900, 15, false).unwrap();
+    //             assert!(next_tick_state.is_none());
+    //         }
+
+    //         #[test]
+    //         fn next_initialized_tick_when_tick_is_negative() {
+    //             // init tick_index [-900,-870,-795]
+    //             let tick_array_ref = build_tick_array(-900, 15, vec![0, 2, 7]);
+    //             let mut tick_array = tick_array_ref.borrow_mut();
+
+    //             // test zero for one
+    //             let mut next_tick_state = tick_array.next_initialized_tick(-900, 15, true).unwrap();
+    //             assert_eq!(identity(next_tick_state.unwrap().tick), -900);
+
+    //             next_tick_state = tick_array.next_initialized_tick(-899, 15, true).unwrap();
+    //             assert_eq!(identity(next_tick_state.unwrap().tick), -900);
+
+    //             next_tick_state = tick_array.next_initialized_tick(-871, 15, true).unwrap();
+    //             assert_eq!(identity(next_tick_state.unwrap().tick), -900);
+    //             next_tick_state = tick_array.next_initialized_tick(-870, 15, true).unwrap();
+    //             assert_eq!(identity(next_tick_state.unwrap().tick), -870);
+    //             next_tick_state = tick_array.next_initialized_tick(-869, 15, true).unwrap();
+    //             assert_eq!(identity(next_tick_state.unwrap().tick), -870);
+
+    //             // test one for zero
+    //             let mut next_tick_state = tick_array.next_initialized_tick(-900, 15, false).unwrap();
+    //             assert_eq!(identity(next_tick_state.unwrap().tick), -870);
+
+    //             next_tick_state = tick_array.next_initialized_tick(-871, 15, false).unwrap();
+    //             assert_eq!(identity(next_tick_state.unwrap().tick), -870);
+    //             next_tick_state = tick_array.next_initialized_tick(-870, 15, false).unwrap();
+    //             assert_eq!(identity(next_tick_state.unwrap().tick), -795);
+    //             next_tick_state = tick_array.next_initialized_tick(-869, 15, false).unwrap();
+    //             assert_eq!(identity(next_tick_state.unwrap().tick), -795);
+
+    //             next_tick_state = tick_array.next_initialized_tick(-795, 15, false).unwrap();
+    //             assert!(next_tick_state.is_none());
+
+    //             // tick not in tickarray
+    //             next_tick_state = tick_array.next_initialized_tick(-10, 15, false).unwrap();
+    //             assert!(next_tick_state.is_none());
+    //         }
+    //     }
+
+    //     mod get_fee_growth_inside_test {
+    //         use super::*;
+    //         use crate::states::{
+    //             pool::RewardInfo,
+    //             tick_array::{get_fee_growth_inside, TickState},
+    //         };
+
+    //         fn fee_growth_inside_delta_when_price_move(
+    //             init_fee_growth_global_0_x64: u128,
+    //             init_fee_growth_global_1_x64: u128,
+    //             fee_growth_global_delta: u128,
+    //             mut tick_current: i32,
+    //             target_tick_current: i32,
+    //             tick_lower: &mut TickState,
+    //             tick_upper: &mut TickState,
+    //             cross_tick_lower: bool,
+    //         ) -> (u128, u128) {
+    //             let mut fee_growth_global_0_x64 = init_fee_growth_global_0_x64;
+    //             let mut fee_growth_global_1_x64 = init_fee_growth_global_1_x64;
+    //             let (fee_growth_inside_0_before, fee_growth_inside_1_before) = get_fee_growth_inside(
+    //                 tick_lower,
+    //                 tick_upper,
+    //                 tick_current,
+    //                 fee_growth_global_0_x64,
+    //                 fee_growth_global_1_x64,
+    //             );
+
+    //             if fee_growth_global_0_x64 != 0 {
+    //                 fee_growth_global_0_x64 = fee_growth_global_0_x64 + fee_growth_global_delta;
+    //             }
+    //             if fee_growth_global_1_x64 != 0 {
+    //                 fee_growth_global_1_x64 = fee_growth_global_1_x64 + fee_growth_global_delta;
+    //             }
+    //             if cross_tick_lower {
+    //                 tick_lower.cross(
+    //                     fee_growth_global_0_x64,
+    //                     fee_growth_global_1_x64,
+    //                     &[RewardInfo::default(); 3],
+    //                 );
+    //             } else {
+    //                 tick_upper.cross(
+    //                     fee_growth_global_0_x64,
+    //                     fee_growth_global_1_x64,
+    //                     &[RewardInfo::default(); 3],
+    //                 );
+    //             }
+
+    //             tick_current = target_tick_current;
+    //             let (fee_growth_inside_0_after, fee_growth_inside_1_after) = get_fee_growth_inside(
+    //                 tick_lower,
+    //                 tick_upper,
+    //                 tick_current,
+    //                 fee_growth_global_0_x64,
+    //                 fee_growth_global_1_x64,
+    //             );
+
+    //             println!(
+    //                 "inside_delta_0:{},fee_growth_inside_0_after:{},fee_growth_inside_0_before:{}",
+    //                 fee_growth_inside_0_after.wrapping_sub(fee_growth_inside_0_before),
+    //                 fee_growth_inside_0_after,
+    //                 fee_growth_inside_0_before
+    //             );
+    //             println!(
+    //                 "inside_delta_1:{},fee_growth_inside_1_after:{},fee_growth_inside_1_before:{}",
+    //                 fee_growth_inside_1_after.wrapping_sub(fee_growth_inside_1_before),
+    //                 fee_growth_inside_1_after,
+    //                 fee_growth_inside_1_before
+    //             );
+    //             (
+    //                 fee_growth_inside_0_after.wrapping_sub(fee_growth_inside_0_before),
+    //                 fee_growth_inside_1_after.wrapping_sub(fee_growth_inside_1_before),
+    //             )
+    //         }
+
+    //         #[test]
+    //         fn price_in_tick_range_move_to_right_test() {
+    //             // one_for_zero, price move to right and token_1 fee growth
+
+    //             // tick_lower and tick_upper all new create, and tick_lower initialize with fee_growth_global_1_x64(1000)
+    //             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
+    //                 fee_growth_inside_delta_when_price_move(
+    //                     0,
+    //                     1000,
+    //                     500,
+    //                     0,
+    //                     11,
+    //                     build_tick_with_fee_reward_growth(-10, 0, 1000, 0).get_mut(),
+    //                     build_tick_with_fee_reward_growth(10, 0, 0, 0).get_mut(),
+    //                     false,
+    //                 );
+    //             assert_eq!(fee_growth_inside_delta_0, 0);
+    //             assert_eq!(fee_growth_inside_delta_1, 500);
+
+    //             // tick_lower is initialized with fee_growth_outside_1_x64(100) and tick_upper is new create.
+    //             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
+    //                 fee_growth_inside_delta_when_price_move(
+    //                     0,
+    //                     1000,
+    //                     500,
+    //                     0,
+    //                     11,
+    //                     build_tick_with_fee_reward_growth(-10, 0, 100, 0).get_mut(),
+    //                     build_tick_with_fee_reward_growth(10, 0, 0, 0).get_mut(),
+    //                     false,
+    //                 );
+    //             assert_eq!(fee_growth_inside_delta_0, 0);
+    //             assert_eq!(fee_growth_inside_delta_1, 500);
+
+    //             // tick_lower is new create with fee_growth_global_1_x64(1000)  and tick_upper is initialized with fee_growth_outside_1_x64(100)
+    //             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
+    //                 fee_growth_inside_delta_when_price_move(
+    //                     0,
+    //                     1000,
+    //                     500,
+    //                     0,
+    //                     11,
+    //                     build_tick_with_fee_reward_growth(-10, 0, 1000, 0).get_mut(),
+    //                     build_tick_with_fee_reward_growth(10, 0, 100, 0).get_mut(),
+    //                     false,
+    //                 );
+    //             assert_eq!(fee_growth_inside_delta_0, 0);
+    //             assert_eq!(fee_growth_inside_delta_1, 500);
+
+    //             // tick_lower is initialized with fee_growth_outside_1_x64(50)  and tick_upper is initialized with fee_growth_outside_1_x64(100)
+    //             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
+    //                 fee_growth_inside_delta_when_price_move(
+    //                     0,
+    //                     1000,
+    //                     500,
+    //                     0,
+    //                     11,
+    //                     build_tick_with_fee_reward_growth(-10, 0, 50, 0).get_mut(),
+    //                     build_tick_with_fee_reward_growth(10, 0, 100, 0).get_mut(),
+    //                     false,
+    //                 );
+    //             assert_eq!(fee_growth_inside_delta_0, 0);
+    //             assert_eq!(fee_growth_inside_delta_1, 500);
+    //         }
+
+    //         #[test]
+    //         fn price_in_tick_range_move_to_left_test() {
+    //             // zero_for_one, price move to left and token_0 fee growth
+
+    //             // tick_lower and tick_upper all new create, and tick_lower initialize with fee_growth_global_0_x64(1000)
+    //             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
+    //                 fee_growth_inside_delta_when_price_move(
+    //                     1000,
+    //                     0,
+    //                     500,
+    //                     0,
+    //                     -11,
+    //                     build_tick_with_fee_reward_growth(-10, 1000, 0, 0).get_mut(),
+    //                     build_tick_with_fee_reward_growth(10, 0, 0, 0).get_mut(),
+    //                     true,
+    //                 );
+    //             assert_eq!(fee_growth_inside_delta_0, 500);
+    //             assert_eq!(fee_growth_inside_delta_1, 0);
+
+    //             // tick_lower is initialized with fee_growth_outside_0_x64(100) and tick_upper is new create.
+    //             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
+    //                 fee_growth_inside_delta_when_price_move(
+    //                     1000,
+    //                     0,
+    //                     500,
+    //                     0,
+    //                     -11,
+    //                     build_tick_with_fee_reward_growth(-10, 100, 0, 0).get_mut(),
+    //                     build_tick_with_fee_reward_growth(10, 0, 0, 0).get_mut(),
+    //                     true,
+    //                 );
+    //             assert_eq!(fee_growth_inside_delta_0, 500);
+    //             assert_eq!(fee_growth_inside_delta_1, 0);
+
+    //             // tick_lower is new create with fee_growth_global_0_x64(1000)  and tick_upper is initialized with fee_growth_outside_0_x64(100)
+    //             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
+    //                 fee_growth_inside_delta_when_price_move(
+    //                     1000,
+    //                     0,
+    //                     500,
+    //                     0,
+    //                     -11,
+    //                     build_tick_with_fee_reward_growth(-10, 1000, 0, 0).get_mut(),
+    //                     build_tick_with_fee_reward_growth(10, 100, 0, 0).get_mut(),
+    //                     true,
+    //                 );
+    //             assert_eq!(fee_growth_inside_delta_0, 500);
+    //             assert_eq!(fee_growth_inside_delta_1, 0);
+
+    //             // tick_lower is initialized with fee_growth_outside_0_x64(50)  and tick_upper is initialized with fee_growth_outside_0_x64(100)
+    //             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
+    //                 fee_growth_inside_delta_when_price_move(
+    //                     1000,
+    //                     0,
+    //                     500,
+    //                     0,
+    //                     -11,
+    //                     build_tick_with_fee_reward_growth(-10, 50, 0, 0).get_mut(),
+    //                     build_tick_with_fee_reward_growth(10, 100, 0, 0).get_mut(),
+    //                     true,
+    //                 );
+    //             assert_eq!(fee_growth_inside_delta_0, 500);
+    //             assert_eq!(fee_growth_inside_delta_1, 0);
+    //         }
+
+    //         #[test]
+    //         fn price_in_tick_range_left_move_to_right_test() {
+    //             // one_for_zero, price move to right and token_1 fee growth
+
+    //             // tick_lower and tick_upper all new create
+    //             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
+    //                 fee_growth_inside_delta_when_price_move(
+    //                     0,
+    //                     1000,
+    //                     500,
+    //                     -11,
+    //                     0,
+    //                     build_tick_with_fee_reward_growth(-10, 0, 0, 0).get_mut(),
+    //                     build_tick_with_fee_reward_growth(10, 0, 0, 0).get_mut(),
+    //                     true,
+    //                 );
+    //             assert_eq!(fee_growth_inside_delta_0, 0);
+    //             assert_eq!(fee_growth_inside_delta_1, 0);
+
+    //             // tick_lower is initialized with fee_growth_outside_1_x64(100) and tick_upper is new create.
+    //             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
+    //                 fee_growth_inside_delta_when_price_move(
+    //                     0,
+    //                     1000,
+    //                     500,
+    //                     -11,
+    //                     0,
+    //                     build_tick_with_fee_reward_growth(-10, 0, 100, 0).get_mut(),
+    //                     build_tick_with_fee_reward_growth(10, 0, 0, 0).get_mut(),
+    //                     true,
+    //                 );
+    //             assert_eq!(fee_growth_inside_delta_0, 0);
+    //             assert_eq!(fee_growth_inside_delta_1, 0);
+
+    //             // tick_lower is new create  and tick_upper is initialized with fee_growth_outside_1_x64(100)
+    //             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
+    //                 fee_growth_inside_delta_when_price_move(
+    //                     0,
+    //                     1000,
+    //                     500,
+    //                     -11,
+    //                     0,
+    //                     build_tick_with_fee_reward_growth(-10, 0, 0, 0).get_mut(),
+    //                     build_tick_with_fee_reward_growth(10, 0, 100, 0).get_mut(),
+    //                     true,
+    //                 );
+    //             assert_eq!(fee_growth_inside_delta_0, 0);
+    //             assert_eq!(fee_growth_inside_delta_1, 0);
+
+    //             // tick_lower is initialized with fee_growth_outside_1_x64(50)  and tick_upper is initialized with fee_growth_outside_1_x64(100)
+    //             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
+    //                 fee_growth_inside_delta_when_price_move(
+    //                     0,
+    //                     1000,
+    //                     500,
+    //                     -11,
+    //                     0,
+    //                     build_tick_with_fee_reward_growth(-10, 0, 50, 0).get_mut(),
+    //                     build_tick_with_fee_reward_growth(10, 0, 100, 0).get_mut(),
+    //                     true,
+    //                 );
+    //             assert_eq!(fee_growth_inside_delta_0, 0);
+    //             assert_eq!(fee_growth_inside_delta_1, 0);
+    //         }
+
+    //         #[test]
+    //         fn price_in_tick_range_right_move_to_left_test() {
+    //             // zero_for_one, price move to left and token_0 fee growth
+
+    //             // tick_lower and tick_upper all new create
+    //             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
+    //                 fee_growth_inside_delta_when_price_move(
+    //                     1000,
+    //                     0,
+    //                     500,
+    //                     11,
+    //                     0,
+    //                     build_tick_with_fee_reward_growth(-10, 1000, 0, 0).get_mut(),
+    //                     build_tick_with_fee_reward_growth(10, 1000, 0, 0).get_mut(),
+    //                     false,
+    //                 );
+    //             assert_eq!(fee_growth_inside_delta_0, 0);
+    //             assert_eq!(fee_growth_inside_delta_1, 0);
+
+    //             // tick_lower is initialized with fee_growth_outside_0_x64(100) and tick_upper is new create.
+    //             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
+    //                 fee_growth_inside_delta_when_price_move(
+    //                     1000,
+    //                     0,
+    //                     500,
+    //                     11,
+    //                     0,
+    //                     build_tick_with_fee_reward_growth(-10, 100, 0, 0).get_mut(),
+    //                     build_tick_with_fee_reward_growth(10, 1000, 0, 0).get_mut(),
+    //                     false,
+    //                 );
+    //             assert_eq!(fee_growth_inside_delta_0, 0);
+    //             assert_eq!(fee_growth_inside_delta_1, 0);
+
+    //             // tick_lower is new create with fee_growth_global_0_x64(1000)  and tick_upper is initialized with fee_growth_outside_0_x64(100)
+    //             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
+    //                 fee_growth_inside_delta_when_price_move(
+    //                     1000,
+    //                     0,
+    //                     500,
+    //                     11,
+    //                     0,
+    //                     build_tick_with_fee_reward_growth(-10, 1000, 0, 0).get_mut(),
+    //                     build_tick_with_fee_reward_growth(10, 100, 0, 0).get_mut(),
+    //                     false,
+    //                 );
+    //             assert_eq!(fee_growth_inside_delta_0, 0);
+    //             assert_eq!(fee_growth_inside_delta_1, 0);
+
+    //             // tick_lower is initialized with fee_growth_outside_0_x64(50)  and tick_upper is initialized with fee_growth_outside_0_x64(100)
+    //             let (fee_growth_inside_delta_0, fee_growth_inside_delta_1) =
+    //                 fee_growth_inside_delta_when_price_move(
+    //                     1000,
+    //                     0,
+    //                     500,
+    //                     11,
+    //                     0,
+    //                     build_tick_with_fee_reward_growth(-10, 50, 0, 0).get_mut(),
+    //                     build_tick_with_fee_reward_growth(10, 100, 0, 0).get_mut(),
+    //                     false,
+    //                 );
+    //             assert_eq!(fee_growth_inside_delta_0, 0);
+    //             assert_eq!(fee_growth_inside_delta_1, 0);
+    //         }
+    //     }
+
+    //     mod get_reward_growths_inside_test {
+    //         use super::*;
+    //         use crate::states::{
+    //             pool::RewardInfo,
+    //             tick_array::{get_reward_growths_inside, TickState},
+    //         };
+    //         use anchor_lang::prelude::Pubkey;
+
+    //         fn build_reward_infos(reward_growth_global_x64: u128) -> [RewardInfo; 3] {
+    //             [
+    //                 RewardInfo {
+    //                     token_mint: Pubkey::new_unique(),
+    //                     reward_growth_global_x64,
+    //                     ..Default::default()
+    //                 },
+    //                 RewardInfo::default(),
+    //                 RewardInfo::default(),
+    //             ]
+    //         }
+
+    //         fn reward_growth_inside_delta_when_price_move(
+    //             init_reward_growth_global_x64: u128,
+    //             reward_growth_global_delta: u128,
+    //             mut tick_current: i32,
+    //             target_tick_current: i32,
+    //             tick_lower: &mut TickState,
+    //             tick_upper: &mut TickState,
+    //             cross_tick_lower: bool,
+    //         ) -> u128 {
+    //             let mut reward_growth_global_x64 = init_reward_growth_global_x64;
+    //             let reward_growth_inside_before = get_reward_growths_inside(
+    //                 tick_lower,
+    //                 tick_upper,
+    //                 tick_current,
+    //                 &build_reward_infos(reward_growth_global_x64),
+    //             )[0];
+
+    //             reward_growth_global_x64 = reward_growth_global_x64 + reward_growth_global_delta;
+    //             if cross_tick_lower {
+    //                 tick_lower.cross(0, 0, &build_reward_infos(reward_growth_global_x64));
+    //             } else {
+    //                 tick_upper.cross(0, 0, &build_reward_infos(reward_growth_global_x64));
+    //             }
+
+    //             tick_current = target_tick_current;
+    //             let reward_growth_inside_after = get_reward_growths_inside(
+    //                 tick_lower,
+    //                 tick_upper,
+    //                 tick_current,
+    //                 &build_reward_infos(reward_growth_global_x64),
+    //             )[0];
+
+    //             println!(
+    //                 "inside_delta:{}, reward_growth_inside_after:{}, reward_growth_inside_before:{}",
+    //                 reward_growth_inside_after.wrapping_sub(reward_growth_inside_before),
+    //                 reward_growth_inside_after,
+    //                 reward_growth_inside_before,
+    //             );
+
+    //             reward_growth_inside_after.wrapping_sub(reward_growth_inside_before)
+    //         }
+
+    //         #[test]
+    //         fn uninitialized_reward_index_test() {
+    //             let tick_current = 0;
+
+    //             let tick_lower = &mut TickState {
+    //                 tick: -10,
+    //                 reward_growths_outside_x64: [1000, 0, 0],
+    //                 ..Default::default()
+    //             };
+    //             let tick_upper = &mut TickState {
+    //                 tick: 10,
+    //                 reward_growths_outside_x64: [1000, 0, 0],
+    //                 ..Default::default()
+    //             };
+
+    //             let reward_infos = &[RewardInfo::default(); 3];
+    //             let reward_inside =
+    //                 get_reward_growths_inside(tick_lower, tick_upper, tick_current, reward_infos);
+    //             assert_eq!(reward_inside, [0; 3]);
+    //         }
+
+    //         #[test]
+    //         fn price_in_tick_range_move_to_right_test() {
+    //             // tick_lower and tick_upper all new create
+    //             let reward_frowth_inside_delta = reward_growth_inside_delta_when_price_move(
+    //                 1000,
+    //                 500,
+    //                 0,
+    //                 11,
+    //                 build_tick_with_fee_reward_growth(-10, 0, 0, 1000).get_mut(),
+    //                 build_tick_with_fee_reward_growth(10, 0, 0, 0).get_mut(),
+    //                 false,
+    //             );
+    //             assert_eq!(reward_frowth_inside_delta, 500);
+
+    //             // tick_lower is initialized with reward_growths_outside_x64(100) and tick_upper is new create.
+    //             let reward_frowth_inside_delta = reward_growth_inside_delta_when_price_move(
+    //                 1000,
+    //                 500,
+    //                 0,
+    //                 11,
+    //                 build_tick_with_fee_reward_growth(-10, 0, 0, 100).get_mut(),
+    //                 build_tick_with_fee_reward_growth(10, 0, 0, 0).get_mut(),
+    //                 false,
+    //             );
+    //             assert_eq!(reward_frowth_inside_delta, 500);
+
+    //             // tick_lower is new create with reward_growths_outside_x64(1000)  and tick_upper is initialized with reward_growths_outside_x64(100)
+    //             let reward_frowth_inside_delta = reward_growth_inside_delta_when_price_move(
+    //                 1000,
+    //                 500,
+    //                 0,
+    //                 11,
+    //                 build_tick_with_fee_reward_growth(-10, 0, 0, 1000).get_mut(),
+    //                 build_tick_with_fee_reward_growth(10, 0, 0, 100).get_mut(),
+    //                 false,
+    //             );
+    //             assert_eq!(reward_frowth_inside_delta, 500);
+
+    //             // tick_lower is initialized with reward_growths_outside_x64(50)  and tick_upper is initialized with reward_growths_outside_x64(100)
+    //             let reward_frowth_inside_delta = reward_growth_inside_delta_when_price_move(
+    //                 1000,
+    //                 500,
+    //                 0,
+    //                 11,
+    //                 build_tick_with_fee_reward_growth(-10, 0, 0, 50).get_mut(),
+    //                 build_tick_with_fee_reward_growth(10, 0, 0, 100).get_mut(),
+    //                 false,
+    //             );
+    //             assert_eq!(reward_frowth_inside_delta, 500);
+    //         }
+
+    //         #[test]
+    //         fn price_in_tick_range_move_to_left_test() {
+    //             // zero_for_one, cross tick_lower
+
+    //             // tick_lower and tick_upper all new create, and tick_lower initialize with reward_growths_outside_x64(1000)
+    //             let reward_frowth_inside_delta = reward_growth_inside_delta_when_price_move(
+    //                 1000,
+    //                 500,
+    //                 0,
+    //                 -11,
+    //                 build_tick_with_fee_reward_growth(-10, 0, 0, 1000).get_mut(),
+    //                 build_tick_with_fee_reward_growth(10, 0, 0, 0).get_mut(),
+    //                 true,
+    //             );
+    //             assert_eq!(reward_frowth_inside_delta, 500);
+
+    //             // tick_lower is initialized with reward_growths_outside_x64(100) and tick_upper is new create.
+    //             let reward_frowth_inside_delta = reward_growth_inside_delta_when_price_move(
+    //                 1000,
+    //                 500,
+    //                 0,
+    //                 -11,
+    //                 build_tick_with_fee_reward_growth(-10, 0, 0, 100).get_mut(),
+    //                 build_tick_with_fee_reward_growth(10, 0, 0, 0).get_mut(),
+    //                 true,
+    //             );
+    //             assert_eq!(reward_frowth_inside_delta, 500);
+
+    //             // tick_lower is new create with reward_growths_outside_x64(1000)  and tick_upper is initialized with reward_growths_outside_x64(100)
+    //             let reward_frowth_inside_delta = reward_growth_inside_delta_when_price_move(
+    //                 1000,
+    //                 500,
+    //                 0,
+    //                 -11,
+    //                 build_tick_with_fee_reward_growth(-10, 0, 0, 1000).get_mut(),
+    //                 build_tick_with_fee_reward_growth(10, 0, 0, 100).get_mut(),
+    //                 true,
+    //             );
+    //             assert_eq!(reward_frowth_inside_delta, 500);
+
+    //             // tick_lower is initialized with reward_growths_outside_x64(50)  and tick_upper is initialized with reward_growths_outside_x64(100)
+    //             let reward_frowth_inside_delta = reward_growth_inside_delta_when_price_move(
+    //                 1000,
+    //                 500,
+    //                 0,
+    //                 -11,
+    //                 build_tick_with_fee_reward_growth(-10, 0, 0, 50).get_mut(),
+    //                 build_tick_with_fee_reward_growth(10, 0, 0, 100).get_mut(),
+    //                 true,
+    //             );
+    //             assert_eq!(reward_frowth_inside_delta, 500);
+    //         }
+    //     }
+}
