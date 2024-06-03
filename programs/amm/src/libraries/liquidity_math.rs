@@ -314,6 +314,8 @@ pub fn get_delta_amounts_signed(
 mod liquidity_math_test {
     use super::*;
     mod get_amounts_delta_signed {
+        use crate::libraries::liquidity_math;
+
         use super::*;
 
         #[test]
@@ -323,6 +325,14 @@ mod liquidity_math_test {
             let (amount0, amount1) =
                 get_delta_amounts_signed(current_tick, current_price, -6960, 4080, 100000).unwrap();
             println!("amount0:{}, amount1:{}", amount0, amount1)
+        }
+
+        #[test]
+        fn get_liquidity_after_delta_added_test() {
+            let liquidity_net = -1000i128;
+            let mut liquidity = 1200u128;
+            liquidity = liquidity_math::add_delta(liquidity, liquidity_net).unwrap();
+            assert!(liquidity == 200u128);
         }
     }
 }
