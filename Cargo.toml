@@ -43,7 +43,6 @@ cw20 = "1.0.1"
 schemars = "0.8.15"
 serde = { version = "1.0.189", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0.49" }
-ruint = "1.12.1"
 cw721 = "0.18.0"
 uint = "0.9.3"
 

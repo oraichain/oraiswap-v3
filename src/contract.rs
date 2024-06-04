@@ -1,12 +1,12 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{entry_point, Decimal256};
 use cosmwasm_std::{
-    from_binary, from_slice, to_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env,
-    MessageInfo, Response, StdError, StdResult, Storage, Uint128, Uint256, WasmMsg,
+    from_binary, to_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env,
+    MessageInfo, Response, StdResult, Storage, Uint128, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
 use cw721::{AllNftInfoResponse, Cw721ExecuteMsg, Cw721QueryMsg, Cw721ReceiveMsg, NftInfoResponse};
-use ruint::Uint;
+
 // use cw2::set_contract_version;
 
 use crate::error::ContractError;
@@ -1049,7 +1049,6 @@ mod tests {
 
     use cosmwasm_std::Uint128;
     use cosmwasm_std::Uint256;
-    use ruint::Uint;
 
     use crate::libraries::get_tick_at_sqrt_price;
     use crate::libraries::MAX_TICK;
@@ -1095,10 +1094,8 @@ mod tests {
     }
     #[test]
     fn test_5() {
-        let x = Uint::<256, 4>::from(5000_u128);
-        let y = Uint128::from(u128::from_be_bytes(
-            <[u8; 16]>::try_from(&x.to_be_bytes::<32>()[16..32]).unwrap(),
-        ));
+        let x = 5000_u128;
+        let y = Uint128::from(x);
 
         assert_eq!(y, Uint128::from(5000_u128), "incorrect");
     }
