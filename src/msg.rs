@@ -1,5 +1,5 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::{Addr, Int256, Uint256};
+use cosmwasm_std::{Addr, Uint128, Uint256};
 use cw721::Cw721ReceiveMsg;
 
 use crate::interface::AssetInfo;
@@ -27,9 +27,10 @@ pub enum ExecuteMsg {
     },
     Swap {
         recipient: Addr,
+        is_base_input: bool,
         zero_for_one: bool,
-        amount_specified: Int256,
-        sqrt_price_limit_x96: Uint256,
+        amount_specified: u64,
+        sqrt_price_limit_x64: u128,
     },
 }
 

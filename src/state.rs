@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Int256, Uint128, Uint256};
+use cosmwasm_std::{Addr, Uint128, Uint256};
 use cw_storage_plus::{Item, Map};
 
 use crate::interface::AssetInfo;
@@ -30,29 +30,50 @@ pub struct NftInfo {
 
 #[cw_serde]
 pub struct FeeGrowthGlobal {
-    pub fee_growth_global_0_x128: Uint256,
-    pub fee_growth_global_1_x128: Uint256,
+    pub fee_growth_global_0_x64: u128,
+    pub fee_growth_global_1_x64: u128,
 }
 
 #[cw_serde]
 pub struct SwapState {
-    pub amount_specified_remaining: Int256,
-    pub amount_calculated: Int256,
-    pub sqrt_price_x96: Uint256,
+    // the amount remaining to be swapped in/out of the input/output asset
+    pub amount_specified_remaining: u64,
+    // the amount already swapped out/in of the output/input asset
+    pub amount_calculated: u64,
+    // current sqrt(price)
+    pub sqrt_price_x64: u128,
+    // the tick associated with the current price
     pub tick: i32,
-    pub fee_growth_global_x128: Uint256,
+    // the global fee growth of the input token
+    pub fee_growth_global_x64: u128,
+
+    // // the global fee of the input token
+    // pub fee_amount: u64,
+    // // amount of input token paid as protocol fee
+    // pub protocol_fee: u64,
+    // // amount of input token paid as fund fee
+    // pub fund_fee: u64,
+
+    // the current liquidity in range
     pub liquidity: u128,
 }
 
 #[cw_serde]
 pub struct StepComputations {
-    pub sqrt_price_start_x96: Uint256,
+    // the price at the beginning of the step
+    pub sqrt_price_start_x64: u128,
+    // the next tick to swap to from the current tick in the swap direction
     pub tick_next: i32,
+    // whether tick_next is initialized or not
     pub initialized: bool,
-    pub sqrt_price_next_x96: Uint256,
-    pub amount_in: Uint256,
-    pub amount_out: Uint256,
-    pub fee_amount: Uint256,
+    // sqrt(price) for the next tick (1/0)
+    pub sqrt_price_next_x64: u128,
+    // how much is being swapped in in this step
+    pub amount_in: u64,
+    // how much is being swapped out
+    pub amount_out: u64,
+    // how much fee is being paid in
+    pub fee_amount: u64,
 }
 
 #[cw_serde]
@@ -63,13 +84,13 @@ pub struct TickInfo {
     pub liquidity_net: i128,
     // fee growth per unit of liquidity on the _other_ side of this tick (relative to the current tick)
     // only has relative meaning, not absolute — the value depends on when the tick is initialized
-    pub fee_growth_outside_0_x128: Uint256,
-    pub fee_growth_outside_1_x128: Uint256,
+    pub fee_growth_outside_0_x64: u128,
+    pub fee_growth_outside_1_x64: u128,
     // // the cumulative tick value on the other side of the tick
     // pub tick_cumulative_outside: i32,
     // // the seconds per unit of liquidity on the _other_ side of this tick (relative to the current tick)
     // // only has relative meaning, not absolute — the value depends on when the tick is initialized
-    // pub seconds_per_liquidity_outside_x128: Uint256,
+    // pub seconds_per_liquidity_outside_x64: u128,
     // // the seconds spent on the other side of the tick (relative to the current tick)
     // // only has relative meaning, not absolute — the value depends on when the tick is initialized
     // pub seconds_outside: u32,
@@ -80,18 +101,18 @@ pub struct Position {
     // the amount of liquidity owned by this position
     pub liquidity: u128,
     // fee growth per unit of liquidity as of the last update to liquidity or fees owed
-    pub fee_growth_inside_0_last_x128: Uint256,
-    pub fee_growth_inside_1_last_x128: Uint256,
+    pub fee_growth_inside_0_last_x64: u128,
+    pub fee_growth_inside_1_last_x64: u128,
     // the fees owed to the position owner in token0/token1
-    pub tokens_owned_0: Uint128,
-    pub tokens_owned_1: Uint128,
+    pub tokens_owned_0: u64,
+    pub tokens_owned_1: u64,
 }
 
 #[cw_serde]
 pub struct CurrentState {
     pub liquidity: u128,
     // the current price
-    pub sqrt_price_x96: Uint256,
+    pub sqrt_price_x64: u128,
     // the current tick
     pub tick: i32,
     // the most-recently updated index of the observations array
