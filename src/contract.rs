@@ -1,8 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{entry_point, Decimal256};
 use cosmwasm_std::{
-    from_slice, to_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
-    Response, StdError, StdResult, Storage, Uint128, Uint256, WasmMsg,
+    from_binary, from_slice, to_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env,
+    MessageInfo, Response, StdError, StdResult, Storage, Uint128, Uint256, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
 use cw721::{AllNftInfoResponse, Cw721ExecuteMsg, Cw721QueryMsg, Cw721ReceiveMsg, NftInfoResponse};
@@ -12,10 +12,11 @@ use ruint::Uint;
 use crate::error::ContractError;
 use crate::interface::{AssetInfo, Cw721BaseExecuteMsg, NftExtentions};
 use crate::libraries::{
-    fixed_point_64, get_sqrt_price_at_tick, get_tick_at_sqrt_price, swap_math, tick_math, MulDiv,
-    SwapStep, MAX_SQRT_PRICE_X64, MIN_SQRT_PRICE_X64, U128,
+    add_delta, fixed_point_64, get_delta_amount_0_unsigned, get_delta_amount_1_unsigned,
+    get_sqrt_price_at_tick, get_tick_at_sqrt_price, swap_math, tick_math, MulDiv, SwapStep,
+    MAX_SQRT_PRICE_X64, MIN_SQRT_PRICE_X64, U128,
 };
-use crate::msg::{Cw721HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{Cw721HookMsg, ExecuteMsg, FeeGrowthOutside, InstantiateMsg, QueryMsg};
 use crate::state::{
     Config, CurrentState, FeeGrowthGlobal, NftInfo, Position, StepComputations, SwapState,
     TickInfo, CONFIG, CURRENT_STATE, FEE_GROWTH_GROBAL, LIST_INITIALIZED_TICKS, NFT_INFO,
@@ -460,35 +461,6 @@ fn cross(
     cur_tick_info
 }
 
-//     /// Transitions to the current tick as needed by price movement, returning the amount of liquidity
-//     /// added (subtracted) when tick is crossed from left to right (right to left)
-//     pub fn cross(
-//         &mut self,
-//         fee_growth_global_0_x64: u128,
-//         fee_growth_global_1_x64: u128,
-//         reward_infos: &[RewardInfo; REWARD_NUM],
-//     ) -> i128 {
-//         self.fee_growth_outside_0_x64 = fee_growth_global_0_x64
-//             .checked_sub(self.fee_growth_outside_0_x64)
-//             .unwrap();
-//         self.fee_growth_outside_1_x64 = fee_growth_global_1_x64
-//             .checked_sub(self.fee_growth_outside_1_x64)
-//             .unwrap();
-
-//         for i in 0..REWARD_NUM {
-//             if !reward_infos[i].initialized() {
-//                 continue;
-//             }
-
-//             self.reward_growths_outside_x64[i] = reward_infos[i]
-//                 .reward_growth_global_x64
-//                 .checked_sub(self.reward_growths_outside_x64[i])
-//                 .unwrap();
-//         }
-
-//         self.liquidity_net
-//     }
-
 fn update_tick_and_list_initialized_tick(
     current_tick: i32,
     tick: i32,
@@ -551,190 +523,166 @@ fn update_tick_and_list_initialized_tick(
     (new_tick_info, list_initialized_ticks, remove_tick_info)
 }
 
-// fn modiy_position(
-//     storage: &mut dyn Storage,
-//     tick_lower: i32,
-//     tick_upper: i32,
-//     liquidity_delta: i128,
-//     position: Option<Position>,
-// ) -> Result<(Position, Uint128, Uint128), ContractError> {
-//     if !(tick_lower < tick_upper
-//         && tick_lower >= tick_math::MIN_TICK
-//         && tick_upper <= tick_math::MAX_TICK)
-//     {
-//         return Err(ContractError::InvalidTicks {});
-//     }
+fn modiy_position(
+    storage: &mut dyn Storage,
+    tick_lower: i32,
+    tick_upper: i32,
+    liquidity_delta: i128,
+    position: Option<Position>,
+) -> Result<(Position, Uint128, Uint128), ContractError> {
+    if !(tick_lower < tick_upper
+        && tick_lower >= tick_math::MIN_TICK
+        && tick_upper <= tick_math::MAX_TICK)
+    {
+        return Err(ContractError::InvalidTicks {});
+    }
 
-//     let mut current_state = match CURRENT_STATE.may_load(storage)? {
-//         Some(current_state) => current_state,
-//         None => {
-//             let tick_lower_sqrt_price_x64 = get_sqrt_price_at_tick(tick_lower).unwrap();
-//             let tick_upper_sqrt_price_x64 = get_sqrt_price_at_tick(tick_upper).unwrap();
-//             let sqrt_price_x64 = (tick_lower_sqrt_price_x64 + tick_upper_sqrt_price_x64) / 2;
-//             CurrentState {
-//                 liquidity: 0,
-//                 sqrt_price_x64: sqrt_price_x64,
-//                 tick: get_tick_at_sqrt_price(sqrt_price_x64).unwrap(),
-//             }
-//         }
-//     };
-//     let fee_growth_global = FEE_GROWTH_GROBAL.load(storage)?;
+    let mut current_state = match CURRENT_STATE.may_load(storage)? {
+        Some(current_state) => current_state,
+        None => {
+            let tick_lower_sqrt_price_x64 = get_sqrt_price_at_tick(tick_lower).unwrap();
+            let tick_upper_sqrt_price_x64 = get_sqrt_price_at_tick(tick_upper).unwrap();
+            let sqrt_price_x64 = (tick_lower_sqrt_price_x64 + tick_upper_sqrt_price_x64) / 2;
+            CurrentState {
+                liquidity: 0,
+                sqrt_price_x64: sqrt_price_x64,
+                tick: get_tick_at_sqrt_price(sqrt_price_x64).unwrap(),
+            }
+        }
+    };
+    let fee_growth_global = FEE_GROWTH_GROBAL.load(storage)?;
 
-//     // UPDATE TICK HERE
-//     let list_initialized_ticks = LIST_INITIALIZED_TICKS.load(storage)?;
-//     let (tick_lower_info, list_initialized_ticks, remove_lower) =
-//         update_tick_and_list_initialized_tick(
-//             current_state.tick,
-//             tick_lower,
-//             TICKS.may_load(storage, tick_lower)?,
-//             list_initialized_ticks,
-//             fee_growth_global.clone(),
-//             liquidity_delta,
-//             false,
-//         );
+    // UPDATE TICK HERE
+    let list_initialized_ticks = LIST_INITIALIZED_TICKS.load(storage)?;
+    let (tick_lower_info, list_initialized_ticks, remove_lower) =
+        update_tick_and_list_initialized_tick(
+            current_state.tick,
+            tick_lower,
+            TICKS.may_load(storage, tick_lower)?,
+            list_initialized_ticks,
+            fee_growth_global.clone(),
+            liquidity_delta,
+            false,
+        );
 
-//     let (tick_upper_info, list_initialized_ticks, remove_upper) =
-//         update_tick_and_list_initialized_tick(
-//             current_state.tick,
-//             tick_upper,
-//             TICKS.may_load(storage, tick_upper)?,
-//             list_initialized_ticks,
-//             fee_growth_global.clone(),
-//             liquidity_delta,
-//             true,
-//         );
+    let (tick_upper_info, list_initialized_ticks, remove_upper) =
+        update_tick_and_list_initialized_tick(
+            current_state.tick,
+            tick_upper,
+            TICKS.may_load(storage, tick_upper)?,
+            list_initialized_ticks,
+            fee_growth_global.clone(),
+            liquidity_delta,
+            true,
+        );
 
-//     LIST_INITIALIZED_TICKS.save(storage, &list_initialized_ticks)?;
-//     if remove_lower {
-//         TICKS.remove(storage, tick_lower)
-//     } else {
-//         TICKS.save(storage, tick_lower, &tick_lower_info)?
-//     }
+    LIST_INITIALIZED_TICKS.save(storage, &list_initialized_ticks)?;
+    if remove_lower {
+        TICKS.remove(storage, tick_lower)
+    } else {
+        TICKS.save(storage, tick_lower, &tick_lower_info)?
+    }
 
-//     if remove_upper {
-//         TICKS.remove(storage, tick_upper)
-//     } else {
-//         TICKS.save(storage, tick_upper, &tick_upper_info)?
-//     }
+    if remove_upper {
+        TICKS.remove(storage, tick_upper)
+    } else {
+        TICKS.save(storage, tick_upper, &tick_upper_info)?
+    }
 
-//     // UPDATE POSITION HERE
-//     let (fee_growth_inside_0_x128, fee_growth_inside_1_x128) = get_fee_growth_inside(
-//         FeeGrowthOutside {
-//             fee_growth_outside0_x128: Uint::<256, 4>::from_be_bytes(
-//                 tick_lower_info.fee_growth_outside_0_x64.to_be_bytes(),
-//             ),
-//             fee_growth_outside1_x128: Uint::<256, 4>::from_be_bytes(
-//                 tick_lower_info.fee_growth_outside_1_x64.to_be_bytes(),
-//             ),
-//         },
-//         FeeGrowthOutside {
-//             fee_growth_outside0_x128: Uint::<256, 4>::from_be_bytes(
-//                 tick_upper_info.fee_growth_outside_0_x64.to_be_bytes(),
-//             ),
-//             fee_growth_outside1_x128: Uint::<256, 4>::from_be_bytes(
-//                 tick_upper_info.fee_growth_outside_1_x64.to_be_bytes(),
-//             ),
-//         },
-//         tick_lower,
-//         tick_upper,
-//         current_state.tick,
-//         Uint::<256, 4>::from_be_bytes(fee_growth_global.fee_growth_global_0_x64.to_be_bytes()),
-//         Uint::<256, 4>::from_be_bytes(fee_growth_global.fee_growth_global_1_x64.to_be_bytes()),
-//     );
+    // UPDATE POSITION HERE
+    let (fee_growth_inside_0_x64, fee_growth_inside_1_x64) = get_fee_growth_inside(
+        FeeGrowthOutside {
+            fee_growth_outside0_x64: tick_lower_info.fee_growth_outside_0_x64,
+            fee_growth_outside1_x64: tick_lower_info.fee_growth_outside_1_x64,
+        },
+        FeeGrowthOutside {
+            fee_growth_outside0_x64: tick_upper_info.fee_growth_outside_0_x64,
+            fee_growth_outside1_x64: tick_upper_info.fee_growth_outside_1_x64,
+        },
+        tick_lower,
+        tick_upper,
+        current_state.tick,
+        fee_growth_global.fee_growth_global_0_x64,
+        fee_growth_global.fee_growth_global_1_x64,
+    );
 
-//     let new_position = match position {
-//         Some(mut position) => {
-//             let (token_owned_0, token_owned_1) = get_tokens_owed(
-//                 Uint::<256, 4>::from_be_bytes(position.fee_growth_inside_0_last_x64.to_be_bytes()),
-//                 Uint::<256, 4>::from_be_bytes(position.fee_growth_inside_1_last_x64.to_be_bytes()),
-//                 position.liquidity,
-//                 fee_growth_inside_0_x128,
-//                 fee_growth_inside_1_x128,
-//             );
+    let new_position = match position {
+        Some(mut position) => {
+            let (token_owned_0, token_owned_1) = get_tokens_owed(
+                position.fee_growth_inside_0_last_x64,
+                position.fee_growth_inside_1_last_x64,
+                position.liquidity,
+                fee_growth_inside_0_x64,
+                fee_growth_inside_1_x64,
+            );
 
-//             position.liquidity = add_delta(position.liquidity, liquidity_delta).unwrap();
-//             position.fee_growth_inside_0_last_x64 =
-//                 Uint256::from_be_bytes(fee_growth_inside_0_x128.to_be_bytes());
-//             position.fee_growth_inside_1_last_x64 =
-//                 Uint256::from_be_bytes(fee_growth_inside_1_x128.to_be_bytes());
-//             position.tokens_owned_0 = Uint128::from(u128::from_be_bytes(
-//                 <[u8; 16]>::try_from(&token_owned_0.to_be_bytes::<32>()[16..32]).unwrap(),
-//             ));
-//             position.tokens_owned_1 = Uint128::from(u128::from_be_bytes(
-//                 <[u8; 16]>::try_from(&token_owned_1.to_be_bytes::<32>()[16..32]).unwrap(),
-//             ));
-//             position
-//         }
-//         None => Position {
-//             liquidity: add_delta(0, liquidity_delta).unwrap(),
-//             fee_growth_inside_0_last_x64: Uint256::from_be_bytes(
-//                 fee_growth_inside_0_x128.to_be_bytes(),
-//             ),
-//             fee_growth_inside_1_last_x64: Uint256::from_be_bytes(
-//                 fee_growth_inside_1_x128.to_be_bytes(),
-//             ),
-//             tokens_owned_0: Uint128::zero(),
-//             tokens_owned_1: Uint128::zero(),
-//         },
-//     };
+            position.liquidity = add_delta(position.liquidity, liquidity_delta).unwrap();
+            position.fee_growth_inside_0_last_x64 = fee_growth_inside_0_x64;
+            position.fee_growth_inside_1_last_x64 = fee_growth_inside_1_x64;
+            position.tokens_owned_0 = token_owned_0;
+            position.tokens_owned_1 = token_owned_1;
+            position
+        }
+        None => Position {
+            liquidity: add_delta(0, liquidity_delta).unwrap(),
+            fee_growth_inside_0_last_x64: fee_growth_inside_0_x64,
+            fee_growth_inside_1_last_x64: fee_growth_inside_1_x64,
+            tokens_owned_0: 0,
+            tokens_owned_1: 0,
+        },
+    };
 
-//     // GET amount_0 and amount_1 from liquidity_delta. update current_state.liquidity if needed
+    // GET amount_0 and amount_1 from liquidity_delta. update current_state.liquidity if needed
 
-//     let (mut amount_0_uint128, mut amount_1_uint128) = (Uint128::zero(), Uint128::zero());
+    let (mut amount_0_uint128, mut amount_1_uint128) = (Uint128::zero(), Uint128::zero());
 
-//     if liquidity_delta != 0 {
-//         let (amount_0, amount_1) = if current_state.tick < tick_lower {
-//             (
-//                 get_amount_0_delta(
-//                     get_sqrt_price_at_tick(tick_lower).unwrap(),
-//                     get_sqrt_price_at_tick(tick_upper).unwrap(),
-//                     u128::try_from(liquidity_delta.abs()).unwrap(),
-//                     false,
-//                 )
-//                 .unwrap(),
-//                 Uint::<256, 4>::ZERO,
-//             )
-//         } else if current_state.tick < tick_upper {
-//             current_state.liquidity = add_delta(current_state.liquidity, liquidity_delta).unwrap();
-//             CURRENT_STATE.save(storage, &current_state)?;
-//             (
-//                 get_amount_0_delta(
-//                     Uint::<256, 4>::from_be_bytes(current_state.sqrt_price_x64.to_be_bytes()),
-//                     get_sqrt_price_at_tick(tick_upper).unwrap(),
-//                     u128::try_from(liquidity_delta.abs()).unwrap(),
-//                     false,
-//                 )
-//                 .unwrap(),
-//                 get_amount_1_delta(
-//                     get_sqrt_price_at_tick(tick_lower).unwrap(),
-//                     Uint::<256, 4>::from_be_bytes(current_state.sqrt_price_x64.to_be_bytes()),
-//                     u128::try_from(liquidity_delta.abs()).unwrap(),
-//                     false,
-//                 )
-//                 .unwrap(),
-//             )
-//         } else {
-//             (
-//                 Uint::<256, 4>::ZERO,
-//                 get_amount_1_delta(
-//                     get_sqrt_price_at_tick(tick_lower).unwrap(),
-//                     get_sqrt_price_at_tick(tick_upper).unwrap(),
-//                     u128::try_from(liquidity_delta.abs()).unwrap(),
-//                     false,
-//                 )
-//                 .unwrap(),
-//             )
-//         };
-//         amount_0_uint128 = Uint128::from(u128::from_be_bytes(
-//             <[u8; 16]>::try_from(&amount_0.to_be_bytes::<32>()[16..32]).unwrap(),
-//         ));
-//         amount_1_uint128 = Uint128::from(u128::from_be_bytes(
-//             <[u8; 16]>::try_from(&amount_1.to_be_bytes::<32>()[16..32]).unwrap(),
-//         ));
-//     }
+    let liquidity_net = liquidity_delta.abs() as u128;
 
-//     Ok((new_position, amount_0_uint128, amount_1_uint128))
-// }
+    if liquidity_delta != 0 {
+        let (amount_0, amount_1) = if current_state.tick < tick_lower {
+            (
+                get_delta_amount_0_unsigned(
+                    get_sqrt_price_at_tick(tick_lower)?,
+                    get_sqrt_price_at_tick(tick_upper)?,
+                    liquidity_net,
+                    false,
+                ),
+                0,
+            )
+        } else if current_state.tick < tick_upper {
+            current_state.liquidity = add_delta(current_state.liquidity, liquidity_delta)?;
+            CURRENT_STATE.save(storage, &current_state)?;
+            (
+                get_delta_amount_0_unsigned(
+                    current_state.sqrt_price_x64,
+                    get_sqrt_price_at_tick(tick_upper)?,
+                    liquidity_net,
+                    false,
+                ),
+                get_delta_amount_1_unsigned(
+                    get_sqrt_price_at_tick(tick_lower)?,
+                    current_state.sqrt_price_x64,
+                    liquidity_net,
+                    false,
+                ),
+            )
+        } else {
+            (
+                0,
+                get_delta_amount_1_unsigned(
+                    get_sqrt_price_at_tick(tick_lower)?,
+                    get_sqrt_price_at_tick(tick_upper)?,
+                    liquidity_net,
+                    false,
+                ),
+            )
+        };
+        amount_0_uint128 = Uint128::from(amount_0);
+        amount_1_uint128 = Uint128::from(amount_1);
+    }
+
+    Ok((new_position, amount_0_uint128, amount_1_uint128))
+}
 
 fn execute_mint(
     deps: DepsMut,
@@ -745,115 +693,113 @@ fn execute_mint(
     tick_upper: i32,
     lp_amount: i128,
 ) -> Result<Response, ContractError> {
-    Ok(Response::default())
+    let config = CONFIG.load(deps.storage)?;
+    let mut nft_info = NFT_INFO.load(deps.storage)?;
+    let mut messages: Vec<WasmMsg> = vec![];
 
-    //     let config = CONFIG.load(deps.storage)?;
-    //     let mut nft_info = NFT_INFO.load(deps.storage)?;
-    //     let mut messages: Vec<WasmMsg> = vec![];
+    if !(tick_lower < tick_upper
+        && tick_lower >= tick_math::MIN_TICK
+        && tick_upper <= tick_math::MAX_TICK)
+    {
+        return Err(ContractError::InvalidTicks {});
+    }
 
-    //     if !(tick_lower < tick_upper
-    //         && tick_lower >= tick_math::MIN_TICK
-    //         && tick_upper <= tick_math::MAX_TICK)
-    //     {
-    //         return Err(ContractError::InvalidTicks {});
-    //     }
+    if lp_amount == 0 {
+        return Err(ContractError::ZeroAmount {});
+    }
 
-    //     if lp_amount == 0 {
-    //         return Err(ContractError::ZeroAmount {});
-    //     }
+    let (new_position, amount_0, amount_1) =
+        modiy_position(deps.storage, tick_lower, tick_upper, lp_amount, None)?;
 
-    //     let (new_position, amount_0, amount_1) =
-    //         modiy_position(deps.storage, tick_lower, tick_upper, lp_amount, None)?;
+    let mut nft_name = "".to_string();
 
-    //     let mut nft_name = "".to_string();
+    if amount_0 > Uint128::zero() {
+        match config.token_0 {
+            AssetInfo::NativeToken { denom } => {
+                if !(info.funds.contains(&Coin {
+                    denom: denom.clone(),
+                    amount: amount_0,
+                })) {
+                    return Err(ContractError::InvalidFunds {});
+                }
+                nft_name.push_str(&denom);
+                nft_name.push('_');
+            }
+            AssetInfo::Token { contract_addr } => {
+                messages.push(WasmMsg::Execute {
+                    contract_addr: contract_addr.to_string(),
+                    msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                        owner: info.sender.to_string(),
+                        recipient: env.contract.address.to_string(),
+                        amount: amount_0,
+                    })?,
+                    funds: vec![],
+                });
+                nft_name.push_str(contract_addr.as_ref());
+                nft_name.push('_');
+            }
+        }
+    }
 
-    //     if amount_0 > Uint128::zero() {
-    //         match config.token_0 {
-    //             AssetInfo::NativeToken { denom } => {
-    //                 if !(info.funds.contains(&Coin {
-    //                     denom: denom.clone(),
-    //                     amount: amount_0,
-    //                 })) {
-    //                     return Err(ContractError::InvalidFunds {});
-    //                 }
-    //                 nft_name.push_str(&denom);
-    //                 nft_name.push('_');
-    //             }
-    //             AssetInfo::Token { contract_addr } => {
-    //                 messages.push(WasmMsg::Execute {
-    //                     contract_addr: contract_addr.to_string(),
-    //                     msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-    //                         owner: info.sender.to_string(),
-    //                         recipient: env.contract.address.to_string(),
-    //                         amount: amount_0,
-    //                     })?,
-    //                     funds: vec![],
-    //                 });
-    //                 nft_name.push_str(contract_addr.as_ref());
-    //                 nft_name.push('_');
-    //             }
-    //         }
-    //     }
+    if amount_1 > Uint128::zero() {
+        match config.token_1 {
+            AssetInfo::NativeToken { denom } => {
+                if !(info.funds.contains(&Coin {
+                    denom: denom.clone(),
+                    amount: amount_1,
+                })) {
+                    return Err(ContractError::InvalidFunds {});
+                }
+                nft_name.push_str(&denom);
+                nft_name.push('_');
+            }
+            AssetInfo::Token { contract_addr } => {
+                messages.push(WasmMsg::Execute {
+                    contract_addr: contract_addr.to_string(),
+                    msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                        owner: info.sender.to_string(),
+                        recipient: env.contract.address.to_string(),
+                        amount: amount_1,
+                    })?,
+                    funds: vec![],
+                });
+                nft_name.push_str(contract_addr.as_ref());
+                nft_name.push('_');
+            }
+        }
+    }
 
-    //     if amount_1 > Uint128::zero() {
-    //         match config.token_1 {
-    //             AssetInfo::NativeToken { denom } => {
-    //                 if !(info.funds.contains(&Coin {
-    //                     denom: denom.clone(),
-    //                     amount: amount_1,
-    //                 })) {
-    //                     return Err(ContractError::InvalidFunds {});
-    //                 }
-    //                 nft_name.push_str(&denom);
-    //                 nft_name.push('_');
-    //             }
-    //             AssetInfo::Token { contract_addr } => {
-    //                 messages.push(WasmMsg::Execute {
-    //                     contract_addr: contract_addr.to_string(),
-    //                     msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-    //                         owner: info.sender.to_string(),
-    //                         recipient: env.contract.address.to_string(),
-    //                         amount: amount_1,
-    //                     })?,
-    //                     funds: vec![],
-    //                 });
-    //                 nft_name.push_str(contract_addr.as_ref());
-    //                 nft_name.push('_');
-    //             }
-    //         }
-    //     }
+    let nft_id = nft_info.last_id + 1;
+    nft_name.push_str(&nft_id.to_string());
 
-    //     let nft_id = nft_info.last_id + 1;
-    //     nft_name.push_str(&nft_id.to_string());
+    messages.push(WasmMsg::Execute {
+        contract_addr: nft_info.nft_address.to_string(),
+        msg: to_binary(&Cw721BaseExecuteMsg::<NftExtentions>::Mint {
+            token_id: nft_name.clone(),
+            owner: recipient.to_string(),
+            token_uri: None,
+            extension: NftExtentions {
+                pool: env.contract.address.clone(),
+                tick_lower,
+                tick_upper,
+            },
+        })?,
+        funds: vec![],
+    });
 
-    //     messages.push(WasmMsg::Execute {
-    //         contract_addr: nft_info.nft_address.to_string(),
-    //         msg: to_binary(&Cw721BaseExecuteMsg::<NftExtentions>::Mint {
-    //             token_id: nft_name.clone(),
-    //             owner: recipient.to_string(),
-    //             token_uri: None,
-    //             extension: NftExtentions {
-    //                 pool: env.contract.address.clone(),
-    //                 tick_lower,
-    //                 tick_upper,
-    //             },
-    //         })?,
-    //         funds: vec![],
-    //     });
+    nft_info.last_id = nft_id;
+    NFT_INFO.save(deps.storage, &nft_info)?;
+    POSITIONS.save(deps.storage, nft_name.clone(), &new_position)?;
 
-    //     nft_info.last_id = nft_id;
-    //     NFT_INFO.save(deps.storage, &nft_info)?;
-    //     POSITIONS.save(deps.storage, nft_name.clone(), &new_position)?;
-
-    //     Ok(Response::new()
-    //         .add_attributes(vec![
-    //             ("action", "mint"),
-    //             ("pool", env.contract.address.as_ref()),
-    //             ("tick_lower", &tick_lower.to_string()),
-    //             ("tick_upper", &tick_upper.to_string()),
-    //             ("token_id", &nft_name),
-    //         ])
-    //         .add_messages(messages))
+    Ok(Response::new()
+        .add_attributes(vec![
+            ("action", "mint"),
+            ("pool", env.contract.address.as_ref()),
+            ("tick_lower", &tick_lower.to_string()),
+            ("tick_upper", &tick_upper.to_string()),
+            ("token_id", &nft_name),
+        ])
+        .add_messages(messages))
 }
 
 fn receive_cw721(
@@ -862,405 +808,389 @@ fn receive_cw721(
     info: MessageInfo,
     cw721_msg: Cw721ReceiveMsg,
 ) -> Result<Response, ContractError> {
-    Ok(Response::default())
-    //     match from_json(&cw721_msg.msg)? {
-    //         Cw721HookMsg::Burn {} => {
-    //             let nft_info = NFT_INFO.load(deps.storage)?;
-    //             let nft_info_resposne: NftInfoResponse<NftExtentions> = deps.querier.query_wasm_smart(
-    //                 nft_info.nft_address.clone(),
-    //                 &Cw721QueryMsg::NftInfo {
-    //                     token_id: cw721_msg.token_id.clone(),
-    //                 },
-    //             )?;
-    //             let nft_extension = nft_info_resposne.extension;
+    match from_binary(&cw721_msg.msg)? {
+        Cw721HookMsg::Burn {} => {
+            let nft_info = NFT_INFO.load(deps.storage)?;
+            let nft_info_resposne: NftInfoResponse<NftExtentions> = deps.querier.query_wasm_smart(
+                nft_info.nft_address.clone(),
+                &Cw721QueryMsg::NftInfo {
+                    token_id: cw721_msg.token_id.clone(),
+                },
+            )?;
+            let nft_extension = nft_info_resposne.extension;
 
-    //             if info.sender != nft_info.nft_address || nft_extension.pool != env.contract.address {
-    //                 return Err(ContractError::InvalidFunds {});
-    //             }
-    //             let position = POSITIONS.load(deps.storage, cw721_msg.token_id.clone())?;
-    //             let (new_position, amount_0, amount_1) = modiy_position(
-    //                 deps.storage,
-    //                 nft_extension.tick_lower,
-    //                 nft_extension.tick_upper,
-    //                 -i128::try_from(position.liquidity).unwrap(),
-    //                 Some(position),
-    //             )?;
+            if info.sender != nft_info.nft_address || nft_extension.pool != env.contract.address {
+                return Err(ContractError::InvalidFunds {});
+            }
+            let position = POSITIONS.load(deps.storage, cw721_msg.token_id.clone())?;
+            let (new_position, amount_0, amount_1) = modiy_position(
+                deps.storage,
+                nft_extension.tick_lower,
+                nft_extension.tick_upper,
+                -(position.liquidity as i128),
+                Some(position),
+            )?;
 
-    //             let total_amount_0 = amount_0 + new_position.tokens_owned_0;
-    //             let total_amount_1 = amount_1 + new_position.tokens_owned_1;
+            let total_amount_0 = amount_0 + Uint128::from(new_position.tokens_owned_0);
+            let total_amount_1 = amount_1 + Uint128::from(new_position.tokens_owned_1);
 
-    //             let config = CONFIG.load(deps.storage)?;
+            let config = CONFIG.load(deps.storage)?;
 
-    //             let mut messages: Vec<CosmosMsg> = vec![];
+            let mut messages: Vec<CosmosMsg> = vec![];
 
-    //             if total_amount_0 > Uint128::zero() {
-    //                 match config.token_0 {
-    //                     AssetInfo::NativeToken { denom } => {
-    //                         messages.push(CosmosMsg::Bank(BankMsg::Send {
-    //                             to_address: cw721_msg.sender.clone(),
-    //                             amount: vec![Coin {
-    //                                 denom,
-    //                                 amount: total_amount_0,
-    //                             }],
-    //                         }));
-    //                     }
-    //                     AssetInfo::Token { contract_addr } => {
-    //                         messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-    //                             contract_addr: contract_addr.to_string(),
-    //                             msg: to_binary(&Cw20ExecuteMsg::Transfer {
-    //                                 recipient: cw721_msg.sender.clone(),
-    //                                 amount: total_amount_0,
-    //                             })?,
-    //                             funds: vec![],
-    //                         }));
-    //                     }
-    //                 }
-    //             }
+            if total_amount_0 > Uint128::zero() {
+                match config.token_0 {
+                    AssetInfo::NativeToken { denom } => {
+                        messages.push(CosmosMsg::Bank(BankMsg::Send {
+                            to_address: cw721_msg.sender.clone(),
+                            amount: vec![Coin {
+                                denom,
+                                amount: total_amount_0,
+                            }],
+                        }));
+                    }
+                    AssetInfo::Token { contract_addr } => {
+                        messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                            contract_addr: contract_addr.to_string(),
+                            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                                recipient: cw721_msg.sender.clone(),
+                                amount: total_amount_0,
+                            })?,
+                            funds: vec![],
+                        }));
+                    }
+                }
+            }
 
-    //             if total_amount_1 > Uint128::zero() {
-    //                 match config.token_1 {
-    //                     AssetInfo::NativeToken { denom } => {
-    //                         messages.push(CosmosMsg::Bank(BankMsg::Send {
-    //                             to_address: cw721_msg.sender,
-    //                             amount: vec![Coin {
-    //                                 denom,
-    //                                 amount: total_amount_1,
-    //                             }],
-    //                         }));
-    //                     }
-    //                     AssetInfo::Token { contract_addr } => {
-    //                         messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-    //                             contract_addr: contract_addr.to_string(),
-    //                             msg: to_binary(&Cw20ExecuteMsg::Transfer {
-    //                                 recipient: cw721_msg.sender,
-    //                                 amount: total_amount_1,
-    //                             })?,
-    //                             funds: vec![],
-    //                         }));
-    //                     }
-    //                 }
-    //             }
+            if total_amount_1 > Uint128::zero() {
+                match config.token_1 {
+                    AssetInfo::NativeToken { denom } => {
+                        messages.push(CosmosMsg::Bank(BankMsg::Send {
+                            to_address: cw721_msg.sender,
+                            amount: vec![Coin {
+                                denom,
+                                amount: total_amount_1,
+                            }],
+                        }));
+                    }
+                    AssetInfo::Token { contract_addr } => {
+                        messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                            contract_addr: contract_addr.to_string(),
+                            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                                recipient: cw721_msg.sender,
+                                amount: total_amount_1,
+                            })?,
+                            funds: vec![],
+                        }));
+                    }
+                }
+            }
 
-    //             messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-    //                 contract_addr: nft_info.nft_address.to_string(),
-    //                 msg: to_binary(&Cw721ExecuteMsg::Burn {
-    //                     token_id: cw721_msg.token_id.clone(),
-    //                 })?,
-    //                 funds: vec![],
-    //             }));
+            messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                contract_addr: nft_info.nft_address.to_string(),
+                msg: to_binary(&Cw721ExecuteMsg::Burn {
+                    token_id: cw721_msg.token_id.clone(),
+                })?,
+                funds: vec![],
+            }));
 
-    //             POSITIONS.remove(deps.storage, cw721_msg.token_id.clone());
+            POSITIONS.remove(deps.storage, cw721_msg.token_id.clone());
 
-    //             Ok(Response::new()
-    //                 .add_attributes(vec![
-    //                     ("action", "burn"),
-    //                     ("pool", env.contract.address.as_ref()),
-    //                     ("tick_lower", &nft_extension.tick_lower.to_string()),
-    //                     ("tick_upper", &nft_extension.tick_upper.to_string()),
-    //                     ("token_id", &cw721_msg.token_id),
-    //                 ])
-    //                 .add_messages(messages))
-    //         }
-    //     }
+            Ok(Response::new()
+                .add_attributes(vec![
+                    ("action", "burn"),
+                    ("pool", env.contract.address.as_ref()),
+                    ("tick_lower", &nft_extension.tick_lower.to_string()),
+                    ("tick_upper", &nft_extension.tick_upper.to_string()),
+                    ("token_id", &cw721_msg.token_id),
+                ])
+                .add_messages(messages))
+        }
+    }
 }
 
 fn execute_collect(deps: DepsMut, token_ids: Vec<String>) -> Result<Response, ContractError> {
-    Ok(Response::default())
-    //     let config = CONFIG.load(deps.storage)?;
-    //     let nft_info = NFT_INFO.load(deps.storage)?;
+    let config = CONFIG.load(deps.storage)?;
+    let nft_info = NFT_INFO.load(deps.storage)?;
 
-    //     let mut messages: Vec<CosmosMsg> = vec![];
+    let mut messages: Vec<CosmosMsg> = vec![];
 
-    //     for token_id in token_ids {
-    //         let all_nft_info_res: AllNftInfoResponse<NftExtentions> = deps.querier.query_wasm_smart(
-    //             nft_info.nft_address.clone(),
-    //             &Cw721QueryMsg::AllNftInfo {
-    //                 token_id: token_id.clone(),
-    //                 include_expired: None,
-    //             },
-    //         )?;
+    for token_id in token_ids {
+        let all_nft_info_res: AllNftInfoResponse<NftExtentions> = deps.querier.query_wasm_smart(
+            nft_info.nft_address.clone(),
+            &Cw721QueryMsg::AllNftInfo {
+                token_id: token_id.clone(),
+                include_expired: None,
+            },
+        )?;
 
-    //         let nft_info_extenstion = all_nft_info_res.info.extension;
-    //         let position = POSITIONS.may_load(deps.storage, token_id.clone())?;
+        let nft_info_extenstion = all_nft_info_res.info.extension;
+        let position = POSITIONS.may_load(deps.storage, token_id.clone())?;
 
-    //         let (mut new_position, _, _) = modiy_position(
-    //             deps.storage,
-    //             nft_info_extenstion.tick_lower,
-    //             nft_info_extenstion.tick_upper,
-    //             0,
-    //             position,
-    //         )?;
-    //         let owner = all_nft_info_res.access.owner;
-    //         match config.token_0.clone() {
-    //             AssetInfo::NativeToken { denom } => {
-    //                 messages.push(CosmosMsg::Bank(BankMsg::Send {
-    //                     to_address: owner.clone(),
-    //                     amount: vec![Coin {
-    //                         denom,
-    //                         amount: new_position.tokens_owned_0,
-    //                     }],
-    //                 }));
-    //             }
-    //             AssetInfo::Token { contract_addr } => {
-    //                 messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-    //                     contract_addr: contract_addr.to_string(),
-    //                     msg: to_binary(&Cw20ExecuteMsg::Transfer {
-    //                         recipient: owner.clone(),
-    //                         amount: new_position.tokens_owned_0,
-    //                     })?,
-    //                     funds: vec![],
-    //                 }));
-    //             }
-    //         }
-    //         match config.token_1.clone() {
-    //             AssetInfo::NativeToken { denom } => {
-    //                 messages.push(CosmosMsg::Bank(BankMsg::Send {
-    //                     to_address: owner,
-    //                     amount: vec![Coin {
-    //                         denom,
-    //                         amount: new_position.tokens_owned_1,
-    //                     }],
-    //                 }));
-    //             }
-    //             AssetInfo::Token { contract_addr } => {
-    //                 messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
-    //                     contract_addr: contract_addr.to_string(),
-    //                     msg: to_binary(&Cw20ExecuteMsg::Transfer {
-    //                         recipient: owner,
-    //                         amount: new_position.tokens_owned_1,
-    //                     })?,
-    //                     funds: vec![],
-    //                 }));
-    //             }
-    //         }
-    //         new_position.tokens_owned_0 = Uint128::zero();
-    //         new_position.tokens_owned_1 = Uint128::zero();
-    //         POSITIONS.save(deps.storage, token_id, &new_position)?;
-    //     }
-    //     Ok(Response::new()
-    //         .add_attributes(vec![("action", "collect")])
-    //         .add_messages(messages))
+        let (mut new_position, _, _) = modiy_position(
+            deps.storage,
+            nft_info_extenstion.tick_lower,
+            nft_info_extenstion.tick_upper,
+            0,
+            position,
+        )?;
+        let owner = all_nft_info_res.access.owner;
+        match config.token_0.clone() {
+            AssetInfo::NativeToken { denom } => {
+                messages.push(CosmosMsg::Bank(BankMsg::Send {
+                    to_address: owner.clone(),
+                    amount: vec![Coin {
+                        denom,
+                        amount: new_position.tokens_owned_0.into(),
+                    }],
+                }));
+            }
+            AssetInfo::Token { contract_addr } => {
+                messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                    contract_addr: contract_addr.to_string(),
+                    msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                        recipient: owner.clone(),
+                        amount: new_position.tokens_owned_0.into(),
+                    })?,
+                    funds: vec![],
+                }));
+            }
+        }
+        match config.token_1.clone() {
+            AssetInfo::NativeToken { denom } => {
+                messages.push(CosmosMsg::Bank(BankMsg::Send {
+                    to_address: owner,
+                    amount: vec![Coin {
+                        denom,
+                        amount: new_position.tokens_owned_1.into(),
+                    }],
+                }));
+            }
+            AssetInfo::Token { contract_addr } => {
+                messages.push(CosmosMsg::Wasm(WasmMsg::Execute {
+                    contract_addr: contract_addr.to_string(),
+                    msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                        recipient: owner,
+                        amount: new_position.tokens_owned_1.into(),
+                    })?,
+                    funds: vec![],
+                }));
+            }
+        }
+        new_position.tokens_owned_0 = 0;
+        new_position.tokens_owned_1 = 0;
+        POSITIONS.save(deps.storage, token_id, &new_position)?;
+    }
+    Ok(Response::new()
+        .add_attributes(vec![("action", "collect")])
+        .add_messages(messages))
 }
-
-// fn execute_swap(
-//     deps: DepsMut,
-//     recipient: Addr,
-//     zero_for_one: bool,
-//     amount_specified: Int256,
-//     sqrt_price_limit_x64: Uint256,
-// ) -> Result<Response, ContractError> {
-//     if amount_specified == Int256::zero() {
-//         return Err(ContractError::InvalidSqrtPriceLimitX96 {});
-//     }
-
-//     let current_state = CURRENT_STATE.load(deps.storage).unwrap();
-//     if zero_for_one {
-//         let min_sqrt_ratio_in_uint256 = Uint256::from_str(&MIN_SQRT_RATIO.to_string()).unwrap();
-//         if !(sqrt_price_limit_x64 < current_state.sqrt_price_x64
-//             && sqrt_price_limit_x64 > min_sqrt_ratio_in_uint256)
-//         {
-//             return Err(ContractError::InvalidSqrtPrice {});
-//         }
-//     } else {
-//         let max_sqrt_ratio_in_uint256 = Uint256::from_str(&MAX_SQRT_RATIO.to_string()).unwrap();
-//         if !(sqrt_price_limit_x64 > current_state.sqrt_price_x64
-//             && sqrt_price_limit_x64 < max_sqrt_ratio_in_uint256)
-//         {
-//             return Err(ContractError::InvalidSqrtPrice {});
-//         }
-//     }
-
-//     let exact_input = amount_specified > Int256::zero();
-
-//     let fee_growth_global = FEE_GROWTH_GROBAL.load(deps.storage).unwrap();
-
-//     let fee_growth_global_x64 = if zero_for_one {
-//         fee_growth_global.fee_growth_global_0_x64
-//     } else {
-//         fee_growth_global.fee_growth_global_1_x64
-//     };
-
-//     let state = SwapState {
-//         amount_specified_remaining: amount_specified,
-//         amount_calculated: Int256::zero(),
-//         sqrt_price_x64: current_state.sqrt_price_x64,
-//         tick: current_state.tick,
-//         fee_growth_global_x64,
-//         liquidity: current_state.liquidity,
-//     };
-
-//     while state.amount_specified_remaining != Int256::zero()
-//         && state.sqrt_price_x64 != sqrt_price_limit_x64
-//     {
-//         let mut step = StepComputations {
-//             sqrt_price_start_x64: Uint256::zero(),
-//             tick_next: 0,
-//             initialized: false,
-//             sqrt_price_next_x64: Uint256::zero(),
-//             amount_in: Uint256::zero(),
-//             amount_out: Uint256::zero(),
-//             fee_amount: Uint256::zero(),
-//         };
-//         step.sqrt_price_start_x64 = state.sqrt_price_x64;
-//     }
-
-//     Ok(Response::new())
-// }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
     unimplemented!()
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use std::str::FromStr;
+/// Computes the amount of fees owed to a position
+pub fn get_tokens_owed(
+    fee_growth_inside_0_last_x64: u128,
+    fee_growth_inside_1_last_x64: u128,
+    liquidity: u128,
+    fee_growth_inside_0_x64: u128,
+    fee_growth_inside_1_x64: u128,
+) -> (u64, u64) {
+    // calculate accumulated Fees
+    let tokens_owed_0 =
+        U128::from(fee_growth_inside_0_x64.saturating_sub(fee_growth_inside_0_last_x64))
+            .mul_div_floor(U128::from(liquidity), U128::from(fixed_point_64::Q64))
+            .unwrap()
+            .to_underflow_u64();
+    let tokens_owed_1 =
+        U128::from(fee_growth_inside_1_x64.saturating_sub(fee_growth_inside_1_last_x64))
+            .mul_div_floor(U128::from(liquidity), U128::from(fixed_point_64::Q64))
+            .unwrap()
+            .to_underflow_u64();
 
-//     use crate::contract::get_tick_at_sqrt_ratio;
-//     use cosmwasm_std::Decimal256;
-//     use cosmwasm_std::Int128;
-//     use cosmwasm_std::Uint128;
-//     use cosmwasm_std::Uint256;
-//     use ruint::Uint;
-//     use utils::MAX_TICK;
-//     use utils::MIN_SQRT_RATIO;
-//     use utils::MIN_TICK;
+    (tokens_owed_0, tokens_owed_1)
+}
 
-//     #[test]
-//     fn test_1() {
-//         // test individual values for correct results
-//         let x = Uint256::from_u128(4295128739u128);
-//         let y = Uint256::from_be_bytes(Uint::<256, 4>::from(4295128739u128).to_be_bytes());
-//         let tick = get_tick_at_sqrt_ratio(Uint::<256, 4>::from_be_bytes(x.to_be_bytes())).unwrap();
+pub fn get_fee_growth_inside(
+    lower: FeeGrowthOutside,
+    upper: FeeGrowthOutside,
+    tick_lower: i32,
+    tick_upper: i32,
+    tick_current: i32,
+    fee_growth_global0_x64: u128,
+    fee_growth_global1_x64: u128,
+) -> (u128, u128) {
+    if tick_current < tick_lower {
+        (
+            lower.fee_growth_outside0_x64 - upper.fee_growth_outside0_x64,
+            lower.fee_growth_outside1_x64 - upper.fee_growth_outside1_x64,
+        )
+    } else if tick_current >= tick_upper {
+        (
+            upper.fee_growth_outside0_x64 - lower.fee_growth_outside0_x64,
+            upper.fee_growth_outside1_x64 - lower.fee_growth_outside1_x64,
+        )
+    } else {
+        (
+            fee_growth_global0_x64 - lower.fee_growth_outside0_x64 - upper.fee_growth_outside0_x64,
+            fee_growth_global1_x64 - lower.fee_growth_outside1_x64 - upper.fee_growth_outside1_x64,
+        )
+    }
+}
 
-//         assert_eq!(x, y, "incorrect");
-//         assert_eq!(tick, MIN_TICK, "incorrect");
-//     }
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
 
-//     #[test]
-//     fn test_2() {
-//         // test individual values for correct results
+    use cosmwasm_std::Decimal256;
 
-//         let tick_spacing = 600;
-//         let num_ticks = (u32::try_from(MAX_TICK).unwrap() / tick_spacing) * 2 + 1;
-//         assert_eq!(num_ticks, 2957, "incorrect");
-//     }
+    use cosmwasm_std::Uint128;
+    use cosmwasm_std::Uint256;
+    use ruint::Uint;
 
-//     #[test]
-//     fn test_3() {
-//         // test individual values for correct results
+    use crate::libraries::get_tick_at_sqrt_price;
+    use crate::libraries::MAX_TICK;
+    use crate::libraries::MIN_SQRT_PRICE_X64;
+    use crate::libraries::MIN_TICK;
 
-//         let x: Int128 = Int128::try_from(Uint128::from(50u128)).unwrap();
-//         let y: i128 = -i128::try_from(50u128).unwrap();
-//         assert_eq!(x, Int128::from(50), "incorrect");
-//         assert_eq!(y, -50, "incorrect");
-//     }
+    #[test]
+    fn test_1() {
+        // test individual values for correct results
+        let x = 4295128739u128;
+        let y = 4295128739u128;
+        let tick = get_tick_at_sqrt_price(x).unwrap();
 
-//     #[test]
-//     fn test_4() {
-//         // test individual values for correct results
+        assert_eq!(x, y, "incorrect");
+        assert_eq!(tick, MIN_TICK, "incorrect");
+    }
 
-//         let x: u128 = u128::try_from(Uint128::from(50u128)).unwrap();
-//         assert_eq!(x, 50_u128, "incorrect");
-//     }
-//     #[test]
-//     fn test_5() {
-//         let x = Uint::<256, 4>::from(5000_u128);
-//         let y = Uint128::from(u128::from_be_bytes(
-//             <[u8; 16]>::try_from(&x.to_be_bytes::<32>()[16..32]).unwrap(),
-//         ));
+    #[test]
+    fn test_2() {
+        // test individual values for correct results
 
-//         assert_eq!(y, Uint128::from(5000_u128), "incorrect");
-//     }
-//     #[test]
-//     fn test_6() {
-//         let x = MIN_SQRT_RATIO.to_string();
-//         let y = Uint256::from_str(&x).unwrap();
-//         println!("{}", x);
-//         println!("{}", y);
-//     }
-//     #[test]
-//     fn test_7() {
-//         let mut vec = vec![10, 20, 30, 40, 50];
-//         let a = 25;
-//         vec.sort();
-//         let pos = vec.binary_search_by(|x| x.cmp(&a).then(std::cmp::Ordering::Greater));
-//         match pos {
-//             Ok(index) => println!("Found element exactly matching {}: {}", a, vec[index]),
-//             Err(index) => {
-//                 if index < vec.len() {
-//                     println!("Smallest element greater than {}: {}", a, vec[index]);
-//                 } else {
-//                     println!("No element greater than {}", a);
-//                 }
-//             }
-//         }
-//     }
-//     #[test]
-//     fn test_8() {
-//         let vec = vec![10, 20, 30, 40, 50];
-//         let a = 25;
-//         let sorted_vec = vec;
-//         let pos = sorted_vec.binary_search(&a);
-//         match pos {
-//             Ok(index) => {
-//                 if index + 1 < sorted_vec.len() {
-//                     println!(
-//                         "Smallest element greater than {}: {}",
-//                         index,
-//                         sorted_vec[index - 1]
-//                     );
-//                 } else {
-//                     println!("No element greater than {}", a);
-//                 }
-//             }
-//             Err(index) => {
-//                 if index < sorted_vec.len() {
-//                     println!("Smallest element greater than {}: {}", a, sorted_vec[index]);
-//                 } else {
-//                     println!("No element greater than {}", a);
-//                 }
-//             }
-//         }
-//     }
-//     #[test]
-//     fn test_9() {
-//         let vec = vec![30, 40];
-//         let a = 25;
-//         let sorted_vec = vec;
-//         let pos = sorted_vec.binary_search(&a);
-//         match pos {
-//             Ok(index) => {
-//                 if index > 0 {
-//                     println!(
-//                         "Largest element smaller than {}: {}",
-//                         a,
-//                         sorted_vec[index - 1]
-//                     );
-//                 } else {
-//                     println!("No element smaller than {}", a);
-//                 }
-//             }
-//             Err(index) => {
-//                 if index > 0 {
-//                     println!(
-//                         "Largest element smaller than {}: {}",
-//                         a,
-//                         sorted_vec[index - 1]
-//                     );
-//                 } else {
-//                     println!("No element smaller than {}", a);
-//                 }
-//             }
-//         }
-//     }
+        let tick_spacing = 600;
+        let num_ticks = (MAX_TICK as u32 / tick_spacing) * 2 + 1;
+        assert_eq!(num_ticks, 1479, "incorrect");
+    }
 
-//     #[test]
-//     fn test_10() {
-//         let tick_spacing = 200;
-//         let num_ticks = (u32::try_from(MAX_TICK).unwrap() / tick_spacing) * 2 + 1;
-//         let x = Uint128::try_from(Decimal256::from_ratio(Uint128::MAX, num_ticks).to_uint_floor())
-//             .unwrap();
-//         println!("{}", x);
-//     }
-// }
+    #[test]
+    fn test_3() {
+        // test individual values for correct results
+
+        let x = 50u128;
+        let y = -50i128;
+        assert_eq!(x, 50, "incorrect");
+        assert_eq!(y, -50, "incorrect");
+    }
+
+    #[test]
+    fn test_4() {
+        // test individual values for correct results
+
+        let x: u128 = u128::try_from(Uint128::from(50u128)).unwrap();
+        assert_eq!(x, 50_u128, "incorrect");
+    }
+    #[test]
+    fn test_5() {
+        let x = Uint::<256, 4>::from(5000_u128);
+        let y = Uint128::from(u128::from_be_bytes(
+            <[u8; 16]>::try_from(&x.to_be_bytes::<32>()[16..32]).unwrap(),
+        ));
+
+        assert_eq!(y, Uint128::from(5000_u128), "incorrect");
+    }
+    #[test]
+    fn test_6() {
+        let x = MIN_SQRT_PRICE_X64.to_string();
+        let y = Uint256::from_str(&x).unwrap();
+        println!("{}", x);
+        println!("{}", y);
+    }
+    #[test]
+    fn test_7() {
+        let mut vec = vec![10, 20, 30, 40, 50];
+        let a = 25;
+        vec.sort();
+        let pos = vec.binary_search_by(|x| x.cmp(&a).then(std::cmp::Ordering::Greater));
+        match pos {
+            Ok(index) => println!("Found element exactly matching {}: {}", a, vec[index]),
+            Err(index) => {
+                if index < vec.len() {
+                    println!("Smallest element greater than {}: {}", a, vec[index]);
+                } else {
+                    println!("No element greater than {}", a);
+                }
+            }
+        }
+    }
+    #[test]
+    fn test_8() {
+        let vec = vec![10, 20, 30, 40, 50];
+        let a = 25;
+        let sorted_vec = vec;
+        let pos = sorted_vec.binary_search(&a);
+        match pos {
+            Ok(index) => {
+                if index + 1 < sorted_vec.len() {
+                    println!(
+                        "Smallest element greater than {}: {}",
+                        index,
+                        sorted_vec[index - 1]
+                    );
+                } else {
+                    println!("No element greater than {}", a);
+                }
+            }
+            Err(index) => {
+                if index < sorted_vec.len() {
+                    println!("Smallest element greater than {}: {}", a, sorted_vec[index]);
+                } else {
+                    println!("No element greater than {}", a);
+                }
+            }
+        }
+    }
+    #[test]
+    fn test_9() {
+        let vec = vec![30, 40];
+        let a = 25;
+        let sorted_vec = vec;
+        let pos = sorted_vec.binary_search(&a);
+        match pos {
+            Ok(index) => {
+                if index > 0 {
+                    println!(
+                        "Largest element smaller than {}: {}",
+                        a,
+                        sorted_vec[index - 1]
+                    );
+                } else {
+                    println!("No element smaller than {}", a);
+                }
+            }
+            Err(index) => {
+                if index > 0 {
+                    println!(
+                        "Largest element smaller than {}: {}",
+                        a,
+                        sorted_vec[index - 1]
+                    );
+                } else {
+                    println!("No element smaller than {}", a);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_10() {
+        let tick_spacing = 200;
+        let num_ticks = (u32::try_from(MAX_TICK).unwrap() / tick_spacing) * 2 + 1;
+        let x = Uint128::try_from(Decimal256::from_ratio(Uint128::MAX, num_ticks).to_uint_floor())
+            .unwrap();
+        println!("{}", x);
+    }
+}

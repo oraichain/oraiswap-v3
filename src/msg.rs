@@ -42,3 +42,9 @@ pub enum Cw721HookMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {}
+
+#[cw_serde]
+pub struct FeeGrowthOutside {
+    pub fee_growth_outside0_x64: u128,
+    pub fee_growth_outside1_x64: u128,
+}
