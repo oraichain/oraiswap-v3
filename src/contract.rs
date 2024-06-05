@@ -1,22 +1,8 @@
-#[cfg(not(feature = "library"))]
-use cosmwasm_std::{entry_point, Decimal256};
-use cosmwasm_std::{
-    from_binary, from_slice, to_binary, Addr, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env,
-    MessageInfo, Response, StdError, StdResult, Storage, Uint128, Uint256, WasmMsg,
-};
-use cw20::Cw20ExecuteMsg;
-use cw721::{AllNftInfoResponse, Cw721ExecuteMsg, Cw721QueryMsg, Cw721ReceiveMsg, NftInfoResponse};
-use ruint::Uint;
-// use cw2::set_contract_version;
-
 use crate::error::ContractError;
-use crate::interface::{AssetInfo, Cw721BaseExecuteMsg, NftExtentions};
-use crate::libraries::{
-    add_delta, fixed_point_64, get_delta_amount_0_unsigned, get_delta_amount_1_unsigned,
-    get_sqrt_price_at_tick, get_tick_at_sqrt_price, swap_math, tick_math, MulDiv, SwapStep,
-    MAX_SQRT_PRICE_X64, MIN_SQRT_PRICE_X64, U128,
-};
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+#[cfg(not(feature = "library"))]
+use cosmwasm_std::entry_point;
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -35,12 +21,52 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    match msg {}
+    match msg {
+        ExecuteMsg::Mint {
+            recipient,
+            tick_lower,
+            tick_upper,
+            liquidity,
+        } => unimplemented!(),
+        ExecuteMsg::Collect {
+            recipient,
+            tick_lower,
+            tick_upper,
+            amount_0_requested,
+            amount_1_requested,
+        } => unimplemented!(),
+        ExecuteMsg::Burn {
+            tick_lower,
+            tick_upper,
+            liquidity,
+        } => unimplemented!(),
+        ExecuteMsg::Swap {
+            recipient,
+            zero_for_one,
+            amount_in,
+            sqrt_price_limit_x64,
+        } => unimplemented!(),
+        ExecuteMsg::CollectProtocol {
+            recipient,
+            amount_0_requested,
+            amount_1_requested,
+        } => unimplemented!(),
+    }
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    unimplemented!()
+pub fn query(_deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::PoolConfig {} => unimplemented!(),
+        QueryMsg::Fee {} => unimplemented!(),
+        QueryMsg::Slot0 {} => unimplemented!(),
+        QueryMsg::FeeGrowthGlobalX64 {} => unimplemented!(),
+        QueryMsg::ProtocolFee {} => unimplemented!(),
+        QueryMsg::Ticks { tick } => unimplemented!(),
+        QueryMsg::Position { key } => unimplemented!(),
+        QueryMsg::Liquidity {} => unimplemented!(),
+        QueryMsg::TickBitmap { word_position } => unimplemented!(),
+    }
 }
 
 #[cfg(test)]

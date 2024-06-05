@@ -6,7 +6,7 @@ use cw_storage_plus::{Item, Map};
     mapping(int24 => Tick.Info) public override ticks; x
     mapping(int16 => uint256) public override tickBitmap; x
     mapping(bytes32 => Position.Info) public override positions; x
-    Oracle.Observation[65535] public override observations;
+    Oracle.Observation[65535] public override observations; x
 */
 #[cw_serde]
 pub struct PoolConfig {
@@ -103,14 +103,14 @@ pub struct Position {
 
 /*
     struct Observation {
-        uint32 blockTimestamp;
-        int56 tickCumulative;
-        uint160 secondsPerLiquidityCumulativeX128;
+        uint32 blockTimestamp; x
+        int56 tickCumulative; x
+        uint160 secondsPerLiquidityCumulativeX128; x
 */
 #[cw_serde]
 pub struct Observation {
     pub block_timestamp: u32,
-    pub tick_cumulative: i64,
+    pub tick_cumulative: u128,
     pub seconds_per_liquidity_cumulative_x128: u128,
 }
 
@@ -122,3 +122,4 @@ pub const POOL_CONFIG: Item<PoolConfig> = Item::new("pool_config");
 pub const TICKS: Map<i64, TickInfo> = Map::new("ticks");
 pub const TICK_BITMAP: Map<i16, u128> = Map::new("tick_bitmap");
 pub const POSITIONS: Map<&str, Position> = Map::new("positions");
+pub const OBSERVATIONS: Map<u16, Observation> = Map::new("observations");
