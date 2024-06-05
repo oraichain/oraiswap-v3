@@ -1,68 +1,125 @@
-use cosmwasm_std::StdError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ContractError {
-    #[error("{0}")]
-    Std(#[from] StdError),
 
-    #[error("Unauthorized")]
-    Unauthorized {},
+    #[error("Invalid tick spacing")]
+    InvalidTickSpacing,
 
-    #[error("Invalid funds")]
-    InvalidFunds {},
+    #[error("Invalid fee")]
+    InvalidFee,
 
-    #[error("Invalid ticks")]
-    InvalidTicks {},
+    #[error("InvalidTickIndex")]
+    InvalidTickIndex,
 
-    #[error("Zero lp amount")]
-    ZeroLpAmount {},
+    #[error("InvalidTick")]
+    InvalidTick,
 
-    #[error("Invalid sqrt price limit x96")]
-    InvalidSqrtPriceLimitX96 {},
+    #[error("Tokens are the same")]
+    TokensAreSame,
 
-    #[error("Invalid sqrt price limit")]
-    InvalidSqrtPrice {},
+    #[error("Invalid tick")]
+    InvalidInitTick,
 
-    #[error("Zero amount")]
-    ZeroAmount {},
+    #[error("Invalid sqrt price")]
+    InvalidInitSqrtPrice,
 
-    #[error("Invalid price limit")]
-    InvalidPriceLimit {},
+    #[error("")]
+    Mul,
 
-    #[error("Can't find the next tick")]
-    NoNextTick {},
+    #[error("")]
+    Div,
 
-    #[error("Cannot compute swap step")]
-    CannotComputeSwapStep {},
+    #[error("")]
+    Cast,
 
-    #[error("Square root price limit overflow")]
-    SqrtPriceLimitOverflow,
-    // second inequality must be < because the price can never reach the price at the max tick
-    #[error("sqrt_price_x64 out of range")]
-    SqrtPriceX64,
+    #[error("")]
+    Add,
 
-    #[error("Tick out of range")]
-    InvaildTickIndex,
-    #[error("The lower tick must be below the upper tick")]
-    TickInvaildOrder,
-    #[error("The tick must be greater, or equal to the minimum tick(-221818)")]
-    TickLowerOverflow,
-    #[error("The tick must be lesser than, or equal to the maximum tick(221818)")]
-    TickUpperOverflow,
+    #[error("")]
+    Sub,
 
-    // Liquidity Sub
-    #[error("Liquidity sub delta L must be smaller than before")]
-    LiquiditySubValueErr,
-    // Liquidity Add
-    #[error("Liquidity add delta L must be greater, or equal to before")]
-    LiquidityAddValueErr,
-    #[error("Invaild liquidity when update position")]
-    InvaildLiquidity,
-    #[error("Both token amount must not be zero while supply liquidity")]
-    ForbidBothZeroForSupplyLiquidity,
-    #[error("Liquidity insufficient")]
-    LiquidityInsufficient,
-    // Add any other custom errors you like here.
-    // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
+    #[error("update_liquidity: liquidity + liquidity_delta overflow")]
+    UpdateLiquidityPlusOverflow,
+
+    #[error("update_liquidity: liquidity - liquidity_delta underflow")]
+    UpdateLiquidityMinusOverflow,
+
+    #[error("EmptyPositionPokes")]
+    EmptyPositionPokes,
+
+    #[error("position add liquidity overflow")]
+    PositionAddLiquidityOverflow,
+
+    #[error("position remove liquidity underflow")]
+    PositionRemoveLiquidityUnderflow,
+
+    #[error("PriceLimitReached")]
+    PriceLimitReached,
+
+    #[error("InsufficientLiquidity")]
+    InsufficientLiquidity, 
+
+    #[error("current_timestamp - pool.start_timestamp underflow")]
+    TimestampSubOverflow,
+
+    #[error("pool.liquidity + tick.liquidity_change overflow")]
+    PoolAddTickLiquidityOverflow,
+
+    #[error("pool.liquidity - tick.liquidity_change underflow")]
+    PoolSubTickLiquidityUnderflow,
+
+    #[error("tick add liquidity overflow")]
+    TickAddLiquidityOverflow,
+
+    #[error("tick remove liquidity underflow")]
+    TickRemoveLiquidityUnderflow,
+
+    #[error("Invalid tick liquidity")]
+    InvalidTickLiquidity,
+
+    #[error("sqrt_price out of range")]
+    SqrtPriceOutOfRange,
+
+    #[error("current_timestamp > last_timestamp failed")]
+    TimestampCheckFailed,
+
+    #[error("Can't parse from u320 to u256")]
+    U320ToU256,
+
+    #[error("tick over bounds")]
+    TickOverBounds,
+
+    #[error("calculate_sqrt_price: parsing from scale failed")]
+    ParseFromScale,
+
+    #[error("calcaule_sqrt_price::checked_div division failed")]
+    CheckedDiv,
+    
+    #[error("calculate_sqrt_price: parsing scale failed")]
+    ParseScale,
+
+    #[error("extending liquidity overflow")]
+    ExtendLiquidityOverflow,
+
+    #[error("big_liquidity -/+ sqrt_price * x")]
+    BigLiquidityOverflow,
+
+    #[error("upper_tick is not greater than lower_tick")]
+    UpperTickNotGreater,
+
+    #[error("tick_lower > tick_upper")]
+    TickLowerGreater,
+
+    #[error("Upper Sqrt Price < Current Sqrt Price")]
+    UpperSqrtPriceLess,
+
+    #[error("Overflow in calculating liquidity")]
+    OverflowInCalculatingLiquidity,
+    
+    #[error("Current Sqrt Price < Lower Sqrt Price")]
+    CurrentSqrtPriceLess,
+
+    #[error("Overflow while casting to TokenAmount")]
+    OverflowCastingTokenAmount,
 }

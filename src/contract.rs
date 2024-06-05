@@ -21,52 +21,12 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    match msg {
-        ExecuteMsg::Mint {
-            recipient,
-            tick_lower,
-            tick_upper,
-            liquidity,
-        } => unimplemented!(),
-        ExecuteMsg::Collect {
-            recipient,
-            tick_lower,
-            tick_upper,
-            amount_0_requested,
-            amount_1_requested,
-        } => unimplemented!(),
-        ExecuteMsg::Burn {
-            tick_lower,
-            tick_upper,
-            liquidity,
-        } => unimplemented!(),
-        ExecuteMsg::Swap {
-            recipient,
-            zero_for_one,
-            amount_in,
-            sqrt_price_limit_x64,
-        } => unimplemented!(),
-        ExecuteMsg::CollectProtocol {
-            recipient,
-            amount_0_requested,
-            amount_1_requested,
-        } => unimplemented!(),
-    }
+    unimplemented!()
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(_deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
-    match msg {
-        QueryMsg::PoolConfig {} => unimplemented!(),
-        QueryMsg::Fee {} => unimplemented!(),
-        QueryMsg::Slot0 {} => unimplemented!(),
-        QueryMsg::FeeGrowthGlobalX64 {} => unimplemented!(),
-        QueryMsg::ProtocolFee {} => unimplemented!(),
-        QueryMsg::Ticks { tick } => unimplemented!(),
-        QueryMsg::Position { key } => unimplemented!(),
-        QueryMsg::Liquidity {} => unimplemented!(),
-        QueryMsg::TickBitmap { word_position } => unimplemented!(),
-    }
+    match msg {}
 }
 
 #[cfg(test)]
