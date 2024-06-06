@@ -210,10 +210,10 @@ pub fn get_next_sqrt_price_x_up(
     }
     .ok_or_else(|| ContractError::BigLiquidityOverflow))?; // never should be triggered
 
-    (SqrtPrice::checked_big_div_values_up(
+    SqrtPrice::checked_big_div_values_up(
         starting_sqrt_price.big_mul_to_value_up(liquidity),
         denominator,
-    ))
+    )
 }
 
 fn get_next_sqrt_price_y_down(

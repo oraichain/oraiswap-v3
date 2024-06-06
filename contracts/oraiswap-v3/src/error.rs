@@ -1,7 +1,10 @@
+use cosmwasm_std::StdError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ContractError {
+    #[error("{0}")]
+    Std(#[from] StdError),
 
     #[error("Invalid tick spacing")]
     InvalidTickSpacing,
@@ -58,7 +61,7 @@ pub enum ContractError {
     PriceLimitReached,
 
     #[error("InsufficientLiquidity")]
-    InsufficientLiquidity, 
+    InsufficientLiquidity,
 
     #[error("current_timestamp - pool.start_timestamp underflow")]
     TimestampSubOverflow,
@@ -95,7 +98,7 @@ pub enum ContractError {
 
     #[error("calcaule_sqrt_price::checked_div division failed")]
     CheckedDiv,
-    
+
     #[error("calculate_sqrt_price: parsing scale failed")]
     ParseScale,
 
@@ -116,7 +119,7 @@ pub enum ContractError {
 
     #[error("Overflow in calculating liquidity")]
     OverflowInCalculatingLiquidity,
-    
+
     #[error("Current Sqrt Price < Lower Sqrt Price")]
     CurrentSqrtPriceLess,
 

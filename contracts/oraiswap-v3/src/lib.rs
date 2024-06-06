@@ -11,3 +11,6 @@ pub mod storage;
 pub use crate::error::ContractError;
 pub use math::*;
 pub use storage::*;
+
+#[cfg(test)]
+mod tests;
