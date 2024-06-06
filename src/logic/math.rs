@@ -108,13 +108,13 @@ pub fn get_liquidity_by_x(
     let lower_sqrt_price = (calculate_sqrt_price(lower_tick))?;
     let upper_sqrt_price = (calculate_sqrt_price(upper_tick))?;
 
-    (get_liquidity_by_x_sqrt_price(
+    get_liquidity_by_x_sqrt_price(
         x,
         lower_sqrt_price,
         upper_sqrt_price,
         current_sqrt_price,
         rounding_up,
-    ))
+    )
 }
 pub fn get_liquidity_by_x_sqrt_price(
     x: TokenAmount,
@@ -181,13 +181,13 @@ pub fn get_liquidity_by_y(
     let lower_sqrt_price = (calculate_sqrt_price(lower_tick))?;
     let upper_sqrt_price = (calculate_sqrt_price(upper_tick))?;
 
-    (get_liquidity_by_y_sqrt_price(
+    get_liquidity_by_y_sqrt_price(
         y,
         lower_sqrt_price,
         upper_sqrt_price,
         current_sqrt_price,
         rounding_up,
-    ))
+    )
 }
 
 #[allow(dead_code)]

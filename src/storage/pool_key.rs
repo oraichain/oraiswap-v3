@@ -26,11 +26,7 @@ impl Default for PoolKey {
 }
 
 impl PoolKey {
-    pub fn new(
-        token_0: Addr,
-        token_1: Addr,
-        fee_tier: FeeTier,
-    ) -> Result<Self, ContractError> {
+    pub fn new(token_0: Addr, token_1: Addr, fee_tier: FeeTier) -> Result<Self, ContractError> {
         if token_0 == token_1 {
             return Err(ContractError::TokensAreSame);
         }

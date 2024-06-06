@@ -71,12 +71,7 @@ impl Position {
         )?;
 
         // calculate tokens amounts and update pool liquidity
-        pool.update_liquidity(
-            liquidity_delta,
-            add,
-            upper_tick.index,
-            lower_tick.index
-        )
+        pool.update_liquidity(liquidity_delta, add, upper_tick.index, lower_tick.index)
     }
 
     pub fn update(
@@ -135,16 +130,16 @@ impl Position {
         upper_tick: &mut Tick,
         lower_tick: &mut Tick,
         current_timestamp: u64,
-    ) -> (TokenAmount, TokenAmount) {
-        (self.modify(
+    ) -> Result<(TokenAmount, TokenAmount), ContractError> {
+        self.modify(
             pool,
             upper_tick,
             lower_tick,
             Liquidity::new(0),
             true,
             current_timestamp,
-            self.pool_key.fee_tier.tick_spacing
-        ));
+            self.pool_key.fee_tier.tick_spacing,
+        )?;
 
         let tokens_owed_x = self.tokens_owed_x;
         let tokens_owed_y = self.tokens_owed_y;
@@ -152,7 +147,7 @@ impl Position {
         self.tokens_owed_x = TokenAmount(0);
         self.tokens_owed_y = TokenAmount(0);
 
-        (tokens_owed_x, tokens_owed_y)
+        Ok((tokens_owed_x, tokens_owed_y))
     }
     #[allow(clippy::too_many_arguments)]
     pub fn create(
@@ -191,8 +186,9 @@ impl Position {
             liquidity_delta,
             true,
             current_timestamp,
-            tick_spacing
-        )).unwrap();
+            tick_spacing,
+        ))
+        .unwrap();
 
         Ok((position, required_x, required_y))
     }
@@ -204,17 +200,17 @@ impl Position {
         lower_tick: &mut Tick,
         upper_tick: &mut Tick,
         tick_spacing: u16,
-    ) -> (TokenAmount, TokenAmount, bool, bool) {
+    ) -> Result<(TokenAmount, TokenAmount, bool, bool), ContractError> {
         let liquidity_delta = self.liquidity;
-        let (mut amount_x, mut amount_y) = (self.modify(
+        let (mut amount_x, mut amount_y) = self.modify(
             pool,
             upper_tick,
             lower_tick,
             liquidity_delta,
             false,
             current_timestamp,
-            tick_spacing
-        )).unwrap();
+            tick_spacing,
+        )?;
 
         amount_x += self.tokens_owed_x;
         amount_y += self.tokens_owed_y;
@@ -222,12 +218,12 @@ impl Position {
         let deinitialize_lower_tick = lower_tick.liquidity_gross.is_zero();
         let deinitialize_upper_tick = upper_tick.liquidity_gross.is_zero();
 
-        (
+        Ok((
             amount_x,
             amount_y,
             deinitialize_lower_tick,
             deinitialize_upper_tick,
-        )
+        ))
     }
 }
 

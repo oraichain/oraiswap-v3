@@ -154,17 +154,15 @@ impl Pool {
         current_timestamp: u64,
         protocol_fee: Percentage,
         fee_tier: FeeTier,
-    ) -> (TokenAmount, TokenAmount, bool) {
+    ) -> Result<(TokenAmount, TokenAmount, bool), ContractError> {
         let mut has_crossed = false;
         let mut total_amount = TokenAmount(0);
 
         if UpdatePoolTick::NoTick == *tick || swap_limit != result.next_sqrt_price {
-            self.current_tick_index = get_tick_at_sqrt_price(
-                result.next_sqrt_price,
-                fee_tier.tick_spacing
-            ).unwrap();
+            self.current_tick_index =
+                get_tick_at_sqrt_price(result.next_sqrt_price, fee_tier.tick_spacing)?;
 
-            return (total_amount, remaining_amount, has_crossed);
+            return Ok((total_amount, remaining_amount, has_crossed));
         };
 
         let is_enough_amount_to_cross = is_enough_amount_to_change_price(
@@ -174,7 +172,7 @@ impl Pool {
             fee_tier.fee,
             by_amount_in,
             x_to_y,
-        ).unwrap();
+        )?;
 
         let tick_index = match tick {
             UpdatePoolTick::TickInitialized(tick) => {
@@ -183,7 +181,7 @@ impl Pool {
                     has_crossed = true;
                 } else if !remaining_amount.is_zero() {
                     if by_amount_in {
-                        self.add_fee(remaining_amount, x_to_y, protocol_fee);
+                        self.add_fee(remaining_amount, x_to_y, protocol_fee)?;
                         total_amount = remaining_amount;
                     }
                     remaining_amount = TokenAmount(0);
@@ -201,7 +199,7 @@ impl Pool {
             tick_index
         };
 
-        (total_amount, remaining_amount, has_crossed)
+        Ok((total_amount, remaining_amount, has_crossed))
     }
 
     pub fn withdraw_protocol_fee(&mut self, _pool_key: PoolKey) -> (TokenAmount, TokenAmount) {
@@ -263,14 +261,16 @@ mod tests {
             let init_tick = 2;
             let init_sqrt_price = SqrtPrice::new(1000175003749000000000000);
             let tick_spacing = 1;
-            let pool = Pool::create(
+            let pool_err = Pool::create(
                 init_sqrt_price,
                 init_tick,
                 current_timestamp,
                 tick_spacing,
                 fee_receiver.clone(),
-            );
-            // assert_eq!(pool, ContractError::InvalidInitSqrtPrice);
+            )
+            .unwrap_err();
+            assert!(matches!(pool_err, ContractError::InvalidInitSqrtPrice));
+
             let correct_init_tick = 3;
             let pool = Pool::create(
                 init_sqrt_price,
@@ -286,14 +286,15 @@ mod tests {
             let init_tick = 0;
             let init_sqrt_price = SqrtPrice::new(1000225003749000000000000);
             let tick_spacing = 3;
-            let pool = Pool::create(
+            let pool_err = Pool::create(
                 init_sqrt_price,
                 init_tick,
                 current_timestamp,
                 tick_spacing,
                 fee_receiver.clone(),
-            );
-            // assert_eq!(pool, Err(ContractError::InvalidInitSqrtPrice));
+            )
+            .unwrap_err();
+            assert!(matches!(pool_err, ContractError::InvalidInitSqrtPrice));
             let correct_init_tick = 3;
             let pool = Pool::create(
                 init_sqrt_price,

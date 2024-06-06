@@ -4,10 +4,10 @@ pub mod interface;
 pub mod msg;
 pub mod state;
 
+pub mod logic;
 pub mod math;
 pub mod storage;
-pub mod logic;
 
+pub use crate::error::ContractError;
 pub use math::*;
 pub use storage::*;
-pub use crate::error::ContractError;
