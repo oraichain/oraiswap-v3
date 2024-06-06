@@ -3,14 +3,19 @@ use cosmwasm_std::entry_point;
 use decimal::{CheckedOps, Decimal};
 
 use crate::error::ContractError;
-use crate::interface::CalculateSwapResult;
+use crate::interface::{CalculateSwapResult, SwapHop};
 use crate::liquidity::Liquidity;
-use crate::token_amount::TokenAmount;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::percentage::Percentage;
 use crate::sqrt_price::{get_max_tick, get_min_tick, SqrtPrice};
-use crate::state::{add_position, add_tick, flip_bitmap, get_closer_limit, get_tick, update_tick, CONFIG, POOLS};
-use crate::{check_tick, compute_swap_step, Config, PoolKey, Position, Tick, UpdatePoolTick, MAX_SQRT_PRICE, MIN_SQRT_PRICE};
+use crate::state::{
+    add_position, add_tick, flip_bitmap, get_closer_limit, get_tick, update_tick, CONFIG, POOLS,
+};
+use crate::token_amount::TokenAmount;
+use crate::{
+    check_tick, compute_swap_step, Config, PoolKey, Position, Tick,
+    UpdatePoolTick, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
+};
 
 use cosmwasm_std::{
     to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Storage, WasmMsg,
@@ -93,9 +98,12 @@ pub fn execute(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::ProtocolFee {} => to_binary(&get_protocol_fee(deps)?),
+        QueryMsg::QuoteRoute { amount_in, swaps } => {
+            to_binary(&quote_route(deps.storage, env, amount_in, swaps)?)
+        }
     }
 }
 
@@ -284,7 +292,7 @@ fn create_position(
     ]))
 }
 
-pub fn calculate_swap(
+fn calculate_swap(
     store: &dyn Storage,
     current_timestamp: u64,
     pool_key: PoolKey,
@@ -302,8 +310,7 @@ pub fn calculate_swap(
     let mut pool = POOLS.load(store, &pool_key.key())?;
 
     if x_to_y {
-        if pool.sqrt_price <= sqrt_price_limit
-            || sqrt_price_limit > SqrtPrice::new(MAX_SQRT_PRICE)
+        if pool.sqrt_price <= sqrt_price_limit || sqrt_price_limit > SqrtPrice::new(MAX_SQRT_PRICE)
         {
             return Err(ContractError::WrongLimit {});
         }
@@ -428,7 +435,7 @@ pub fn calculate_swap(
     })
 }
 
-pub fn swap(
+fn swap(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -499,5 +506,41 @@ pub fn swap(
         });
     }
 
-    Ok(Response::new().add_messages(msgs).add_attribute("action", "swap"))
+    Ok(Response::new()
+        .add_messages(msgs)
+        .add_attribute("action", "swap")
+        .add_attribute("amount_out", calculate_swap_result.amount_out.to_string()))
+}
+
+fn quote_route(
+    store: &dyn Storage,
+    env: Env,
+    amount_in: TokenAmount,
+    swaps: Vec<SwapHop>,
+) -> StdResult<TokenAmount> {
+    let mut next_swap_amount = amount_in;
+
+    for swap_hop in swaps.iter() {
+        let SwapHop { pool_key, x_to_y } = swap_hop;
+
+        let sqrt_price_limit = if *x_to_y {
+            SqrtPrice::new(MIN_SQRT_PRICE)
+        } else {
+            SqrtPrice::new(MAX_SQRT_PRICE)
+        };
+
+        let res = calculate_swap(
+            store,
+            env.block.time.nanos(),
+            pool_key.clone(),
+            *x_to_y,
+            next_swap_amount,
+            true,
+            sqrt_price_limit,
+        ).unwrap();
+
+        next_swap_amount = res.amount_out;
+    }
+
+    Ok(next_swap_amount)
 }

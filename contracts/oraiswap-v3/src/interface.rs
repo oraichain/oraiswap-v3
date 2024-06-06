@@ -1,7 +1,7 @@
 use cosmwasm_schema::cw_serde;
 use cosmwasm_std::{Addr, Uint128};
 
-use crate::{sqrt_price::SqrtPrice, token_amount::TokenAmount, Pool, Tick};
+use crate::{sqrt_price::SqrtPrice, token_amount::TokenAmount, Pool, PoolKey, Tick};
 
 #[cw_serde]
 pub struct Asset {
@@ -22,6 +22,7 @@ pub struct NftExtentions {
     pub tick_upper: i32,
 }
 
+#[cw_serde]
 pub struct CalculateSwapResult {
     pub amount_in: TokenAmount,
     pub amount_out: TokenAmount,
@@ -30,6 +31,12 @@ pub struct CalculateSwapResult {
     pub fee: TokenAmount,
     pub pool: Pool,
     pub ticks: Vec<Tick>,
+}
+
+#[cw_serde]
+pub struct SwapHop {
+    pub pool_key: PoolKey,
+    pub x_to_y: bool,
 }
 
 #[cw_serde]

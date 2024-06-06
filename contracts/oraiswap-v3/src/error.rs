@@ -158,4 +158,10 @@ pub enum ContractError {
 
     #[error("NoGainSwap")]
     NoGainSwap,
+
+    #[error("SwapFailed")]
+    SwapFailed,
+
+    #[error("AmountUnderMinimumAmountOut")]
+    AmountUnderMinimumAmountOut
 }
