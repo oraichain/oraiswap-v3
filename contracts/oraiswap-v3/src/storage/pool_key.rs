@@ -6,6 +6,7 @@ use crate::math::percentage::Percentage;
 use crate::{ContractError, FeeTier};
 
 #[cw_serde]
+#[derive(Eq)]
 pub struct PoolKey {
     pub token_x: Addr,
     pub token_y: Addr,

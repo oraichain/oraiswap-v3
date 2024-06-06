@@ -7,11 +7,7 @@ use decimal::*;
 
 #[decimal(28)]
 #[cw_serde]
-#[derive(Default, Copy, Eq, PartialOrd, scale::Decode, scale::Encode)]
-#[cfg_attr(
-    feature = "std",
-    derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
-)]
+#[derive(Default, Eq, Copy)]
 pub struct FeeGrowth(pub u128);
 
 impl FeeGrowth {

@@ -3,6 +3,7 @@ use cosmwasm_schema::cw_serde;
 use decimal::*;
 
 #[cw_serde]
+#[derive(Eq, Copy)]
 pub struct FeeTier {
     pub fee: Percentage,
     pub tick_spacing: u16,

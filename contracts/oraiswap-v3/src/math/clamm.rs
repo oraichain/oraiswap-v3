@@ -1,10 +1,11 @@
+use cosmwasm_schema::cw_serde;
 use decimal::*;
 
 use crate::math::consts::*;
 use crate::math::types::{liquidity::*, percentage::*, sqrt_price::*, token_amount::*};
 use crate::ContractError;
 
-#[derive(PartialEq, Debug, Copy, Clone)]
+#[cw_serde]
 pub struct SwapResult {
     pub next_sqrt_price: SqrtPrice,
     pub amount_in: TokenAmount,
@@ -62,12 +63,8 @@ pub fn compute_swap_step(
         if amount >= amount_out {
             next_sqrt_price = target_sqrt_price
         } else {
-            next_sqrt_price = (get_next_sqrt_price_from_output(
-                current_sqrt_price,
-                liquidity,
-                amount,
-                x_to_y
-            ))?;
+            next_sqrt_price =
+                (get_next_sqrt_price_from_output(current_sqrt_price, liquidity, amount, x_to_y))?;
         }
     }
 
@@ -75,37 +72,17 @@ pub fn compute_swap_step(
 
     if x_to_y {
         if not_max || !by_amount_in {
-            amount_in = (get_delta_x(
-                next_sqrt_price,
-                current_sqrt_price,
-                liquidity,
-                true
-            ))?
+            amount_in = (get_delta_x(next_sqrt_price, current_sqrt_price, liquidity, true))?
         };
         if not_max || by_amount_in {
-            amount_out = (get_delta_y(
-                next_sqrt_price,
-                current_sqrt_price,
-                liquidity,
-                false
-            ))?
+            amount_out = (get_delta_y(next_sqrt_price, current_sqrt_price, liquidity, false))?
         }
     } else {
         if not_max || !by_amount_in {
-            amount_in = (get_delta_y(
-                current_sqrt_price,
-                next_sqrt_price,
-                liquidity,
-                true
-            ))?
+            amount_in = (get_delta_y(current_sqrt_price, next_sqrt_price, liquidity, true))?
         };
         if not_max || by_amount_in {
-            amount_out = (get_delta_x(
-                current_sqrt_price,
-                next_sqrt_price,
-                liquidity,
-                false
-            ))?
+            amount_out = (get_delta_x(current_sqrt_price, next_sqrt_price, liquidity, false))?
         };
     }
 
@@ -178,9 +155,9 @@ pub fn get_delta_y(
             .ok_or_else(|| ContractError::Div)?,
     };
 
-    Ok(TokenAmount(delta_y.try_into().map_err(|_| {
-        ContractError::Cast
-    })?))
+    Ok(TokenAmount(
+        delta_y.try_into().map_err(|_| ContractError::Cast)?,
+    ))
 }
 
 fn get_next_sqrt_price_from_input(
@@ -235,7 +212,7 @@ pub fn get_next_sqrt_price_x_up(
 
     (SqrtPrice::checked_big_div_values_up(
         starting_sqrt_price.big_mul_to_value_up(liquidity),
-        denominator
+        denominator,
     ))
 }
 
@@ -251,12 +228,10 @@ fn get_next_sqrt_price_y_down(
         .map_err(|_| ContractError::ExtendLiquidityOverflow)?;
 
     if add_y {
-        let quotient =
-            (SqrtPrice::checked_big_div_values(numerator, denominator))?;
+        let quotient = (SqrtPrice::checked_big_div_values(numerator, denominator))?;
         Ok(starting_sqrt_price.checked_add(quotient).unwrap())
     } else {
-        let quotient =
-            (SqrtPrice::checked_big_div_values_up(numerator, denominator))?;
+        let quotient = (SqrtPrice::checked_big_div_values_up(numerator, denominator))?;
         Ok(starting_sqrt_price.checked_sub(quotient).unwrap())
     }
 }
@@ -337,7 +312,11 @@ pub fn calculate_max_liquidity_per_tick(tick_spacing: u16) -> Liquidity {
     Liquidity::new(Liquidity::max_instance().get() / ticks_amount_spacing_limited)
 }
 
-pub fn check_ticks(tick_lower: i32, tick_upper: i32, tick_spacing: u16) -> Result<(), ContractError> {
+pub fn check_ticks(
+    tick_lower: i32,
+    tick_upper: i32,
+    tick_spacing: u16,
+) -> Result<(), ContractError> {
     if tick_lower > tick_upper {
         return Err(ContractError::TickLowerGreater);
     }

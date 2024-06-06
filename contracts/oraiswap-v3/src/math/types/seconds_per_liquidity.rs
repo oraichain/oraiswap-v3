@@ -1,13 +1,11 @@
+use cosmwasm_schema::cw_serde;
 use decimal::*;
 
 use crate::{math::types::liquidity::Liquidity, ContractError};
 
 #[decimal(24)]
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, scale::Decode, scale::Encode)]
-#[cfg_attr(
-    feature = "std",
-    derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
-)]
+#[cw_serde]
+#[derive(Default, Eq, PartialOrd, Copy)]
 pub struct SecondsPerLiquidity(pub u128);
 
 impl SecondsPerLiquidity {

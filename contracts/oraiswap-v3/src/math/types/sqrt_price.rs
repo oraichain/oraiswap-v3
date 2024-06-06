@@ -7,11 +7,7 @@ use crate::ContractError;
 
 #[decimal(24)]
 #[cw_serde]
-#[derive(Default, Copy, Eq, PartialOrd, scale::Decode, scale::Encode)]
-#[cfg_attr(
-    feature = "std",
-    derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
-)]
+#[derive(Default, Eq, PartialOrd, Copy)]
 pub struct SqrtPrice(pub u128);
 
 impl SqrtPrice {

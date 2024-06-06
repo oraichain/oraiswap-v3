@@ -15,7 +15,7 @@ use cosmwasm_schema::cw_serde;
 use decimal::*;
 
 #[cw_serde]
-#[derive(Default)]
+#[derive(Default, Eq)]
 pub struct Position {
     pub pool_key: PoolKey,
     pub liquidity: Liquidity,

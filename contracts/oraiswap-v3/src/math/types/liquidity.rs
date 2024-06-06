@@ -3,9 +3,5 @@ use decimal::*;
 
 #[decimal(6)]
 #[cw_serde]
-#[derive(Default, Copy, Eq, PartialOrd, scale::Decode, scale::Encode)]
-#[cfg_attr(
-    feature = "std",
-    derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
-)]
+#[derive(Default, Eq, Copy, PartialOrd)]
 pub struct Liquidity(pub u128);

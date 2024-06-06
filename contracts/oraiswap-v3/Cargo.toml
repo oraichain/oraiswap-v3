@@ -29,9 +29,6 @@ thiserror = { workspace = true }
 cw721 = { workspace = true }
 
 decimal = { workspace = true }
-scale = { package = "parity-scale-codec", version = "3", default-features = false, features = [
-  "derive",
-] }
 
 [dev-dependencies]
 quickcheck = "0.9"
