@@ -27,13 +27,13 @@ impl Default for PoolKey {
 }
 
 impl PoolKey {
-    pub fn key(&self, api: &dyn Api) -> Result<Vec<u8>, ContractError> {
-        let token_x_bytes = api.addr_canonicalize(self.token_x.as_str())?;
-        let token_y_bytes = api.addr_canonicalize(self.token_y.as_str())?;
-        Ok(match token_x_bytes.le(&token_y_bytes) {
-            true => [token_x_bytes.as_slice(), token_y_bytes.as_slice()].concat(),
-            false => [token_y_bytes.as_slice(), token_x_bytes.as_slice()].concat(),
-        })
+    pub fn key(&self) -> Vec<u8> {
+        let token_x_bytes = self.token_x.as_bytes();
+        let token_y_bytes = self.token_y.as_bytes();
+        match token_x_bytes.le(token_y_bytes) {
+            true => [token_x_bytes, token_y_bytes].concat(),
+            false => [token_y_bytes, token_x_bytes].concat(),
+        }
     }
 
     pub fn new(token_0: Addr, token_1: Addr, fee_tier: FeeTier) -> Result<Self, ContractError> {

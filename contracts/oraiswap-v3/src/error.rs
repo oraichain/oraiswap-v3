@@ -51,6 +51,9 @@ pub enum ContractError {
     #[error("EmptyPositionPokes")]
     EmptyPositionPokes,
 
+    #[error("position not found")]
+    PositionNotFound,
+
     #[error("position add liquidity overflow")]
     PositionAddLiquidityOverflow,
 
@@ -66,11 +69,23 @@ pub enum ContractError {
     #[error("current_timestamp - pool.start_timestamp underflow")]
     TimestampSubOverflow,
 
+    #[error("pool not found")]
+    PoolNotFound,
+
     #[error("pool.liquidity + tick.liquidity_change overflow")]
     PoolAddTickLiquidityOverflow,
 
     #[error("pool.liquidity - tick.liquidity_change underflow")]
     PoolSubTickLiquidityUnderflow,
+
+    #[error("tick limit reached")]
+    TickLimitReached,
+
+    #[error("tick not found")]
+    TickNotFound,
+
+    #[error("tick already exist")]
+    TickAlreadyExist,
 
     #[error("tick add liquidity overflow")]
     TickAddLiquidityOverflow,
@@ -113,6 +128,9 @@ pub enum ContractError {
 
     #[error("tick_lower > tick_upper")]
     TickLowerGreater,
+
+    #[error("tick initialize tick again")]
+    TickReInitialize,
 
     #[error("Upper Sqrt Price < Current Sqrt Price")]
     UpperSqrtPriceLess,

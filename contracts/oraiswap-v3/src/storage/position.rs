@@ -179,7 +179,7 @@ impl Position {
             tokens_owed_y: TokenAmount::new(0),
         };
 
-        let (required_x, required_y) = (position.modify(
+        let (required_x, required_y) = position.modify(
             pool,
             upper_tick,
             lower_tick,
@@ -187,8 +187,7 @@ impl Position {
             true,
             current_timestamp,
             tick_spacing,
-        ))
-        .unwrap();
+        )?;
 
         Ok((position, required_x, required_y))
     }

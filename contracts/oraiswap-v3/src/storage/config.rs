@@ -4,12 +4,12 @@ use cosmwasm_std::Addr;
 use crate::math::types::percentage::Percentage;
 
 #[cw_serde]
-pub struct AmmConfig {
+pub struct Config {
     pub admin: Addr,
     pub protocol_fee: Percentage,
 }
 
-impl Default for AmmConfig {
+impl Default for Config {
     fn default() -> Self {
         Self {
             admin: Addr::unchecked(""),
