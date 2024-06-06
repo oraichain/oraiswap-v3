@@ -229,10 +229,14 @@ fn get_next_sqrt_price_y_down(
 
     if add_y {
         let quotient = (SqrtPrice::checked_big_div_values(numerator, denominator))?;
-        Ok(starting_sqrt_price.checked_add(quotient).unwrap())
+        starting_sqrt_price
+            .checked_add(quotient)
+            .map_err(|_| ContractError::Add)
     } else {
         let quotient = (SqrtPrice::checked_big_div_values_up(numerator, denominator))?;
-        Ok(starting_sqrt_price.checked_sub(quotient).unwrap())
+        starting_sqrt_price
+            .checked_sub(quotient)
+            .map_err(|_| ContractError::Sub)
     }
 }
 
@@ -511,12 +515,10 @@ mod tests {
         }
         // error handling
         {
-            // let (_, cause, stack) =
-            //     get_next_sqrt_price_from_input(max_sqrt_price, min_liquidity, max_amount, false)
-            //         .unwrap_err()
-            //         .get();
-            // assert_eq!(cause, "multiplication overflow");
-            // assert_eq!(stack.len(), 3);
+            let err =
+                get_next_sqrt_price_from_input(max_sqrt_price, min_liquidity, max_amount, false)
+                    .unwrap_err();
+            assert!(matches!(err, ContractError::Mul));
         }
     }
 
@@ -570,26 +572,23 @@ mod tests {
         }
         // liquidity == 0
         {
-            // let (_, cause, stack) = get_next_sqrt_price_from_output(
-            //     min_sqrt_price,
-            //     Liquidity::new(0),
-            //     TokenAmount(20),
-            //     true,
-            // )
-            // .unwrap_err()
-            // .get();
+            let err = get_next_sqrt_price_from_output(
+                min_sqrt_price,
+                Liquidity::new(0),
+                TokenAmount(20),
+                true,
+            )
+            .unwrap_err();
 
-            // assert_eq!(cause, "subtraction underflow");
-            // assert_eq!(stack.len(), 3);
+            assert!(matches!(err, ContractError::Sub));
         }
         // error handling
         {
-            // let (_, cause, stack) =
-            //     get_next_sqrt_price_from_output(max_sqrt_price, min_liquidity, max_amount, false)
-            //         .unwrap_err()
-            //         .get();
-            // assert_eq!(cause, "big_liquidity -/+ sqrt_price * x");
-            // assert_eq!(stack.len(), 3);
+            let err =
+                get_next_sqrt_price_from_output(max_sqrt_price, min_liquidity, max_amount, false)
+                    .unwrap_err();
+
+            assert!(matches!(err, ContractError::BigLiquidityOverflow));
         }
     }
 
@@ -1352,54 +1351,44 @@ mod tests {
         // extension TokenAmount to SqrtPrice decimal overflow
         {
             {
-                // let (_, cause, stack) =
-                //     get_next_sqrt_price_y_down(max_sqrt_price, min_liquidity, max_y, true)
-                //         .unwrap_err()
-                //         .get();
-                // assert_eq!(cause, "multiplication overflow");
-                // assert_eq!(stack.len(), 2);
+                let err = get_next_sqrt_price_y_down(max_sqrt_price, min_liquidity, max_y, true)
+                    .unwrap_err();
+
+                assert!(matches!(err, ContractError::Mul));
             }
             {
-                // let (_, cause, stack) = get_next_sqrt_price_y_down(
-                //     min_sqrt_price_outside_domain,
-                //     min_liquidity,
-                //     max_y,
-                //     false,
-                // )
-                // .unwrap_err()
-                // .get();
-                // assert_eq!(
-                //     cause,
-                //     "conversion to invariant::math::types::sqrt_price::SqrtPrice type failed"
-                // );
-                // assert_eq!(stack.len(), 2);
+                let err = get_next_sqrt_price_y_down(
+                    min_sqrt_price_outside_domain,
+                    min_liquidity,
+                    max_y,
+                    false,
+                )
+                .unwrap_err();
+                assert!(matches!(err, ContractError::Cast));
             }
         }
         // overflow in sqrt_price difference
         {
             {
-                // let result = get_next_sqrt_price_y_down(
-                //     max_sqrt_price,
-                //     one_liquidity,
-                //     min_overflow_token_y - TokenAmount(2),
-                //     true,
-                // )
-                // .unwrap_err();
-                // let (_, cause, stack) = result.get();
-                // assert_eq!(cause, "checked_add: (self + rhs) additional overflow");
-                // assert_eq!(stack.len(), 1);
+                let err = get_next_sqrt_price_y_down(
+                    max_sqrt_price,
+                    one_liquidity,
+                    min_overflow_token_y - TokenAmount(2),
+                    true,
+                )
+                .unwrap_err();
+                assert!(matches!(err, ContractError::Add));
             }
             {
-                // let result = get_next_sqrt_price_y_down(
-                //     min_sqrt_price_outside_domain,
-                //     one_liquidity,
-                //     min_overflow_token_y - TokenAmount(2),
-                //     false,
-                // )
-                // .unwrap_err();
-                // let (_, cause, stack) = result.get();
-                // assert_eq!(cause, "checked_sub: (self - rhs) subtraction underflow");
-                // assert_eq!(stack.len(), 1);
+                let err = get_next_sqrt_price_y_down(
+                    min_sqrt_price_outside_domain,
+                    one_liquidity,
+                    min_overflow_token_y - TokenAmount(2),
+                    false,
+                )
+                .unwrap_err();
+
+                assert!(matches!(err, ContractError::Sub));
             }
         }
 
@@ -1414,58 +1403,45 @@ mod tests {
                 let irrelevant_liquidity: Liquidity = Liquidity::from_integer(1);
 
                 {
-                    // let (_, cause, stack) = get_next_sqrt_price_y_down(
-                    //     irrelevant_sqrt_price,
-                    //     irrelevant_liquidity,
-                    //     min_y_overflow_decimal_extenstion,
-                    //     true,
-                    // )
-                    // .unwrap_err()
-                    // .get();
-                    // assert_eq!(
-                    //     cause,
-                    //     "conversion to invariant::math::types::sqrt_price::SqrtPrice type failed"
-                    // );
-                    // assert_eq!(stack.len(), 2);
+                    let err = get_next_sqrt_price_y_down(
+                        irrelevant_sqrt_price,
+                        irrelevant_liquidity,
+                        min_y_overflow_decimal_extenstion,
+                        true,
+                    )
+                    .unwrap_err();
+                    assert!(matches!(err, ContractError::Cast));
                 }
                 {
-                    // let (_, cause, stack) = get_next_sqrt_price_y_down(
-                    //     irrelevant_sqrt_price,
-                    //     irrelevant_liquidity,
-                    //     min_y_overflow_decimal_extenstion,
-                    //     false,
-                    // )
-                    // .unwrap_err()
-                    // .get();
-                    // assert_eq!(
-                    //     cause,
-                    //     "conversion to invariant::math::types::sqrt_price::SqrtPrice type failed"
-                    // );
-                    // assert_eq!(stack.len(), 2);
+                    let err = get_next_sqrt_price_y_down(
+                        irrelevant_sqrt_price,
+                        irrelevant_liquidity,
+                        min_y_overflow_decimal_extenstion,
+                        false,
+                    )
+                    .unwrap_err();
+                    assert!(matches!(err, ContractError::Cast));
                 }
             }
         }
         // y_max
         {
             {
-                // let (_, cause, stack) =
-                //     get_next_sqrt_price_y_down(min_sqrt_price, max_liquidity, max_y, true)
-                //         .unwrap_err()
-                //         .get();
-                // assert_eq!(cause, "multiplication overflow");
-                // assert_eq!(stack.len(), 2);
+                let err = get_next_sqrt_price_y_down(min_sqrt_price, max_liquidity, max_y, true)
+                    .unwrap_err();
+
+                assert!(matches!(err, ContractError::Mul));
             }
         }
 
         // L == 0
         {
             {
-                // let (_, cause, stack) =
-                //     get_next_sqrt_price_y_down(min_sqrt_price, Liquidity::new(0), min_y, true)
-                //         .unwrap_err()
-                //         .get();
-                // assert_eq!(cause, "division overflow or division by zero");
-                // assert_eq!(stack.len(), 2);
+                let err =
+                    get_next_sqrt_price_y_down(min_sqrt_price, Liquidity::new(0), min_y, true)
+                        .unwrap_err();
+
+                assert!(matches!(err, ContractError::Div));
             }
         }
         // TokenAmount is zero
@@ -1960,13 +1936,10 @@ mod tests {
         }
         // subtraction underflow (not possible from upper-level function)
         {
-            // let (_, cause, stack) =
-            //     get_next_sqrt_price_x_up(max_sqrt_price, min_liquidity, max_x, false)
-            //         .unwrap_err()
-            //         .get();
+            let err =
+                get_next_sqrt_price_x_up(max_sqrt_price, min_liquidity, max_x, false).unwrap_err();
 
-            // assert_eq!(cause, "big_liquidity -/+ sqrt_price * x");
-            // assert_eq!(stack.len(), 2);
+            assert!(matches!(err, ContractError::BigLiquidityOverflow));
         }
         // max possible result test
         {
@@ -1999,19 +1972,17 @@ mod tests {
         let max_sqrt_price = SqrtPrice::from_tick(MAX_TICK).unwrap();
         let min_fee = Percentage::from_integer(0);
         {
-            // let (_, cause, stack) = is_enough_amount_to_change_price(
-            //     TokenAmount::max_instance(),
-            //     max_sqrt_price,
-            //     min_liquidity,
-            //     min_fee,
-            //     false,
-            //     false,
-            // )
-            // .unwrap_err()
-            // .get();
+            let err = is_enough_amount_to_change_price(
+                TokenAmount::max_instance(),
+                max_sqrt_price,
+                min_liquidity,
+                min_fee,
+                false,
+                false,
+            )
+            .unwrap_err();
 
-            // assert_eq!(cause, "big_liquidity -/+ sqrt_price * x");
-            // assert_eq!(stack.len(), 4);
+            assert!(matches!(err, ContractError::BigLiquidityOverflow));
         }
     }
 
@@ -2027,19 +1998,17 @@ mod tests {
 
         // Percentage Max
         {
-            // let (_, cause, stack) = is_enough_amount_to_change_price(
-            //     min_amount,
-            //     max_sqrt_price,
-            //     min_liquidity,
-            //     max_fee,
-            //     false,
-            //     false,
-            // )
-            // .unwrap_err()
-            // .get();
+            let err = is_enough_amount_to_change_price(
+                min_amount,
+                max_sqrt_price,
+                min_liquidity,
+                max_fee,
+                false,
+                false,
+            )
+            .unwrap_err();
 
-            // assert_eq!(cause, "big_liquidity -/+ sqrt_price * x");
-            // assert_eq!(stack.len(), 4);
+            assert!(matches!(err, ContractError::BigLiquidityOverflow));
         }
 
         // Liquidity is 0
@@ -2057,35 +2026,30 @@ mod tests {
         }
         // Amount Min
         {
-            // let (_, cause, stack) = is_enough_amount_to_change_price(
-            //     min_amount,
-            //     max_sqrt_price,
-            //     min_liquidity,
-            //     min_fee,
-            //     false,
-            //     false,
-            // )
-            // .unwrap_err()
-            // .get();
+            let err = is_enough_amount_to_change_price(
+                min_amount,
+                max_sqrt_price,
+                min_liquidity,
+                min_fee,
+                false,
+                false,
+            )
+            .unwrap_err();
 
-            // assert_eq!(cause, "big_liquidity -/+ sqrt_price * x");
-            // assert_eq!(stack.len(), 4);
+            assert!(matches!(err, ContractError::BigLiquidityOverflow));
         }
         // Amount Max
         {
-            // let (_, cause, stack) = is_enough_amount_to_change_price(
-            //     max_amount,
-            //     max_sqrt_price,
-            //     min_liquidity,
-            //     min_fee,
-            //     false,
-            //     false,
-            // )
-            // .unwrap_err()
-            // .get();
-
-            // assert_eq!(cause, "big_liquidity -/+ sqrt_price * x");
-            // assert_eq!(stack.len(), 4);
+            let err = is_enough_amount_to_change_price(
+                max_amount,
+                max_sqrt_price,
+                min_liquidity,
+                min_fee,
+                false,
+                false,
+            )
+            .unwrap_err();
+            assert!(matches!(err, ContractError::BigLiquidityOverflow));
         }
     }
 
@@ -2271,18 +2235,16 @@ mod tests {
             let upper_tick = 4;
             let lower_tick = 10;
 
-            // let (_, cause, stack) = calculate_amount_delta(
-            //     current_tick_index,
-            //     current_sqrt_price,
-            //     liquidity_delta,
-            //     liquidity_sign,
-            //     upper_tick,
-            //     lower_tick,
-            // )
-            // .unwrap_err()
-            // .get();
-            // assert_eq!(cause, "upper_tick is not greater than lower_tick");
-            // assert_eq!(stack.len(), 1);
+            let err = calculate_amount_delta(
+                current_tick_index,
+                current_sqrt_price,
+                liquidity_delta,
+                liquidity_sign,
+                upper_tick,
+                lower_tick,
+            )
+            .unwrap_err();
+            assert!(matches!(err, ContractError::UpperTickNotGreater));
         }
         {
             let max_sqrt_price = SqrtPrice::max_instance(); // 2^128 - 1
@@ -2294,21 +2256,17 @@ mod tests {
                 let upper_tick = MAX_TICK;
                 let lower_tick = -MAX_TICK;
 
-                // let (_, cause, stack) = calculate_amount_delta(
-                //     current_tick_index,
-                //     current_sqrt_price,
-                //     max_liquidity,
-                //     liquidity_sign,
-                //     upper_tick,
-                //     lower_tick,
-                // )
-                // .unwrap_err()
-                // .get();
-                // assert_eq!(
-                //     cause,
-                //     "conversion to invariant::math::types::token_amount::TokenAmount type failed"
-                // );
-                // assert_eq!(stack.len(), 2)
+                let err = calculate_amount_delta(
+                    current_tick_index,
+                    current_sqrt_price,
+                    max_liquidity,
+                    liquidity_sign,
+                    upper_tick,
+                    lower_tick,
+                )
+                .unwrap_err();
+
+                assert!(matches!(err, ContractError::Cast));
             }
         }
     }

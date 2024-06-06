@@ -388,18 +388,13 @@ mod tests {
             let lower_tick = -10000;
             let upper_tick = 0;
 
-            // let (_, cause, stack) =
-            //     get_liquidity_by_y(y, lower_tick, upper_tick, current_sqrt_price, true)
-            //         .unwrap_err()
-            //         .get();
-            // assert_eq!(cause, "Current Sqrt Price < Lower Sqrt Price");
-            // assert_eq!(stack.len(), 2);
-            // let (_, cause, stack) =
-            //     get_liquidity_by_y(y, lower_tick, upper_tick, current_sqrt_price, false)
-            //         .unwrap_err()
-            //         .get();
-            // assert_eq!(cause, "Current Sqrt Price < Lower Sqrt Price");
-            // assert_eq!(stack.len(), 2);
+            let err = get_liquidity_by_y(y, lower_tick, upper_tick, current_sqrt_price, true)
+                .unwrap_err();
+            assert!(matches!(err, ContractError::CurrentSqrtPriceLess));
+
+            let err = get_liquidity_by_y(y, lower_tick, upper_tick, current_sqrt_price, false)
+                .unwrap_err();
+            assert!(matches!(err, ContractError::CurrentSqrtPriceLess));
         }
     }
 

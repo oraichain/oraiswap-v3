@@ -446,453 +446,538 @@ mod tests {
         }
     }
 
-    // #[test]
-    // fn test_flip() {
-    //     let token_0: Addr = Addr::unchecked("token_0");
-    //     let token_1: Addr = Addr::unchecked("token_1");
-    //     let fee_tier: FeeTier = FeeTier {
-    //         fee: Percentage::new(1),
-    //         tick_spacing: 1,
-    //     };
-    //     let pool_key: PoolKey = PoolKey::new(token_0, token_1, fee_tier).unwrap();
-
-    //     let tickmap = &mut Tickmap::default();
-    //     //zero
-    //     {
-    //         let index = 0;
-
-    //         assert!(!tickmap.get(index, 1, pool_key));
-    //         tickmap.flip(true, index, 1, pool_key);
-    //         assert!(tickmap.get(index, 1, pool_key));
-    //         tickmap.flip(false, index, 1, pool_key);
-    //         assert!(!tickmap.get(index, 1, pool_key));
-    //     }
-    //     // small
-    //     {
-    //         let index = 7;
-
-    //         assert!(!tickmap.get(index, 1, pool_key));
-    //         tickmap.flip(true, index, 1, pool_key);
-    //         assert!(tickmap.get(index, 1, pool_key));
-    //         tickmap.flip(false, index, 1, pool_key);
-    //         assert!(!tickmap.get(index, 1, pool_key));
-    //     }
-    //     // big
-    //     {
-    //         let index = MAX_TICK - 1;
-
-    //         assert!(!tickmap.get(index, 1, pool_key));
-    //         tickmap.flip(true, index, 1, pool_key);
-    //         assert!(tickmap.get(index, 1, pool_key));
-    //         tickmap.flip(false, index, 1, pool_key);
-    //         assert!(!tickmap.get(index, 1, pool_key));
-    //     }
-    //     // negative
-    //     {
-    //         let index = MAX_TICK - 40;
-
-    //         assert!(!tickmap.get(index, 1, pool_key));
-    //         tickmap.flip(true, index, 1, pool_key);
-    //         assert!(tickmap.get(index, 1, pool_key));
-    //         tickmap.flip(false, index, 1, pool_key);
-    //         assert!(!tickmap.get(index, 1, pool_key));
-    //     }
-    //     // tick spacing
-    //     {
-    //         let index = 20000;
-    //         let tick_spacing = 1000;
-
-    //         assert!(!tickmap.get(index, tick_spacing, pool_key));
-    //         tickmap.flip(true, index, tick_spacing, pool_key);
-    //         assert!(tickmap.get(index, tick_spacing, pool_key));
-    //         tickmap.flip(false, index, tick_spacing, pool_key);
-    //         assert!(!tickmap.get(index, tick_spacing, pool_key));
-    //     }
-    // }
-
-    // #[test]
-    // fn test_next_initialized_simple() {
-    //     let token_0: Addr = Addr::unchecked("token_0");
-    //     let token_1: Addr = Addr::unchecked("token_1");
-    //     let fee_tier: FeeTier = FeeTier {
-    //         fee: Percentage::new(1),
-    //         tick_spacing: 1,
-    //     };
-    //     let pool_key: PoolKey = PoolKey::new(token_0, token_1, fee_tier).unwrap();
-
-    //     let tickmap = &mut Tickmap::default();
-    //     tickmap.flip(true, 5, 1, pool_key);
-    //     assert_eq!(tickmap.next_initialized(0, 1, pool_key), Some(5));
-    // }
-
-    // #[test]
-    // fn test_next_initialized_multiple() {
-    //     let token_0: Addr = Addr::unchecked("token_0");
-    //     let token_1: Addr = Addr::unchecked("token_1");
-    //     let fee_tier: FeeTier = FeeTier {
-    //         fee: Percentage::new(1),
-    //         tick_spacing: 1,
-    //     };
-    //     let pool_key: PoolKey = PoolKey::new(token_0, token_1, fee_tier).unwrap();
-
-    //     let tickmap = &mut Tickmap::default();
-    //     tickmap.flip(true, 50, 10, pool_key);
-    //     tickmap.flip(true, 100, 10, pool_key);
-    //     assert_eq!(tickmap.next_initialized(0, 10, pool_key), Some(50));
-    //     assert_eq!(tickmap.next_initialized(50, 10, pool_key), Some(100));
-    // }
-
-    // #[test]
-    // fn test_next_initialized_current_is_last() {
-    //     let token_0: Addr = Addr::unchecked("token_0");
-    //     let token_1: Addr = Addr::unchecked("token_1");
-    //     let fee_tier: FeeTier = FeeTier {
-    //         fee: Percentage::new(1),
-    //         tick_spacing: 1,
-    //     };
-    //     let pool_key: PoolKey = PoolKey::new(token_0, token_1, fee_tier).unwrap();
-
-    //     let tickmap = &mut Tickmap::default();
-    //     tickmap.flip(true, 0, 10, pool_key);
-    //     assert_eq!(tickmap.next_initialized(0, 10, pool_key), None);
-    // }
-
-    // #[test]
-    // fn test_next_initialized_just_below_limit() {
-    //     let token_0: Addr = Addr::unchecked("token_0");
-    //     let token_1: Addr = Addr::unchecked("token_1");
-    //     let fee_tier: FeeTier = FeeTier {
-    //         fee: Percentage::new(1),
-    //         tick_spacing: 1,
-    //     };
-    //     let pool_key: PoolKey = PoolKey::new(token_0, token_1, fee_tier).unwrap();
-
-    //     let tickmap = &mut Tickmap::default();
-
-    //     tickmap.flip(true, 0, 1, pool_key);
-    //     assert_eq!(
-    //         tickmap.next_initialized(-TICK_SEARCH_RANGE, 1, pool_key),
-    //         Some(0)
-    //     );
-    // }
-
-    // #[test]
-    // fn test_next_initialized_at_limit() {
-    //     let token_0: Addr = Addr::unchecked("token_0");
-    //     let token_1: Addr = Addr::unchecked("token_1");
-    //     let fee_tier: FeeTier = FeeTier {
-    //         fee: Percentage::new(1),
-    //         tick_spacing: 1,
-    //     };
-    //     let pool_key: PoolKey = PoolKey::new(token_0, token_1, fee_tier).unwrap();
-
-    //     let tickmap = &mut Tickmap::default();
-
-    //     tickmap.flip(true, 0, 1, pool_key);
-    //     assert_eq!(
-    //         tickmap.next_initialized(-TICK_SEARCH_RANGE - 1, 1, pool_key),
-    //         None
-    //     );
-    // }
-
-    // #[test]
-    // fn test_next_initialized_further_than_limit() {
-    //     let token_0: Addr = Addr::unchecked("token_0");
-    //     let token_1: Addr = Addr::unchecked("token_1");
-    //     let fee_tier: FeeTier = FeeTier {
-    //         fee: Percentage::new(1),
-    //         tick_spacing: 1,
-    //     };
-    //     let pool_key: PoolKey = PoolKey::new(token_0, token_1, fee_tier).unwrap();
-
-    //     let tickmap = &mut Tickmap::default();
-
-    //     tickmap.flip(true, MAX_TICK - 10, 1, pool_key);
-    //     assert_eq!(tickmap.next_initialized(-MAX_TICK + 1, 1, pool_key), None);
-    // }
-
-    // #[test]
-    // fn test_next_initialized_hitting_the_limit() {
-    //     let token_0: Addr = Addr::unchecked("token_0");
-    //     let token_1: Addr = Addr::unchecked("token_1");
-    //     let fee_tier: FeeTier = FeeTier {
-    //         fee: Percentage::new(1),
-    //         tick_spacing: 1,
-    //     };
-    //     let pool_key: PoolKey = PoolKey::new(token_0, token_1, fee_tier).unwrap();
-
-    //     let tickmap = &mut Tickmap::default();
-
-    //     assert_eq!(tickmap.next_initialized(MAX_TICK - 22, 4, pool_key), None);
-    // }
-
-    // #[test]
-    // fn test_next_initialized_already_at_limit() {
-    //     let token_0: Addr = Addr::unchecked("token_0");
-    //     let token_1: Addr = Addr::unchecked("token_1");
-    //     let fee_tier: FeeTier = FeeTier {
-    //         fee: Percentage::new(1),
-    //         tick_spacing: 1,
-    //     };
-    //     let pool_key: PoolKey = PoolKey::new(token_0, token_1, fee_tier).unwrap();
-
-    //     let tickmap = &mut Tickmap::default();
-
-    //     assert_eq!(tickmap.next_initialized(MAX_TICK - 2, 4, pool_key), None);
-    // }
-
-    // #[test]
-    // fn test_next_initialized_at_pos_63() {
-    //     let token_0: Addr = Addr::unchecked("token_0");
-    //     let token_1: Addr = Addr::unchecked("token_1");
-    //     let fee_tier: FeeTier = FeeTier {
-    //         fee: Percentage::new(1),
-    //         tick_spacing: 1,
-    //     };
-    //     let pool_key: PoolKey = PoolKey::new(token_0, token_1, fee_tier).unwrap();
-
-    //     let tickmap = &mut Tickmap::default();
-
-    //     tickmap.flip(true, MAX_TICK - 63, 1, pool_key);
-    //     assert_eq!(
-    //         tickmap.next_initialized(MAX_TICK - 128, 1, pool_key),
-    //         Some(MAX_TICK - 63)
-    //     );
-    // }
-
-    // #[test]
-    // fn test_prev_initialized_simple() {
-    //     let token_0: Addr = Addr::unchecked("token_0");
-    //     let token_1: Addr = Addr::unchecked("token_1");
-    //     let fee_tier: FeeTier = FeeTier {
-    //         fee: Percentage::new(1),
-    //         tick_spacing: 1,
-    //     };
-    //     let pool_key: PoolKey = PoolKey::new(token_0, token_1, fee_tier).unwrap();
-
-    //     let tickmap = &mut Tickmap::default();
-
-    //     tickmap.flip(true, -5, 1, pool_key);
-    //     assert_eq!(tickmap.prev_initialized(0, 1, pool_key), Some(-5));
-    // }
-
-    // #[test]
-    // fn test_prev_initialized_multiple() {
-    //     let token_0: Addr = Addr::unchecked("token_0");
-    //     let token_1: Addr = Addr::unchecked("token_1");
-    //     let fee_tier: FeeTier = FeeTier {
-    //         fee: Percentage::new(1),
-    //         tick_spacing: 1,
-    //     };
-    //     let pool_key: PoolKey = PoolKey::new(token_0, token_1, fee_tier).unwrap();
-
-    //     let tickmap = &mut Tickmap::default();
-
-    //     tickmap.flip(true, -50, 10, pool_key);
-    //     tickmap.flip(true, -100, 10, pool_key);
-    //     assert_eq!(tickmap.prev_initialized(0, 10, pool_key), Some(-50));
-    //     assert_eq!(tickmap.prev_initialized(-50, 10, pool_key), Some(-50));
-    // }
-
-    // #[test]
-    // fn test_prev_initialized_current_is_last() {
-    //     let token_0: Addr = Addr::unchecked("token_0");
-    //     let token_1: Addr = Addr::unchecked("token_1");
-    //     let fee_tier: FeeTier = FeeTier {
-    //         fee: Percentage::new(1),
-    //         tick_spacing: 1,
-    //     };
-    //     let pool_key: PoolKey = PoolKey::new(token_0, token_1, fee_tier).unwrap();
-
-    //     let tickmap = &mut Tickmap::default();
-
-    //     tickmap.flip(true, 0, 10, pool_key);
-    //     assert_eq!(tickmap.prev_initialized(0, 10, pool_key), Some(0));
-    // }
-
-    // #[test]
-    // fn test_prev_initialized_next_is_last() {
-    //     let token_0: Addr = Addr::unchecked("token_0");
-    //     let token_1: Addr = Addr::unchecked("token_1");
-    //     let fee_tier: FeeTier = FeeTier {
-    //         fee: Percentage::new(1),
-    //         tick_spacing: 1,
-    //     };
-    //     let pool_key: PoolKey = PoolKey::new(token_0, token_1, fee_tier).unwrap();
-
-    //     let tickmap = &mut Tickmap::default();
-
-    //     tickmap.flip(true, 10, 10, pool_key);
-    //     assert_eq!(tickmap.prev_initialized(0, 10, pool_key), None);
-    // }
-
-    // #[test]
-    // fn test_prev_initialized_just_below_limit() {
-    //     let token_0: Addr = Addr::unchecked("token_0");
-    //     let token_1: Addr = Addr::unchecked("token_1");
-    //     let fee_tier: FeeTier = FeeTier {
-    //         fee: Percentage::new(1),
-    //         tick_spacing: 1,
-    //     };
-    //     let pool_key: PoolKey = PoolKey::new(token_0, token_1, fee_tier).unwrap();
-
-    //     let tickmap = &mut Tickmap::default();
-
-    //     tickmap.flip(true, 0, 1, pool_key);
-    //     assert_eq!(
-    //         tickmap.prev_initialized(TICK_SEARCH_RANGE, 1, pool_key),
-    //         Some(0)
-    //     );
-    // }
-
-    // #[test]
-    // fn test_prev_initialized_at_limit() {
-    //     let token_0: Addr = Addr::unchecked("token_0");
-    //     let token_1: Addr = Addr::unchecked("token_1");
-    //     let fee_tier: FeeTier = FeeTier {
-    //         fee: Percentage::new(1),
-    //         tick_spacing: 1,
-    //     };
-    //     let pool_key: PoolKey = PoolKey::new(token_0, token_1, fee_tier).unwrap();
-
-    //     let tickmap = &mut Tickmap::default();
-
-    //     tickmap.flip(true, 0, 1, pool_key);
-    //     assert_eq!(
-    //         tickmap.prev_initialized(TICK_SEARCH_RANGE + 1, 1, pool_key),
-    //         None
-    //     );
-    // }
-
-    // #[test]
-    // fn test_prev_initialized_farther_than_limit() {
-    //     let token_0: Addr = Addr::unchecked("token_0");
-    //     let token_1: Addr = Addr::unchecked("token_1");
-    //     let fee_tier: FeeTier = FeeTier {
-    //         fee: Percentage::new(1),
-    //         tick_spacing: 1,
-    //     };
-    //     let pool_key: PoolKey = PoolKey::new(token_0, token_1, fee_tier).unwrap();
-
-    //     let tickmap = &mut Tickmap::default();
-
-    //     tickmap.flip(true, -MAX_TICK + 1, 1, pool_key);
-    //     assert_eq!(tickmap.prev_initialized(MAX_TICK - 1, 1, pool_key), None);
-    // }
-
-    // #[test]
-    // fn test_prev_initialized_at_pos_63() {
-    //     let token_0: Addr = Addr::unchecked("token_0");
-    //     let token_1: Addr = Addr::unchecked("token_1");
-    //     let fee_tier: FeeTier = FeeTier {
-    //         fee: Percentage::new(1),
-    //         tick_spacing: 1,
-    //     };
-    //     let pool_key: PoolKey = PoolKey::new(token_0, token_1, fee_tier).unwrap();
-
-    //     let tickmap = &mut Tickmap::default();
-
-    //     tickmap.flip(true, -MAX_TICK + 63, 1, pool_key);
-    //     assert_eq!(
-    //         tickmap.prev_initialized(-MAX_TICK + 128, 1, pool_key),
-    //         Some(-MAX_TICK + 63)
-    //     );
-    // }
-
-    // #[test]
-    // fn test_get_search_limit() {
-    //     // Simple up
-    //     {
-    //         let result = get_search_limit(0, 1, true);
-    //         assert_eq!(result, TICK_SEARCH_RANGE);
-    //     }
-    //     // Simple down
-    //     {
-    //         let result = get_search_limit(0, 1, false);
-    //         assert_eq!(result, -TICK_SEARCH_RANGE);
-    //     }
-    //     // Less simple up
-    //     {
-    //         let start = 60;
-    //         let step = 12;
-    //         let result = get_search_limit(start, step, true);
-    //         let expected = start + TICK_SEARCH_RANGE * step as i32;
-    //         assert_eq!(result, expected);
-    //     }
-    //     // Less simple down
-    //     {
-    //         let start = 60;
-    //         let step = 12;
-    //         let result = get_search_limit(start, step, false);
-    //         let expected = start - TICK_SEARCH_RANGE * step as i32;
-    //         assert_eq!(result, expected);
-    //     }
-    //     // Up to price limit
-    //     {
-    //         let step = 5u16;
-    //         let result = get_search_limit(MAX_TICK - 22, step, true);
-    //         let expected = MAX_TICK - 3;
-    //         assert_eq!(result, expected);
-    //     }
-    //     // At the price limit
-    //     {
-    //         let step = 5u16;
-    //         let result = get_search_limit(MAX_TICK - 3, step, true);
-    //         let expected = MAX_TICK - 3;
-    //         assert_eq!(result, expected);
-    //     }
-    // }
-
-    // #[test]
-    // fn test_next_and_prev_initialized() {
-    //     let token_0: Addr = Addr::unchecked("token_0");
-    //     let token_1: Addr = Addr::unchecked("token_1");
-    //     let fee_tier: FeeTier = FeeTier {
-    //         fee: Percentage::new(1),
-    //         tick_spacing: 1,
-    //     };
-    //     let pool_key: PoolKey = PoolKey::new(token_0, token_1, fee_tier).unwrap();
-
-    //     // initalized edges
-    //     {
-    //         for spacing in 1..=10 {
-    //             let tickmap = &mut Tickmap::default();
-
-    //             let max_index = MAX_TICK - MAX_TICK % spacing;
-    //             let min_index = -max_index;
-
-    //             tickmap.flip(true, max_index, spacing as u16, pool_key);
-    //             tickmap.flip(true, min_index, spacing as u16, pool_key);
-
-    //             let tick_edge_diff = TICK_SEARCH_RANGE / spacing * spacing;
-
-    //             let prev =
-    //                 tickmap.prev_initialized(min_index + tick_edge_diff, spacing as u16, pool_key);
-    //             let next =
-    //                 tickmap.next_initialized(max_index - tick_edge_diff, spacing as u16, pool_key);
-
-    //             assert_eq!((prev.is_some(), next.is_some()), (true, true));
-    //             // cleanup
-    //             {
-    //                 tickmap.flip(false, max_index, spacing as u16, pool_key);
-    //                 tickmap.flip(false, min_index, spacing as u16, pool_key);
-    //             }
-    //         }
-    //     }
-    //     // unintalized edges
-    //     for spacing in 1..=1000 {
-    //         // let mut contract = Contract::new();
-    //         let tickmap = &mut Tickmap::default();
-    //         let max_index = MAX_TICK - MAX_TICK % spacing;
-    //         let min_index = -max_index;
-    //         let tick_edge_diff = TICK_SEARCH_RANGE / spacing * spacing;
-
-    //         let prev =
-    //             tickmap.prev_initialized(min_index + tick_edge_diff, spacing as u16, pool_key);
-    //         let next =
-    //             tickmap.next_initialized(max_index - tick_edge_diff, spacing as u16, pool_key);
-
-    //         assert_eq!((prev.is_some(), next.is_some()), (false, false));
-    //     }
-    // }
+    #[test]
+    fn test_flip() {
+        let mut deps = mock_dependencies();
+        let token_0: Addr = Addr::unchecked("token_0");
+        let token_1: Addr = Addr::unchecked("token_1");
+        let fee_tier: FeeTier = FeeTier {
+            fee: Percentage::new(1),
+            tick_spacing: 1,
+        };
+        let pool_key = &PoolKey::new(token_0, token_1, fee_tier).unwrap();
+
+        //zero
+        {
+            let index = 0;
+
+            assert!(!get_bitmap(deps.as_ref().storage, index, 1, pool_key));
+            flip_bitmap(deps.as_mut().storage, true, index, 1, pool_key).unwrap();
+            assert!(get_bitmap(deps.as_ref().storage, index, 1, pool_key));
+            flip_bitmap(deps.as_mut().storage, false, index, 1, pool_key).unwrap();
+            assert!(!get_bitmap(deps.as_ref().storage, index, 1, pool_key));
+        }
+        // small
+        {
+            let index = 7;
+
+            assert!(!get_bitmap(deps.as_ref().storage, index, 1, pool_key));
+            flip_bitmap(deps.as_mut().storage, true, index, 1, pool_key).unwrap();
+            assert!(get_bitmap(deps.as_ref().storage, index, 1, pool_key));
+            flip_bitmap(deps.as_mut().storage, false, index, 1, pool_key).unwrap();
+            assert!(!get_bitmap(deps.as_ref().storage, index, 1, pool_key));
+        }
+        // big
+        {
+            let index = MAX_TICK - 1;
+
+            assert!(!get_bitmap(deps.as_ref().storage, index, 1, pool_key));
+            flip_bitmap(deps.as_mut().storage, true, index, 1, pool_key).unwrap();
+            assert!(get_bitmap(deps.as_ref().storage, index, 1, pool_key));
+            flip_bitmap(deps.as_mut().storage, false, index, 1, pool_key).unwrap();
+            assert!(!get_bitmap(deps.as_ref().storage, index, 1, pool_key));
+        }
+        // negative
+        {
+            let index = MAX_TICK - 40;
+
+            assert!(!get_bitmap(deps.as_ref().storage, index, 1, pool_key));
+            flip_bitmap(deps.as_mut().storage, true, index, 1, pool_key).unwrap();
+            assert!(get_bitmap(deps.as_ref().storage, index, 1, pool_key));
+            flip_bitmap(deps.as_mut().storage, false, index, 1, pool_key).unwrap();
+            assert!(!get_bitmap(deps.as_ref().storage, index, 1, pool_key));
+        }
+        // tick spacing
+        {
+            let index = 20000;
+            let tick_spacing = 1000;
+
+            assert!(!get_bitmap(
+                deps.as_ref().storage,
+                index,
+                tick_spacing,
+                pool_key
+            ));
+            flip_bitmap(deps.as_mut().storage, true, index, tick_spacing, pool_key).unwrap();
+            assert!(get_bitmap(
+                deps.as_ref().storage,
+                index,
+                tick_spacing,
+                pool_key
+            ));
+            flip_bitmap(deps.as_mut().storage, false, index, tick_spacing, pool_key).unwrap();
+            assert!(!get_bitmap(
+                deps.as_ref().storage,
+                index,
+                tick_spacing,
+                pool_key
+            ));
+        }
+    }
+
+    #[test]
+    fn test_next_initialized_simple() {
+        let mut deps = mock_dependencies();
+        let token_0: Addr = Addr::unchecked("token_0");
+        let token_1: Addr = Addr::unchecked("token_1");
+        let fee_tier: FeeTier = FeeTier {
+            fee: Percentage::new(1),
+            tick_spacing: 1,
+        };
+        let pool_key = &PoolKey::new(token_0, token_1, fee_tier).unwrap();
+
+        flip_bitmap(deps.as_mut().storage, true, 5, 1, pool_key).unwrap();
+        assert_eq!(
+            next_initialized(deps.as_ref().storage, 0, 1, pool_key),
+            Some(5)
+        );
+    }
+
+    #[test]
+    fn test_next_initialized_multiple() {
+        let mut deps = mock_dependencies();
+        let token_0: Addr = Addr::unchecked("token_0");
+        let token_1: Addr = Addr::unchecked("token_1");
+        let fee_tier: FeeTier = FeeTier {
+            fee: Percentage::new(1),
+            tick_spacing: 1,
+        };
+        let pool_key = &PoolKey::new(token_0, token_1, fee_tier).unwrap();
+
+        flip_bitmap(deps.as_mut().storage, true, 50, 10, pool_key).unwrap();
+        flip_bitmap(deps.as_mut().storage, true, 100, 10, pool_key).unwrap();
+        assert_eq!(
+            next_initialized(deps.as_ref().storage, 0, 10, pool_key),
+            Some(50)
+        );
+        assert_eq!(
+            next_initialized(deps.as_ref().storage, 50, 10, pool_key),
+            Some(100)
+        );
+    }
+
+    #[test]
+    fn test_next_initialized_current_is_last() {
+        let mut deps = mock_dependencies();
+        let token_0: Addr = Addr::unchecked("token_0");
+        let token_1: Addr = Addr::unchecked("token_1");
+        let fee_tier: FeeTier = FeeTier {
+            fee: Percentage::new(1),
+            tick_spacing: 1,
+        };
+        let pool_key = &PoolKey::new(token_0, token_1, fee_tier).unwrap();
+
+        flip_bitmap(deps.as_mut().storage, true, 0, 10, pool_key).unwrap();
+        assert_eq!(
+            next_initialized(deps.as_ref().storage, 0, 10, pool_key),
+            None
+        );
+    }
+
+    #[test]
+    fn test_next_initialized_just_below_limit() {
+        let mut deps = mock_dependencies();
+        let token_0: Addr = Addr::unchecked("token_0");
+        let token_1: Addr = Addr::unchecked("token_1");
+        let fee_tier: FeeTier = FeeTier {
+            fee: Percentage::new(1),
+            tick_spacing: 1,
+        };
+        let pool_key = &PoolKey::new(token_0, token_1, fee_tier).unwrap();
+
+        flip_bitmap(deps.as_mut().storage, true, 0, 1, pool_key).unwrap();
+        assert_eq!(
+            next_initialized(deps.as_ref().storage, -TICK_SEARCH_RANGE, 1, pool_key),
+            Some(0)
+        );
+    }
+
+    #[test]
+    fn test_next_initialized_at_limit() {
+        let mut deps = mock_dependencies();
+        let token_0: Addr = Addr::unchecked("token_0");
+        let token_1: Addr = Addr::unchecked("token_1");
+        let fee_tier: FeeTier = FeeTier {
+            fee: Percentage::new(1),
+            tick_spacing: 1,
+        };
+        let pool_key = &PoolKey::new(token_0, token_1, fee_tier).unwrap();
+
+        flip_bitmap(deps.as_mut().storage, true, 0, 1, pool_key).unwrap();
+        assert_eq!(
+            next_initialized(deps.as_ref().storage, -TICK_SEARCH_RANGE - 1, 1, pool_key),
+            None
+        );
+    }
+
+    #[test]
+    fn test_next_initialized_further_than_limit() {
+        let mut deps = mock_dependencies();
+        let token_0: Addr = Addr::unchecked("token_0");
+        let token_1: Addr = Addr::unchecked("token_1");
+        let fee_tier: FeeTier = FeeTier {
+            fee: Percentage::new(1),
+            tick_spacing: 1,
+        };
+        let pool_key = &PoolKey::new(token_0, token_1, fee_tier).unwrap();
+
+        flip_bitmap(deps.as_mut().storage, true, MAX_TICK - 10, 1, pool_key).unwrap();
+        assert_eq!(
+            next_initialized(deps.as_ref().storage, -MAX_TICK + 1, 1, pool_key),
+            None
+        );
+    }
+
+    #[test]
+    fn test_next_initialized_hitting_the_limit() {
+        let deps = mock_dependencies();
+        let token_0: Addr = Addr::unchecked("token_0");
+        let token_1: Addr = Addr::unchecked("token_1");
+        let fee_tier: FeeTier = FeeTier {
+            fee: Percentage::new(1),
+            tick_spacing: 1,
+        };
+        let pool_key = &PoolKey::new(token_0, token_1, fee_tier).unwrap();
+
+        assert_eq!(
+            next_initialized(deps.as_ref().storage, MAX_TICK - 22, 4, pool_key),
+            None
+        );
+    }
+
+    #[test]
+    fn test_next_initialized_already_at_limit() {
+        let deps = mock_dependencies();
+        let token_0: Addr = Addr::unchecked("token_0");
+        let token_1: Addr = Addr::unchecked("token_1");
+        let fee_tier: FeeTier = FeeTier {
+            fee: Percentage::new(1),
+            tick_spacing: 1,
+        };
+        let pool_key = &PoolKey::new(token_0, token_1, fee_tier).unwrap();
+
+        assert_eq!(
+            next_initialized(deps.as_ref().storage, MAX_TICK - 2, 4, pool_key),
+            None
+        );
+    }
+
+    #[test]
+    fn test_next_initialized_at_pos_63() {
+        let mut deps = mock_dependencies();
+        let token_0: Addr = Addr::unchecked("token_0");
+        let token_1: Addr = Addr::unchecked("token_1");
+        let fee_tier: FeeTier = FeeTier {
+            fee: Percentage::new(1),
+            tick_spacing: 1,
+        };
+        let pool_key = &PoolKey::new(token_0, token_1, fee_tier).unwrap();
+
+        flip_bitmap(deps.as_mut().storage, true, MAX_TICK - 63, 1, pool_key).unwrap();
+        assert_eq!(
+            next_initialized(deps.as_ref().storage, MAX_TICK - 128, 1, pool_key),
+            Some(MAX_TICK - 63)
+        );
+    }
+
+    #[test]
+    fn test_prev_initialized_simple() {
+        let mut deps = mock_dependencies();
+        let token_0: Addr = Addr::unchecked("token_0");
+        let token_1: Addr = Addr::unchecked("token_1");
+        let fee_tier: FeeTier = FeeTier {
+            fee: Percentage::new(1),
+            tick_spacing: 1,
+        };
+        let pool_key = &PoolKey::new(token_0, token_1, fee_tier).unwrap();
+
+        flip_bitmap(deps.as_mut().storage, true, -5, 1, pool_key).unwrap();
+        assert_eq!(
+            prev_initialized(deps.as_ref().storage, 0, 1, pool_key),
+            Some(-5)
+        );
+    }
+
+    #[test]
+    fn test_prev_initialized_multiple() {
+        let mut deps = mock_dependencies();
+        let token_0: Addr = Addr::unchecked("token_0");
+        let token_1: Addr = Addr::unchecked("token_1");
+        let fee_tier: FeeTier = FeeTier {
+            fee: Percentage::new(1),
+            tick_spacing: 1,
+        };
+        let pool_key = &PoolKey::new(token_0, token_1, fee_tier).unwrap();
+
+        flip_bitmap(deps.as_mut().storage, true, -50, 10, pool_key).unwrap();
+        flip_bitmap(deps.as_mut().storage, true, -100, 10, pool_key).unwrap();
+        assert_eq!(
+            prev_initialized(deps.as_ref().storage, 0, 10, pool_key),
+            Some(-50)
+        );
+        assert_eq!(
+            prev_initialized(deps.as_ref().storage, -50, 10, pool_key),
+            Some(-50)
+        );
+    }
+
+    #[test]
+    fn test_prev_initialized_current_is_last() {
+        let mut deps = mock_dependencies();
+        let token_0: Addr = Addr::unchecked("token_0");
+        let token_1: Addr = Addr::unchecked("token_1");
+        let fee_tier: FeeTier = FeeTier {
+            fee: Percentage::new(1),
+            tick_spacing: 1,
+        };
+        let pool_key = &PoolKey::new(token_0, token_1, fee_tier).unwrap();
+
+        flip_bitmap(deps.as_mut().storage, true, 0, 10, pool_key).unwrap();
+        assert_eq!(
+            prev_initialized(deps.as_ref().storage, 0, 10, pool_key),
+            Some(0)
+        );
+    }
+
+    #[test]
+    fn test_prev_initialized_next_is_last() {
+        let mut deps = mock_dependencies();
+        let token_0: Addr = Addr::unchecked("token_0");
+        let token_1: Addr = Addr::unchecked("token_1");
+        let fee_tier: FeeTier = FeeTier {
+            fee: Percentage::new(1),
+            tick_spacing: 1,
+        };
+        let pool_key = &PoolKey::new(token_0, token_1, fee_tier).unwrap();
+
+        flip_bitmap(deps.as_mut().storage, true, 10, 10, pool_key).unwrap();
+        assert_eq!(
+            prev_initialized(deps.as_ref().storage, 0, 10, pool_key),
+            None
+        );
+    }
+
+    #[test]
+    fn test_prev_initialized_just_below_limit() {
+        let mut deps = mock_dependencies();
+        let token_0: Addr = Addr::unchecked("token_0");
+        let token_1: Addr = Addr::unchecked("token_1");
+        let fee_tier: FeeTier = FeeTier {
+            fee: Percentage::new(1),
+            tick_spacing: 1,
+        };
+        let pool_key = &PoolKey::new(token_0, token_1, fee_tier).unwrap();
+
+        flip_bitmap(deps.as_mut().storage, true, 0, 1, pool_key).unwrap();
+        assert_eq!(
+            prev_initialized(deps.as_ref().storage, TICK_SEARCH_RANGE, 1, pool_key),
+            Some(0)
+        );
+    }
+
+    #[test]
+    fn test_prev_initialized_at_limit() {
+        let mut deps = mock_dependencies();
+        let token_0: Addr = Addr::unchecked("token_0");
+        let token_1: Addr = Addr::unchecked("token_1");
+        let fee_tier: FeeTier = FeeTier {
+            fee: Percentage::new(1),
+            tick_spacing: 1,
+        };
+        let pool_key = &PoolKey::new(token_0, token_1, fee_tier).unwrap();
+
+        flip_bitmap(deps.as_mut().storage, true, 0, 1, pool_key).unwrap();
+        assert_eq!(
+            prev_initialized(deps.as_ref().storage, TICK_SEARCH_RANGE + 1, 1, pool_key),
+            None
+        );
+    }
+
+    #[test]
+    fn test_prev_initialized_farther_than_limit() {
+        let mut deps = mock_dependencies();
+        let token_0: Addr = Addr::unchecked("token_0");
+        let token_1: Addr = Addr::unchecked("token_1");
+        let fee_tier: FeeTier = FeeTier {
+            fee: Percentage::new(1),
+            tick_spacing: 1,
+        };
+        let pool_key = &PoolKey::new(token_0, token_1, fee_tier).unwrap();
+
+        flip_bitmap(deps.as_mut().storage, true, -MAX_TICK + 1, 1, pool_key).unwrap();
+        assert_eq!(
+            prev_initialized(deps.as_ref().storage, MAX_TICK - 1, 1, pool_key),
+            None
+        );
+    }
+
+    #[test]
+    fn test_prev_initialized_at_pos_63() {
+        let mut deps = mock_dependencies();
+        let token_0: Addr = Addr::unchecked("token_0");
+        let token_1: Addr = Addr::unchecked("token_1");
+        let fee_tier: FeeTier = FeeTier {
+            fee: Percentage::new(1),
+            tick_spacing: 1,
+        };
+        let pool_key = &PoolKey::new(token_0, token_1, fee_tier).unwrap();
+
+        flip_bitmap(deps.as_mut().storage, true, -MAX_TICK + 63, 1, pool_key).unwrap();
+        assert_eq!(
+            prev_initialized(deps.as_ref().storage, -MAX_TICK + 128, 1, pool_key),
+            Some(-MAX_TICK + 63)
+        );
+    }
+
+    #[test]
+    fn test_get_search_limit() {
+        // Simple up
+        {
+            let result = get_search_limit(0, 1, true);
+            assert_eq!(result, TICK_SEARCH_RANGE);
+        }
+        // Simple down
+        {
+            let result = get_search_limit(0, 1, false);
+            assert_eq!(result, -TICK_SEARCH_RANGE);
+        }
+        // Less simple up
+        {
+            let start = 60;
+            let step = 12;
+            let result = get_search_limit(start, step, true);
+            let expected = start + TICK_SEARCH_RANGE * step as i32;
+            assert_eq!(result, expected);
+        }
+        // Less simple down
+        {
+            let start = 60;
+            let step = 12;
+            let result = get_search_limit(start, step, false);
+            let expected = start - TICK_SEARCH_RANGE * step as i32;
+            assert_eq!(result, expected);
+        }
+        // Up to price limit
+        {
+            let step = 5u16;
+            let result = get_search_limit(MAX_TICK - 22, step, true);
+            let expected = MAX_TICK - 3;
+            assert_eq!(result, expected);
+        }
+        // At the price limit
+        {
+            let step = 5u16;
+            let result = get_search_limit(MAX_TICK - 3, step, true);
+            let expected = MAX_TICK - 3;
+            assert_eq!(result, expected);
+        }
+    }
+
+    #[test]
+    fn test_next_and_prev_initialized() {
+        let mut deps = mock_dependencies();
+        let token_0: Addr = Addr::unchecked("token_0");
+        let token_1: Addr = Addr::unchecked("token_1");
+        let fee_tier: FeeTier = FeeTier {
+            fee: Percentage::new(1),
+            tick_spacing: 1,
+        };
+        let pool_key = &PoolKey::new(token_0, token_1, fee_tier).unwrap();
+
+        // initalized edges
+        {
+            for spacing in 1..=10 {
+                let max_index = MAX_TICK - MAX_TICK % spacing;
+                let min_index = -max_index;
+
+                flip_bitmap(
+                    deps.as_mut().storage,
+                    true,
+                    max_index,
+                    spacing as u16,
+                    pool_key,
+                )
+                .unwrap();
+
+                flip_bitmap(
+                    deps.as_mut().storage,
+                    true,
+                    min_index,
+                    spacing as u16,
+                    pool_key,
+                )
+                .unwrap();
+
+                let tick_edge_diff = TICK_SEARCH_RANGE / spacing * spacing;
+
+                let prev = prev_initialized(
+                    deps.as_ref().storage,
+                    min_index + tick_edge_diff,
+                    spacing as u16,
+                    pool_key,
+                );
+                let next = next_initialized(
+                    deps.as_ref().storage,
+                    max_index - tick_edge_diff,
+                    spacing as u16,
+                    pool_key,
+                );
+
+                assert_eq!((prev.is_some(), next.is_some()), (true, true));
+                // cleanup
+                {
+                    flip_bitmap(
+                        deps.as_mut().storage,
+                        false,
+                        max_index,
+                        spacing as u16,
+                        pool_key,
+                    )
+                    .unwrap();
+
+                    flip_bitmap(
+                        deps.as_mut().storage,
+                        false,
+                        min_index,
+                        spacing as u16,
+                        pool_key,
+                    )
+                    .unwrap();
+                }
+            }
+        }
+        // unintalized edges
+        for spacing in 1..=1000 {
+            // let mut contract = Contract::new();
+
+            let max_index = MAX_TICK - MAX_TICK % spacing;
+            let min_index = -max_index;
+            let tick_edge_diff = TICK_SEARCH_RANGE / spacing * spacing;
+
+            let prev = prev_initialized(
+                deps.as_ref().storage,
+                min_index + tick_edge_diff,
+                spacing as u16,
+                pool_key,
+            );
+            let next = next_initialized(
+                deps.as_ref().storage,
+                max_index - tick_edge_diff,
+                spacing as u16,
+                pool_key,
+            );
+
+            assert_eq!((prev.is_some(), next.is_some()), (false, false));
+        }
+    }
 }

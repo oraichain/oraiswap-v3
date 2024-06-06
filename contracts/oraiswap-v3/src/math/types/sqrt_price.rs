@@ -290,16 +290,14 @@ mod tests {
         // over max tick
         {
             let tick_out_of_range = MAX_TICK + 1;
-            // let (_, cause, stack) = SqrtPrice::from_tick(tick_out_of_range).unwrap_err().get();
-            // assert_eq!("tick over bounds", cause);
-            // assert_eq!(1, stack.len());
+            let err = SqrtPrice::from_tick(tick_out_of_range).unwrap_err();
+            assert!(matches!(err, ContractError::TickOverBounds));
         }
         // below min tick
         {
             let tick_out_of_range = -MAX_TICK - 1;
-            // let (_, cause, stack) = SqrtPrice::from_tick(tick_out_of_range).unwrap_err().get();
-            // assert_eq!("tick over bounds", cause);
-            // assert_eq!(1, stack.len());
+            let err = SqrtPrice::from_tick(tick_out_of_range).unwrap_err();
+            assert!(matches!(err, ContractError::TickOverBounds));
         }
     }
 

@@ -266,8 +266,9 @@ mod tests {
         {
             let liqudiity = Liquidity::new(1);
             let fee = TokenAmount::max_instance();
-            let res = FeeGrowth::from_fee(liqudiity, fee).unwrap_err();
-            // assert_eq!(stack.len(), 1);
+            let err = FeeGrowth::from_fee(liqudiity, fee).unwrap_err();
+
+            assert!(matches!(err, ContractError::Cast));
         }
         // amount = 0
         {
@@ -280,9 +281,8 @@ mod tests {
         {
             let liquidity = Liquidity::new(0);
             let fee = TokenAmount::from_integer(1_000);
-            let res = FeeGrowth::from_fee(liquidity, fee).unwrap_err();
-            // assert_eq!(cause, "division overflow or division by zero");
-            // assert_eq!(stack.len(), 1);
+            let err = FeeGrowth::from_fee(liquidity, fee).unwrap_err();
+            assert!(matches!(err, ContractError::Div));
         }
     }
 

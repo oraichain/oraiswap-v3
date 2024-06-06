@@ -27,19 +27,19 @@ pub enum ContractError {
     #[error("Invalid sqrt price")]
     InvalidInitSqrtPrice,
 
-    #[error("")]
+    #[error("multiplication overflow")]
     Mul,
 
-    #[error("")]
+    #[error("division overflow or division by zero")]
     Div,
 
-    #[error("")]
+    #[error("type failed")]
     Cast,
 
-    #[error("")]
+    #[error("addition overflow")]
     Add,
 
-    #[error("")]
+    #[error("subtraction underflow")]
     Sub,
 
     #[error("update_liquidity: liquidity + liquidity_delta overflow")]

@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Api};
+use cosmwasm_std::Addr;
 use decimal::Decimal;
 
 use crate::math::percentage::Percentage;

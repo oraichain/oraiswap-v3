@@ -82,30 +82,28 @@ pub mod tests {
             let liquidity = Liquidity::from_integer(1);
             let current_timestamp = 0;
             let last_timestamp = 100;
-            // let (_, cause, stack) = SecondsPerLiquidity::calculate_seconds_per_liquidity_global(
-            //     liquidity,
-            //     current_timestamp,
-            //     last_timestamp,
-            // )
-            // .unwrap_err()
-            // .get();
-            // assert_eq!(cause, "current_timestamp > last_timestamp failed");
-            // assert_eq!(stack.len(), 1);
+            let err = SecondsPerLiquidity::calculate_seconds_per_liquidity_global(
+                liquidity,
+                current_timestamp,
+                last_timestamp,
+            )
+            .unwrap_err();
+
+            assert!(matches!(err, ContractError::TimestampCheckFailed));
         }
         // L == 0
         {
             let liquidity = Liquidity::new(0);
             let current_timestamp = 1;
             let last_timestamp = 0;
-            // let (_, cause, stack) = SecondsPerLiquidity::calculate_seconds_per_liquidity_global(
-            //     liquidity,
-            //     current_timestamp,
-            //     last_timestamp,
-            // )
-            // .unwrap_err()
-            // .get();
-            // assert_eq!(cause, "division overflow or division by zero");
-            // assert_eq!(stack.len(), 1);
+            let err = SecondsPerLiquidity::calculate_seconds_per_liquidity_global(
+                liquidity,
+                current_timestamp,
+                last_timestamp,
+            )
+            .unwrap_err();
+
+            assert!(matches!(err, ContractError::Div));
         }
         // min value
         {
@@ -143,15 +141,14 @@ pub mod tests {
             let liquidity = Liquidity::new(1);
             let current_timestamp = u64::MAX;
             let last_timestamp = 0;
-            // let (_, cause, stack) = SecondsPerLiquidity::calculate_seconds_per_liquidity_global(
-            //     liquidity,
-            //     current_timestamp,
-            //     last_timestamp,
-            // )
-            // .unwrap_err()
-            // .get();
-            // assert_eq!(cause, "conversion to invariant::math::types::seconds_per_liquidity::SecondsPerLiquidity type failed");
-            // assert_eq!(stack.len(), 1);
+            let err = SecondsPerLiquidity::calculate_seconds_per_liquidity_global(
+                liquidity,
+                current_timestamp,
+                last_timestamp,
+            )
+            .unwrap_err();
+
+            assert!(matches!(err, ContractError::Cast));
         }
 
         let one_liquidity = Liquidity::new(1);
