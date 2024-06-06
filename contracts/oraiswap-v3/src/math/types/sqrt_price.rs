@@ -1,13 +1,13 @@
+use cosmwasm_schema::cw_serde;
 use decimal::*;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
 use crate::math::consts::*;
 use crate::math::types::{fixed_point::FixedPoint, token_amount::TokenAmount};
 use crate::ContractError;
 
 #[decimal(24)]
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, scale::Decode, scale::Encode, Serialize, Deserialize, JsonSchema)]
+#[cw_serde]
+#[derive(Default, Copy, Eq, PartialOrd, scale::Decode, scale::Encode)]
 #[cfg_attr(
     feature = "std",
     derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
@@ -133,8 +133,7 @@ pub fn check_tick_to_sqrt_price_relationship(
         }
     } else {
         let lower_bound = (SqrtPrice::from_tick(tick_index))?;
-        let upper_bound =
-            (SqrtPrice::from_tick(tick_index + tick_spacing as i32))?;
+        let upper_bound = (SqrtPrice::from_tick(tick_index + tick_spacing as i32))?;
         if sqrt_price >= upper_bound || sqrt_price < lower_bound {
             return Ok(false);
         }
@@ -209,8 +208,7 @@ pub fn calculate_sqrt_price(tick_index: i32) -> Result<SqrtPrice, ContractError>
 
     // Parsing to the Sqrt_price type by the end by convention (should always have 12 zeros at the end)
     Ok(if tick_index >= 0 {
-        SqrtPrice::checked_from_decimal(sqrt_price)
-            .map_err(|_| ContractError::ParseFromScale)?
+        SqrtPrice::checked_from_decimal(sqrt_price).map_err(|_| ContractError::ParseFromScale)?
     } else {
         SqrtPrice::checked_from_decimal(
             FixedPoint::from_integer(1)

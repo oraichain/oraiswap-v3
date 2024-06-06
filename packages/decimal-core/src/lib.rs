@@ -1,6 +1,3 @@
-// #![no_std]
-// extern crate alloc;
-// use alloc::{string::ToString, vec::Vec};
 use quote::{quote, ToTokens};
 use syn::parse_macro_input;
 
@@ -16,7 +13,7 @@ mod utils;
 
 use structs::DecimalCharacteristics;
 
-use crate::utils::string_to_ident;
+use utils::string_to_ident;
 
 #[proc_macro_attribute]
 pub fn decimal(

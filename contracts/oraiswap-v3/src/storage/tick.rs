@@ -1,7 +1,12 @@
 use super::Pool;
-use crate::{math::types::{
-    fee_growth::FeeGrowth, liquidity::Liquidity, sqrt_price::{calculate_sqrt_price, SqrtPrice},
-}, ContractError};
+use crate::{
+    math::types::{
+        fee_growth::FeeGrowth,
+        liquidity::Liquidity,
+        sqrt_price::{calculate_sqrt_price, SqrtPrice},
+    },
+    ContractError,
+};
 use cosmwasm_schema::cw_serde;
 use decimal::*;
 

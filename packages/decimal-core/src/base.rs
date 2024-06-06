@@ -1,6 +1,6 @@
 use quote::quote;
 
-use crate::DecimalCharacteristics;
+use super::DecimalCharacteristics;
 
 pub fn generate_base(characteristics: DecimalCharacteristics) -> proc_macro::TokenStream {
     let DecimalCharacteristics {

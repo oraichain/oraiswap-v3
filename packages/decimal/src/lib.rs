@@ -1,7 +1,3 @@
-#![no_std]
-
-extern crate alloc;
-
 mod traits;
 mod uint;
 
@@ -13,7 +9,6 @@ pub use traits::*;
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::alloc::string::ToString;
 
     #[cfg(test)]
     #[decimal(3, u128)]

@@ -1,4 +1,3 @@
-// use alloc::string::String;
 use proc_macro2::Span;
 use syn::Ident;
 

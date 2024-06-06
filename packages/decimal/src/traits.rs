@@ -1,7 +1,5 @@
 use core::fmt::{Debug, Display};
 
-use alloc::string::String;
-
 pub trait Decimal {
     type U: Debug + Default;
 

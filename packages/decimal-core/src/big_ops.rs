@@ -1,8 +1,7 @@
-// use string::ToString;
 use quote::quote;
 
-use crate::utils::string_to_ident;
-use crate::DecimalCharacteristics;
+use super::string_to_ident;
+use super::DecimalCharacteristics;
 
 pub fn generate_big_ops(characteristics: DecimalCharacteristics) -> proc_macro::TokenStream {
     let DecimalCharacteristics {
