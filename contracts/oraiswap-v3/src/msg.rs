@@ -1,7 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
 
-use crate::{liquidity::Liquidity, percentage::Percentage, sqrt_price::SqrtPrice, PoolKey};
+use crate::{liquidity::Liquidity, percentage::Percentage, sqrt_price::SqrtPrice, token_amount::TokenAmount, PoolKey};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -28,6 +28,13 @@ pub enum ExecuteMsg {
         slippage_limit_lower: SqrtPrice,
         slippage_limit_upper: SqrtPrice,
     },
+    Swap {
+        pool_key: PoolKey,
+        x_to_y: bool,
+        amount: TokenAmount,
+        by_amount_in: bool,
+        sqrt_price_limit: SqrtPrice,
+    }
 }
 
 #[cw_serde]

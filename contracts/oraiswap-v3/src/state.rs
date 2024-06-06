@@ -7,7 +7,6 @@ use crate::{
     tick_to_position, Config, ContractError, Pool, PoolKey, Position, Tick, CHUNK_SIZE, MAX_TICK,
 };
 
-// TODO: get state from storage
 pub const CONFIG: Item<Config> = Item::new("config");
 
 pub const POOLS: Map<&[u8], Pool> = Map::new("pools");

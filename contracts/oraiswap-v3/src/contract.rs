@@ -1,13 +1,16 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
+use decimal::{CheckedOps, Decimal};
 
 use crate::error::ContractError;
+use crate::interface::CalculateSwapResult;
 use crate::liquidity::Liquidity;
+use crate::token_amount::TokenAmount;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::percentage::Percentage;
-use crate::sqrt_price::SqrtPrice;
-use crate::state::{add_position, add_tick, flip_bitmap, get_tick, update_tick, CONFIG, POOLS};
-use crate::{check_tick, Config, PoolKey, Position, Tick};
+use crate::sqrt_price::{get_max_tick, get_min_tick, SqrtPrice};
+use crate::state::{add_position, add_tick, flip_bitmap, get_closer_limit, get_tick, update_tick, CONFIG, POOLS};
+use crate::{check_tick, compute_swap_step, Config, PoolKey, Position, Tick, UpdatePoolTick, MAX_SQRT_PRICE, MIN_SQRT_PRICE};
 
 use cosmwasm_std::{
     to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Storage, WasmMsg,
@@ -69,6 +72,22 @@ pub fn execute(
             liquidity_delta,
             slippage_limit_lower,
             slippage_limit_upper,
+        ),
+        ExecuteMsg::Swap {
+            pool_key,
+            x_to_y,
+            amount,
+            by_amount_in,
+            sqrt_price_limit,
+        } => swap(
+            deps,
+            env,
+            info,
+            pool_key,
+            x_to_y,
+            amount,
+            by_amount_in,
+            sqrt_price_limit,
         ),
     }
 }
@@ -263,4 +282,222 @@ fn create_position(
         ("upper_tick", &upper_tick.index.to_string()),
         ("sqrt_price", &pool.sqrt_price.to_string()),
     ]))
+}
+
+pub fn calculate_swap(
+    store: &dyn Storage,
+    current_timestamp: u64,
+    pool_key: PoolKey,
+    x_to_y: bool,
+    amount: TokenAmount,
+    by_amount_in: bool,
+    sqrt_price_limit: SqrtPrice,
+) -> Result<CalculateSwapResult, ContractError> {
+    if amount.is_zero() {
+        return Err(ContractError::AmountIsZero {});
+    }
+
+    let mut ticks: Vec<Tick> = vec![];
+
+    let mut pool = POOLS.load(store, &pool_key.key())?;
+
+    if x_to_y {
+        if pool.sqrt_price <= sqrt_price_limit
+            || sqrt_price_limit > SqrtPrice::new(MAX_SQRT_PRICE)
+        {
+            return Err(ContractError::WrongLimit {});
+        }
+    } else if pool.sqrt_price >= sqrt_price_limit
+        || sqrt_price_limit < SqrtPrice::new(MIN_SQRT_PRICE)
+    {
+        return Err(ContractError::WrongLimit {});
+    }
+
+    let tick_limit = if x_to_y {
+        get_min_tick(pool_key.fee_tier.tick_spacing)
+    } else {
+        get_max_tick(pool_key.fee_tier.tick_spacing)
+    };
+
+    let mut remaining_amount = amount;
+
+    let mut total_amount_in = TokenAmount::new(0);
+    let mut total_amount_out = TokenAmount::new(0);
+
+    let event_start_sqrt_price = pool.sqrt_price;
+    let mut event_fee_amount = TokenAmount::new(0);
+
+    while !remaining_amount.is_zero() {
+        let (swap_limit, limiting_tick) = get_closer_limit(
+            store,
+            sqrt_price_limit,
+            x_to_y,
+            pool.current_tick_index,
+            pool_key.fee_tier.tick_spacing,
+            &pool_key,
+        )?;
+
+        let result = compute_swap_step(
+            pool.sqrt_price,
+            swap_limit,
+            pool.liquidity,
+            remaining_amount,
+            by_amount_in,
+            pool_key.fee_tier.fee,
+        )?;
+
+        // make remaining amount smaller
+        if by_amount_in {
+            remaining_amount = remaining_amount
+                .checked_sub(result.amount_in + result.fee_amount)
+                .map_err(|_| ContractError::SubtractionError)?;
+        } else {
+            remaining_amount = remaining_amount
+                .checked_sub(result.amount_out)
+                .map_err(|_| ContractError::SubtractionError)?;
+        }
+
+        pool.add_fee(result.fee_amount, x_to_y, CONFIG.load(store)?.protocol_fee)?;
+        event_fee_amount += result.fee_amount;
+
+        pool.sqrt_price = result.next_sqrt_price;
+
+        total_amount_in += result.amount_in + result.fee_amount;
+        total_amount_out += result.amount_out;
+
+        // Fail if price would go over swap limit
+        if pool.sqrt_price == sqrt_price_limit && !remaining_amount.is_zero() {
+            return Err(ContractError::PriceLimitReached {});
+        }
+
+        let mut tick_update = {
+            if let Some((tick_index, is_initialized)) = limiting_tick {
+                if is_initialized {
+                    let tick = get_tick(store, &pool_key, tick_index)?;
+                    UpdatePoolTick::TickInitialized(tick)
+                } else {
+                    UpdatePoolTick::TickUninitialized(tick_index)
+                }
+            } else {
+                UpdatePoolTick::NoTick
+            }
+        };
+
+        let (amount_to_add, amount_after_tick_update, has_crossed) = pool.update_tick(
+            result,
+            swap_limit,
+            &mut tick_update,
+            remaining_amount,
+            by_amount_in,
+            x_to_y,
+            current_timestamp,
+            CONFIG.load(store)?.protocol_fee,
+            pool_key.fee_tier,
+        )?;
+
+        remaining_amount = amount_after_tick_update;
+        total_amount_in += amount_to_add;
+
+        if let UpdatePoolTick::TickInitialized(tick) = tick_update {
+            if has_crossed {
+                ticks.push(tick)
+            }
+        }
+
+        let reached_tick_limit = match x_to_y {
+            true => pool.current_tick_index <= tick_limit,
+            false => pool.current_tick_index >= tick_limit,
+        };
+
+        if reached_tick_limit {
+            return Err(ContractError::TickLimitReached {});
+        }
+    }
+    if total_amount_out.is_zero() {
+        return Err(ContractError::NoGainSwap {});
+    }
+
+    Ok(CalculateSwapResult {
+        amount_in: total_amount_in,
+        amount_out: total_amount_out,
+        start_sqrt_price: event_start_sqrt_price,
+        target_sqrt_price: pool.sqrt_price,
+        fee: event_fee_amount,
+        pool,
+        ticks,
+    })
+}
+
+pub fn swap(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    pool_key: PoolKey,
+    x_to_y: bool,
+    amount: TokenAmount,
+    by_amount_in: bool,
+    sqrt_price_limit: SqrtPrice,
+) -> Result<Response, ContractError> {
+    let current_timestamp = env.block.time.nanos();
+
+    let calculate_swap_result = calculate_swap(
+        deps.storage,
+        current_timestamp,
+        pool_key.clone(),
+        x_to_y,
+        amount,
+        by_amount_in,
+        sqrt_price_limit,
+    )?;
+
+    let mut crossed_tick_indexes: Vec<i32> = vec![];
+
+    for tick in calculate_swap_result.ticks.iter() {
+        update_tick(deps.storage, &pool_key, tick.index, tick)?;
+        crossed_tick_indexes.push(tick.index);
+    }
+
+    POOLS.save(deps.storage, &pool_key.key(), &calculate_swap_result.pool)?;
+
+    let mut msgs = vec![];
+
+    if x_to_y {
+        msgs.push(WasmMsg::Execute {
+            contract_addr: pool_key.token_x.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                owner: info.sender.to_string(),
+                recipient: env.contract.address.to_string(),
+                amount: calculate_swap_result.amount_in.into(),
+            })?,
+            funds: vec![],
+        });
+        msgs.push(WasmMsg::Execute {
+            contract_addr: pool_key.token_y.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: info.sender.to_string(),
+                amount: calculate_swap_result.amount_out.into(),
+            })?,
+            funds: vec![],
+        });
+    } else {
+        msgs.push(WasmMsg::Execute {
+            contract_addr: pool_key.token_y.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                owner: info.sender.to_string(),
+                recipient: env.contract.address.to_string(),
+                amount: calculate_swap_result.amount_in.into(),
+            })?,
+            funds: vec![],
+        });
+        msgs.push(WasmMsg::Execute {
+            contract_addr: pool_key.token_x.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: info.sender.to_string(),
+                amount: calculate_swap_result.amount_out.into(),
+            })?,
+            funds: vec![],
+        });
+    }
+
+    Ok(Response::new().add_messages(msgs).add_attribute("action", "swap"))
 }

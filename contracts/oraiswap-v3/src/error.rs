@@ -146,4 +146,16 @@ pub enum ContractError {
 
     #[error("Unauthorized")]
     Unauthorized {},
+
+    #[error("AmountIsZero")]
+    AmountIsZero,
+
+    #[error("WrongLimit")]
+    WrongLimit,
+
+    #[error("SubtractionError")]
+    SubtractionError,
+
+    #[error("NoGainSwap")]
+    NoGainSwap,
 }
