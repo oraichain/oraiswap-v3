@@ -1,6 +1,6 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 
-use crate::percentage::Percentage;
+use crate::{percentage::Percentage, PoolKey};
 
 #[cw_serde]
 pub struct InstantiateMsg {
@@ -8,7 +8,9 @@ pub struct InstantiateMsg {
 }
 
 #[cw_serde]
-pub enum ExecuteMsg {}
+pub enum ExecuteMsg {
+    WithdrawProtocolFee { pool_key: PoolKey },
+}
 
 #[cw_serde]
 pub struct MigrateMsg {}

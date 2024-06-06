@@ -1,5 +1,5 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::Addr;
+use cosmwasm_std::{Addr, Api};
 use decimal::Decimal;
 
 use crate::math::percentage::Percentage;
@@ -27,6 +27,15 @@ impl Default for PoolKey {
 }
 
 impl PoolKey {
+    pub fn key(&self, api: &dyn Api) -> Result<Vec<u8>, ContractError> {
+        let token_x_bytes = api.addr_canonicalize(self.token_x.as_str())?;
+        let token_y_bytes = api.addr_canonicalize(self.token_y.as_str())?;
+        Ok(match token_x_bytes.le(&token_y_bytes) {
+            true => [token_x_bytes.as_slice(), token_y_bytes.as_slice()].concat(),
+            false => [token_y_bytes.as_slice(), token_x_bytes.as_slice()].concat(),
+        })
+    }
+
     pub fn new(token_0: Addr, token_1: Addr, fee_tier: FeeTier) -> Result<Self, ContractError> {
         if token_0 == token_1 {
             return Err(ContractError::TokensAreSame);

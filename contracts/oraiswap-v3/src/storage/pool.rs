@@ -1,6 +1,5 @@
 use super::{FeeTier, Tick};
 use crate::math::types::sqrt_price::check_tick_to_sqrt_price_relationship;
-use crate::PoolKey;
 use crate::{
     math::{
         clamm::*,
@@ -202,7 +201,7 @@ impl Pool {
         Ok((total_amount, remaining_amount, has_crossed))
     }
 
-    pub fn withdraw_protocol_fee(&mut self, _pool_key: PoolKey) -> (TokenAmount, TokenAmount) {
+    pub fn withdraw_protocol_fee(&mut self) -> (TokenAmount, TokenAmount) {
         let fee_protocol_token_x = self.fee_protocol_token_x;
         let fee_protocol_token_y = self.fee_protocol_token_y;
 

@@ -125,4 +125,7 @@ pub enum ContractError {
 
     #[error("Overflow while casting to TokenAmount")]
     OverflowCastingTokenAmount,
+
+    #[error("Unauthorized")]
+    Unauthorized {},
 }
