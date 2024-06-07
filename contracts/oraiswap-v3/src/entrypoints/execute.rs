@@ -2,11 +2,16 @@ use crate::error::ContractError;
 use crate::liquidity::Liquidity;
 use crate::percentage::Percentage;
 use crate::sqrt_price::SqrtPrice;
-use crate::state::{add_position, get_tick, update_tick, CONFIG, POOLS};
+use crate::state::{
+    add_position, get_position, get_tick, remove_position, remove_tick, update_position,
+    update_tick, CONFIG, POOLS,
+};
 use crate::token_amount::TokenAmount;
-use crate::{PoolKey, Position};
+use crate::{check_tick, FeeTier, Pool, PoolKey, Position};
 
-use cosmwasm_std::{to_binary, Addr, DepsMut, Env, MessageInfo, Response, WasmMsg};
+use cosmwasm_std::{
+    attr, to_binary, Addr, Attribute, DepsMut, Env, MessageInfo, Response, WasmMsg,
+};
 use cw20::Cw20ExecuteMsg;
 
 use super::{calculate_swap, create_tick};
@@ -18,9 +23,6 @@ use super::{calculate_swap, create_tick};
 ///
 /// # Errors
 /// - Reverts the call when the caller is an unauthorized receiver.
-///
-/// # External contracts
-/// - PSP22
 pub fn withdraw_protocol_fee(
     deps: DepsMut,
     info: MessageInfo,
@@ -131,9 +133,6 @@ pub fn change_fee_receiver(
 /// - Fails if the price has reached the slippage limit.
 /// - Fails if the allowance is insufficient or the user balance transfer fails.
 /// - Fails if pool does not exist
-///
-/// # External contracts
-/// - PSP22
 pub fn create_position(
     deps: DepsMut,
     env: Env,
@@ -212,13 +211,19 @@ pub fn create_position(
         funds: vec![],
     });
 
-    Ok(Response::new().add_messages(msgs).add_attributes(vec![
-        ("action", "create_position"),
-        ("sender", info.sender.as_str()),
-        ("lower_tick", &lower_tick.index.to_string()),
-        ("upper_tick", &upper_tick.index.to_string()),
-        ("sqrt_price", &pool.sqrt_price.to_string()),
-    ]))
+    let event_attributes = vec![
+        attr("timestamp", "remove_position"),
+        attr("address", info.sender.to_string()),
+        attr("pool", String::from_utf8(pool_key_db).unwrap()),
+        attr("liquidity", liquidity_delta.to_string()),
+        attr("lower_tick", lower_tick.index.to_string()),
+        attr("upper_tick", upper_tick.index.to_string()),
+        attr("current_sqrt_price", pool.sqrt_price.to_string()),
+    ];
+
+    Ok(Response::new()
+        .add_messages(msgs)
+        .add_attributes(event_attributes))
 }
 
 /// Performs a single swap based on the provided parameters.
@@ -241,9 +246,6 @@ pub fn create_position(
 /// - Fails if the allowance is insufficient or the user balance transfer fails.
 /// - Fails if there is insufficient liquidity in pool
 /// - Fails if pool does not exist
-///
-/// # External contracts
-/// - PSP22
 pub fn swap(
     deps: DepsMut,
     env: Env,
@@ -271,6 +273,23 @@ pub fn swap(
     for tick in calculate_swap_result.ticks.iter() {
         update_tick(deps.storage, &pool_key, tick.index, tick)?;
         crossed_tick_indexes.push(tick.index);
+    }
+
+    let mut cross_tick_events: Vec<Attribute> = Vec::new();
+    if !crossed_tick_indexes.is_empty() {
+        cross_tick_events = vec![
+            attr("timestamp", "remove_position"),
+            attr("address", info.sender.to_string()),
+            attr("pool", String::from_utf8(pool_key.key()).unwrap()),
+            attr(
+                "indexes",
+                crossed_tick_indexes
+                    .iter()
+                    .map(|i| i.to_string())
+                    .collect::<Vec<String>>()
+                    .join(", "),
+            ),
+        ];
     }
 
     POOLS.save(deps.storage, &pool_key.key(), &calculate_swap_result.pool)?;
@@ -315,8 +334,284 @@ pub fn swap(
         });
     }
 
+    let swap_events = vec![
+        attr("timestamp", "swap"),
+        attr("address", calculate_swap_result.amount_out.to_string()),
+        attr("pool", String::from_utf8(pool_key.key()).unwrap()),
+        attr("amount_in", calculate_swap_result.amount_in.to_string()),
+        attr("amount_out", calculate_swap_result.amount_out.to_string()),
+        attr("fee", calculate_swap_result.fee.to_string()),
+        attr(
+            "start_sqrt_price",
+            calculate_swap_result.start_sqrt_price.to_string(),
+        ),
+        attr(
+            "target_sqrt_price",
+            calculate_swap_result.target_sqrt_price.to_string(),
+        ),
+        attr("x_to_y", x_to_y.to_string()),
+    ];
+
     Ok(Response::new()
         .add_messages(msgs)
         .add_attribute("action", "swap")
-        .add_attribute("amount_out", calculate_swap_result.amount_out.to_string()))
+        .add_attributes(cross_tick_events)
+        .add_attributes(swap_events))
+}
+
+/// Transfers a position between users.
+///
+/// # Parameters
+/// - `index`: The index of the user position to transfer.
+/// - `receiver`: An `AccountId` identifying the user who will own the position.
+pub fn transfer_position(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    index: u32,
+    receiver: String,
+) -> Result<Response, ContractError> {
+    let caller = info.sender;
+
+    let position = get_position(deps.storage, &caller, index)?;
+
+    remove_position(deps.storage, &caller, index)?;
+
+    let receiver_addr = deps.api.addr_validate(&receiver)?;
+    add_position(deps.storage, &receiver_addr, &position)?;
+
+    Ok(Response::new().add_attribute("action", "transfer_position"))
+}
+
+/// Allows an authorized user (owner of the position) to claim collected fees.
+///
+/// # Parameters
+/// - `index`: The index of the user position from which fees will be claimed.
+///
+/// # Errors
+/// - Fails if the position cannot be found.
+pub fn claim_fee(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    index: u32,
+) -> Result<Response, ContractError> {
+    let caller = info.sender;
+    let current_timestamp = env.block.time.nanos();
+
+    let mut position = get_position(deps.storage, &caller, index)?;
+
+    let mut lower_tick = get_tick(deps.storage, &position.pool_key, position.lower_tick_index)?;
+    let mut upper_tick = get_tick(deps.storage, &position.pool_key, position.upper_tick_index)?;
+
+    let mut pool = POOLS.load(deps.storage, &position.pool_key.key())?;
+
+    let (x, y) = position.claim_fee(
+        &mut pool,
+        &mut upper_tick,
+        &mut lower_tick,
+        current_timestamp,
+    )?;
+
+    update_position(deps.storage, &caller, index, &position)?;
+    POOLS.save(deps.storage, &position.pool_key.key(), &pool)?;
+    update_tick(
+        deps.storage,
+        &position.pool_key,
+        upper_tick.index,
+        &upper_tick,
+    )?;
+    update_tick(
+        deps.storage,
+        &position.pool_key,
+        lower_tick.index,
+        &lower_tick,
+    )?;
+
+    let mut msgs = vec![];
+
+    if x.0 > 0 {
+        msgs.push(WasmMsg::Execute {
+            contract_addr: position.pool_key.token_x.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: caller.to_string(),
+                amount: x.into(),
+            })?,
+            funds: vec![],
+        });
+    }
+
+    if y.0 > 0 {
+        msgs.push(WasmMsg::Execute {
+            contract_addr: position.pool_key.token_y.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: caller.to_string(),
+                amount: y.into(),
+            })?,
+            funds: vec![],
+        });
+    }
+
+    Ok(Response::new()
+        .add_messages(msgs)
+        .add_attribute("action", "claim_fee")
+        .add_attribute("amount_x", x.to_string())
+        .add_attribute("amount_y", y.to_string()))
+}
+
+/// Removes a position. Sends tokens associated with specified position to the owner.
+///
+/// # Parameters
+/// - `index`: The index of the user position to be removed.
+///
+/// # Events
+/// - Emits a `Remove Position` event upon success.
+///
+/// # Errors
+/// - Fails if Position cannot be found
+pub fn remove_pos(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    index: u32,
+) -> Result<Response, ContractError> {
+    let caller = info.sender;
+    let current_timestamp = env.block.time.nanos();
+
+    let mut position = get_position(deps.storage, &caller, index)?;
+    let withdrawed_liquidity = position.liquidity;
+
+    let mut lower_tick = get_tick(deps.storage, &position.pool_key, position.lower_tick_index)?;
+    let mut upper_tick = get_tick(deps.storage, &position.pool_key, position.upper_tick_index)?;
+
+    let mut pool = POOLS.load(deps.storage, &position.pool_key.key())?;
+
+    let (amount_x, amount_y, deinitialize_lower_tick, deinitialize_upper_tick) = position.remove(
+        &mut pool,
+        current_timestamp,
+        &mut lower_tick,
+        &mut upper_tick,
+        position.pool_key.fee_tier.tick_spacing,
+    )?;
+
+    POOLS.save(deps.storage, &position.pool_key.key(), &pool)?;
+
+    if deinitialize_lower_tick {
+        remove_tick(deps.storage, &position.pool_key, lower_tick.index)?;
+    } else {
+        update_tick(
+            deps.storage,
+            &position.pool_key,
+            position.lower_tick_index,
+            &lower_tick,
+        )?;
+    }
+
+    if deinitialize_upper_tick {
+        remove_tick(deps.storage, &position.pool_key, upper_tick.index)?;
+    } else {
+        update_tick(
+            deps.storage,
+            &position.pool_key,
+            position.upper_tick_index,
+            &upper_tick,
+        )?;
+    }
+
+    remove_position(deps.storage, &caller, index)?;
+
+    let mut msgs = vec![];
+
+    if amount_x.0 > 0 {
+        msgs.push(WasmMsg::Execute {
+            contract_addr: position.pool_key.token_x.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: caller.to_string(),
+                amount: amount_x.into(),
+            })?,
+            funds: vec![],
+        });
+    }
+
+    if amount_y.0 > 0 {
+        msgs.push(WasmMsg::Execute {
+            contract_addr: position.pool_key.token_y.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: caller.to_string(),
+                amount: amount_y.into(),
+            })?,
+            funds: vec![],
+        });
+    }
+
+    let event_attributes = vec![
+        attr("action", "remove_position"),
+        attr("timestamp", "remove_position"),
+        attr("address", caller),
+        attr("pool", String::from_utf8(position.pool_key.key()).unwrap()),
+        attr("liquidity", withdrawed_liquidity.to_string()),
+        attr("lower_tick", lower_tick.index.to_string()),
+        attr("upper_tick", upper_tick.index.to_string()),
+        attr("current_sqrt_price", pool.sqrt_price.to_string()),
+    ];
+
+    Ok(Response::new()
+        .add_messages(msgs)
+        .add_attributes(event_attributes))
+}
+
+/// Allows a user to create a custom pool on a specified token pair and fee tier.
+/// The contract specifies the order of tokens as x and y, the lower token address assigned as token x.
+/// The choice is deterministic.
+///
+/// # Parameters
+/// - `token_0`: The address of the first token.
+/// - `token_1`: The address of the second token.
+/// - `fee_tier`: A struct identifying the pool fee and tick spacing.
+/// - `init_sqrt_price`: The square root of the price for the initial pool related to `init_tick`.
+/// - `init_tick`: The initial tick at which the pool will be created.
+///
+/// # Errors
+/// - Fails if the specified fee tier cannot be found.
+/// - Fails if the user attempts to create a pool for the same tokens.
+/// - Fails if Pool with same tokens and fee tier already exist.
+/// - Fails if the init tick is not divisible by the tick spacing.
+/// - Fails if the init sqrt price is not related to the init tick.
+pub fn create_pool(
+    deps: DepsMut,
+    env: Env,
+    _info: MessageInfo,
+    token_0: Addr,
+    token_1: Addr,
+    fee_tier: FeeTier,
+    init_sqrt_price: SqrtPrice,
+    init_tick: i32,
+) -> Result<Response, ContractError> {
+    let current_timestamp = env.block.time.nanos();
+
+    // check fee tier?
+
+    check_tick(init_tick, fee_tier.tick_spacing).map_err(|_| ContractError::InvalidInitTick)?;
+
+    let pool_key =
+        PoolKey::new(token_0, token_1, fee_tier).map_err(|_| ContractError::InvalidPoolKey)?;
+
+    if POOLS.may_load(deps.storage, &pool_key.key())?.is_some() {
+        return Err(ContractError::PoolAlreadyExist);
+    };
+
+    let config = CONFIG.load(deps.storage)?;
+
+    let pool = Pool::create(
+        init_sqrt_price,
+        init_tick,
+        current_timestamp,
+        fee_tier.tick_spacing,
+        config.admin,
+    )
+    .map_err(|_| ContractError::CreatePoolError)?;
+
+    POOLS.save(deps.storage, &pool_key.key(), &pool)?;
+
+    Ok(Response::new().add_attribute("action", "create_pool"))
 }

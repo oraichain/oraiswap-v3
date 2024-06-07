@@ -80,6 +80,27 @@ pub fn execute(
             by_amount_in,
             sqrt_price_limit,
         ),
+        ExecuteMsg::TransferPosition { index, receiver } => {
+            transfer_position(deps, env, info, index, receiver)
+        }
+        ExecuteMsg::ClaimFee { index } => claim_fee(deps, env, info, index),
+        ExecuteMsg::RemovePosition { index } => remove_pos(deps, env, info, index),
+        ExecuteMsg::CreatePool {
+            token_0,
+            token_1,
+            fee_tier,
+            init_sqrt_price,
+            init_tick,
+        } => create_pool(
+            deps,
+            env,
+            info,
+            token_0,
+            token_1,
+            fee_tier,
+            init_sqrt_price,
+            init_tick,
+        ),
     }
 }
 

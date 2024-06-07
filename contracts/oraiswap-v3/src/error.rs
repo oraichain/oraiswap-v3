@@ -163,5 +163,16 @@ pub enum ContractError {
     SwapFailed,
 
     #[error("AmountUnderMinimumAmountOut")]
-    AmountUnderMinimumAmountOut
+    AmountUnderMinimumAmountOut,
+
+    #[error("InvalidPoolKey")]
+    InvalidPoolKey,
+
+    #[error("PoolAlreadyExist")]
+    PoolAlreadyExist,
+
+    #[error("PoolNotCreated")]
+    CreatePoolError,
+
+    
 }
