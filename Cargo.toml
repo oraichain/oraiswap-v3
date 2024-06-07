@@ -37,7 +37,8 @@ cw-utils = "0.16.0"
 decimal-core = { path = "./packages/decimal-core" }
 decimal = { path = "./packages/decimal" }
 
-cosmwasm-testing-util = { git = "https://github.com/oraichain/cosmwasm-testing-util.git", rev = "77d6a49" }
+osmosis-test-tube = { git = "https://github.com/oraichain/test-tube.git", rev = "354d580" }
+test-tube = { git = "https://github.com/oraichain/test-tube.git", rev = "354d580" }
 
 [profile.release]
 opt-level = 3
