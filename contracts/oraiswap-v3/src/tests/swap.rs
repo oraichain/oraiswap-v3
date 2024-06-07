@@ -1,6 +1,7 @@
 use decimal::Factories;
+use test_tube::{Account, Module, Wasm};
 
-use crate::{percentage::Percentage, FeeTier};
+use crate::{msg::QueryMsg, percentage::Percentage, FeeTier};
 
 use super::helper::TestTubeScenario;
 
@@ -11,7 +12,7 @@ fn test_swap_x_to_y() {
 
     let fee_tier = FeeTier::new(protocol_fee, 10).unwrap();
 
-    let res = scenario.add_fee_tier(1, fee_tier).unwrap_err();
+    let res = scenario.add_fee_tier(0, fee_tier).unwrap();
 
-    println!("{:?}", res);
+    println!("{} - {:?}", scenario.accounts[0].address(), res.events);
 }

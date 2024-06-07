@@ -593,7 +593,8 @@ pub fn add_fee_tier(
         return Err(ContractError::InvalidTickSpacing);
     }
 
-    if fee_tier.fee >= Percentage::new(1000000000000) { // 100% -> fee invalid
+    if fee_tier.fee >= Percentage::new(1000000000000) {
+        // 100% -> fee invalid
         return Err(ContractError::InvalidFee);
     }
 
