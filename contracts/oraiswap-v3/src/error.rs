@@ -163,5 +163,11 @@ pub enum ContractError {
     SwapFailed,
 
     #[error("AmountUnderMinimumAmountOut")]
-    AmountUnderMinimumAmountOut
+    AmountUnderMinimumAmountOut,
+}
+
+impl From<ContractError> for StdError {
+    fn from(source: ContractError) -> Self {
+        Self::generic_err(source.to_string())
+    }
 }

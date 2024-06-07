@@ -88,7 +88,7 @@ pub fn change_protocol_fee(
 ///
 /// # Parameters
 /// - `pool_key`: A unique key that identifies the specified pool.
-/// - `fee_receiver`: An `AccountId` identifying the user authorized to claim fees.
+/// - `fee_receiver`: An `Addr` identifying the user authorized to claim fees.
 ///
 /// # Errors
 /// - Reverts the call when the caller is an unauthorized user.

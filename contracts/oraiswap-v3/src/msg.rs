@@ -3,7 +3,7 @@ use cosmwasm_std::Addr;
 
 use crate::{
     interface::SwapHop, liquidity::Liquidity, percentage::Percentage, sqrt_price::SqrtPrice,
-    token_amount::TokenAmount, PoolKey,
+    token_amount::TokenAmount, PoolKey, Position,
 };
 
 #[cw_serde]
@@ -52,4 +52,14 @@ pub struct MigrateMsg {}
 pub enum QueryMsg {
     #[returns(Percentage)]
     ProtocolFee {},
+
+    #[returns(Position)]
+    Position { owner_id: Addr, index: u32 },
+
+    #[returns(Vec<Position>)]
+    Positions {
+        owner_id: Addr,
+        limit: Option<u32>,
+        offset: Option<u32>,
+    },
 }
