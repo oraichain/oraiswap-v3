@@ -13,6 +13,7 @@ use crate::{check_tick, FeeTier, Pool, PoolKey, Position};
 use super::{create_tick, route, swap_internal};
 use cosmwasm_std::{attr, to_binary, Addr, DepsMut, Env, MessageInfo, Response, WasmMsg};
 use cw20::Cw20ExecuteMsg;
+use decimal::Decimal;
 
 /// Allows an fee receiver to withdraw collected fees.
 ///
@@ -353,7 +354,7 @@ pub fn claim_fee(
 
     let mut msgs = vec![];
 
-    if x.0 > 0 {
+    if x > TokenAmount::new(0) {
         msgs.push(WasmMsg::Execute {
             contract_addr: position.pool_key.token_x.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
@@ -364,7 +365,7 @@ pub fn claim_fee(
         });
     }
 
-    if y.0 > 0 {
+    if y > TokenAmount::new(0) {
         msgs.push(WasmMsg::Execute {
             contract_addr: position.pool_key.token_y.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
@@ -446,7 +447,7 @@ pub fn remove_pos(
 
     let mut msgs = vec![];
 
-    if amount_x.0 > 0 {
+    if amount_x > TokenAmount::new(0) {
         msgs.push(WasmMsg::Execute {
             contract_addr: position.pool_key.token_x.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
@@ -457,7 +458,7 @@ pub fn remove_pos(
         });
     }
 
-    if amount_y.0 > 0 {
+    if amount_y > TokenAmount::new(0) {
         msgs.push(WasmMsg::Execute {
             contract_addr: position.pool_key.token_y.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
@@ -592,7 +593,7 @@ pub fn add_fee_tier(
         return Err(ContractError::InvalidTickSpacing);
     }
 
-    if fee_tier.fee.0 >= 1 {
+    if fee_tier.fee >= Percentage::new(1000000000000) { // 100% -> fee invalid
         return Err(ContractError::InvalidFee);
     }
 
