@@ -1,11 +1,12 @@
-use cosmwasm_std::Storage;
+use cosmwasm_std::{to_binary, Addr, DepsMut, Env, MessageInfo, Storage, WasmMsg};
+use cw20::Cw20ExecuteMsg;
 use decimal::{CheckedOps, Decimal};
 
 use crate::{
     check_tick, compute_swap_step,
-    interface::CalculateSwapResult,
+    interface::{CalculateSwapResult, SwapHop},
     sqrt_price::{get_max_tick, get_min_tick, SqrtPrice},
-    state::{add_tick, flip_bitmap, get_closer_limit, get_tick, CONFIG, POOLS},
+    state::{add_tick, flip_bitmap, get_closer_limit, get_tick, update_tick, CONFIG, POOLS},
     token_amount::TokenAmount,
     ContractError, PoolKey, Tick, UpdatePoolTick, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
 };
@@ -30,7 +31,7 @@ pub fn create_tick(
 pub fn calculate_swap(
     store: &dyn Storage,
     current_timestamp: u64,
-    pool_key: PoolKey,
+    pool_key: &PoolKey,
     x_to_y: bool,
     amount: TokenAmount,
     by_amount_in: bool,
@@ -76,7 +77,7 @@ pub fn calculate_swap(
             x_to_y,
             pool.current_tick_index,
             pool_key.fee_tier.tick_spacing,
-            &pool_key,
+            pool_key,
         )?;
 
         let result = compute_swap_step(
@@ -115,7 +116,7 @@ pub fn calculate_swap(
         let mut tick_update = {
             if let Some((tick_index, is_initialized)) = limiting_tick {
                 if is_initialized {
-                    let tick = get_tick(store, &pool_key, tick_index)?;
+                    let tick = get_tick(store, pool_key, tick_index)?;
                     UpdatePoolTick::TickInitialized(tick)
                 } else {
                     UpdatePoolTick::TickUninitialized(tick_index)
@@ -168,4 +169,129 @@ pub fn calculate_swap(
         pool,
         ticks,
     })
+}
+
+pub fn swap_internal(
+    store: &mut dyn Storage,
+    msgs: &mut Vec<WasmMsg>,
+    sender: &Addr,
+    contract_address: &Addr,
+    current_timestamp: u64,
+    pool_key: &PoolKey,
+    x_to_y: bool,
+    amount: TokenAmount,
+    by_amount_in: bool,
+    sqrt_price_limit: SqrtPrice,
+) -> Result<CalculateSwapResult, ContractError> {
+    let calculate_swap_result = calculate_swap(
+        store,
+        current_timestamp,
+        pool_key,
+        x_to_y,
+        amount,
+        by_amount_in,
+        sqrt_price_limit,
+    )?;
+
+    let mut crossed_tick_indexes: Vec<i32> = vec![];
+
+    for tick in calculate_swap_result.ticks.iter() {
+        update_tick(store, &pool_key, tick.index, tick)?;
+        crossed_tick_indexes.push(tick.index);
+    }
+
+    POOLS.save(store, &pool_key.key(), &calculate_swap_result.pool)?;
+
+    if x_to_y {
+        msgs.push(WasmMsg::Execute {
+            contract_addr: pool_key.token_x.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                owner: sender.to_string(),
+                recipient: contract_address.to_string(),
+                amount: calculate_swap_result.amount_in.into(),
+            })?,
+            funds: vec![],
+        });
+        msgs.push(WasmMsg::Execute {
+            contract_addr: pool_key.token_y.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: sender.to_string(),
+                amount: calculate_swap_result.amount_out.into(),
+            })?,
+            funds: vec![],
+        });
+    } else {
+        msgs.push(WasmMsg::Execute {
+            contract_addr: pool_key.token_y.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                owner: sender.to_string(),
+                recipient: contract_address.to_string(),
+                amount: calculate_swap_result.amount_in.into(),
+            })?,
+            funds: vec![],
+        });
+        msgs.push(WasmMsg::Execute {
+            contract_addr: pool_key.token_x.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: sender.to_string(),
+                amount: calculate_swap_result.amount_out.into(),
+            })?,
+            funds: vec![],
+        });
+    }
+
+    Ok(calculate_swap_result)
+}
+
+pub fn route(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    msgs: &mut Vec<WasmMsg>,
+    is_swap: bool,
+    amount_in: TokenAmount,
+    swaps: Vec<SwapHop>,
+) -> Result<TokenAmount, ContractError> {
+    let mut next_swap_amount = amount_in;
+
+    let current_timestamp = env.block.time.nanos();
+
+    for swap_hop in swaps {
+        let SwapHop { pool_key, x_to_y } = swap_hop;
+
+        let sqrt_price_limit = if x_to_y {
+            SqrtPrice::new(MIN_SQRT_PRICE)
+        } else {
+            SqrtPrice::new(MAX_SQRT_PRICE)
+        };
+
+        let res = if is_swap {
+            swap_internal(
+                deps.storage,
+                msgs,
+                &info.sender,
+                &env.contract.address,
+                current_timestamp,
+                &pool_key,
+                x_to_y,
+                next_swap_amount,
+                true,
+                sqrt_price_limit,
+            )
+        } else {
+            calculate_swap(
+                deps.storage,
+                current_timestamp,
+                &pool_key,
+                x_to_y,
+                next_swap_amount,
+                true,
+                sqrt_price_limit,
+            )
+        }?;
+
+        next_swap_amount = res.amount_out;
+    }
+
+    Ok(next_swap_amount)
 }

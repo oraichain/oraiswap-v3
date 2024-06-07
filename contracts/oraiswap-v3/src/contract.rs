@@ -74,12 +74,15 @@ pub fn execute(
             deps,
             env,
             info,
-            pool_key,
+            &pool_key,
             x_to_y,
             amount,
             by_amount_in,
             sqrt_price_limit,
         ),
+        ExecuteMsg::QuoteRoute { amount_in, swaps } => {
+            quote_route(deps, env, info, amount_in, swaps)
+        }
     }
 }
 
@@ -87,55 +90,5 @@ pub fn execute(
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::ProtocolFee {} => to_binary(&get_protocol_fee(deps)?),
-        QueryMsg::QuoteRoute { amount_in, swaps } => {
-            to_binary(&quote_route(deps, env, amount_in, swaps)?)
-        }
     }
 }
-
-// fn route(
-//     &mut self,
-//     is_swap: bool,
-//     amount_in: TokenAmount,
-//     swaps: Vec<SwapHop>,
-// ) -> Result<TokenAmount, InvariantError> {
-//     let mut next_swap_amount = amount_in;
-
-//     for swap in swaps.iter() {
-//         let SwapHop { pool_key, x_to_y } = *swap;
-
-//         let sqrt_price_limit = if x_to_y {
-//             SqrtPrice::new(MIN_SQRT_PRICE)
-//         } else {
-//             SqrtPrice::new(MAX_SQRT_PRICE)
-//         };
-
-//         let result = if is_swap {
-//             self.swap(pool_key, x_to_y, next_swap_amount, true, sqrt_price_limit)
-//         } else {
-//             self.calculate_swap(pool_key, x_to_y, next_swap_amount, true, sqrt_price_limit)
-//         }?;
-
-//         next_swap_amount = result.amount_out;
-//     }
-
-//     Ok(next_swap_amount)
-// }
-
-// fn swap_route(
-//     deps: Deps,
-//     amount_in: TokenAmount,
-//     expected_amount_out: TokenAmount,
-//     slippage: Percentage,
-//     swaps: Vec<SwapHop>,
-// ) -> Result<(), InvariantError> {
-//     let amount_out = self.route(true, amount_in, swaps)?;
-
-//     let min_amount_out = calculate_min_amount_out(expected_amount_out, slippage);
-
-//     if amount_out < min_amount_out {
-//         return Err(InvariantError::AmountUnderMinimumAmountOut);
-//     }
-
-//     Ok(())
-// }
