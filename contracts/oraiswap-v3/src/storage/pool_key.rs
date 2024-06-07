@@ -30,9 +30,11 @@ impl PoolKey {
     pub fn key(&self) -> Vec<u8> {
         let token_x_bytes = self.token_x.as_bytes();
         let token_y_bytes = self.token_y.as_bytes();
+
+        // sort by asc then append fee_tier at the end to create unique key
         match token_x_bytes.le(token_y_bytes) {
-            true => [token_x_bytes, token_y_bytes].concat(),
-            false => [token_y_bytes, token_x_bytes].concat(),
+            true => [token_x_bytes, token_y_bytes, &self.fee_tier.key()].concat(),
+            false => [token_y_bytes, token_x_bytes, &self.fee_tier.key()].concat(),
         }
     }
 
@@ -54,5 +56,27 @@ impl PoolKey {
                 fee_tier,
             })
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use cosmwasm_std::Addr;
+    use decimal::Decimal;
+
+    use crate::{percentage::Percentage, FeeTier, PoolKey};
+
+    #[test]
+    fn test_key() {
+        let token_x = Addr::unchecked("token_0");
+        let token_y = Addr::unchecked("token_1");
+        let fee_tier = FeeTier {
+            fee: Percentage::new(10),
+            tick_spacing: 1,
+        };
+
+        let pool_key = PoolKey::new(token_x, token_y, fee_tier).unwrap();
+
+        println!("key {:?}", pool_key.key());
     }
 }

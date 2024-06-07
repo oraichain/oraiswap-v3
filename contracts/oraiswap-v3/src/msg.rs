@@ -138,6 +138,9 @@ pub enum QueryMsg {
         lower_tick: i32,
         upper_tick: i32,
     },
+
+    #[returns(Vec<Pool>)]
+    PoolsForPair { token0: Addr, token1: Addr },
 }
 
 #[cw_serde]

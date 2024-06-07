@@ -30,4 +30,10 @@ impl FeeTier {
 
         Ok(Self { fee, tick_spacing })
     }
+
+    pub fn key(&self) -> Vec<u8> {
+        let mut key = self.fee.0.to_be_bytes().to_vec();
+        key.extend_from_slice(&self.tick_spacing.to_be_bytes());
+        key
+    }
 }

@@ -108,6 +108,26 @@ pub fn get_pools(
     state::get_all_pool_keys(deps.storage, limit, offset)
 }
 
+/// Retrieves listed pools for provided token pair
+/// - `token0`: Address of first token
+/// - `token1`: Address of second token
+pub fn get_all_pools_for_pair(
+    deps: Deps,
+    token0: Addr,
+    token1: Addr,
+) -> Result<Vec<Pool>, ContractError> {
+    let fee_tiers = get_fee_tiers(deps)?;
+    let mut pool_key = PoolKey::new(token0, token1, FeeTier::default())?;
+    let mut pools: Vec<Pool> = vec![];
+    for fee_tier in fee_tiers {
+        pool_key.fee_tier = fee_tier;
+        if let Ok(pool) = state::get_pool(deps.storage, &pool_key) {
+            pools.push(pool);
+        }
+    }
+    Ok(pools)
+}
+
 /// Retrieves available fee tiers
 pub fn get_fee_tiers(deps: Deps) -> Result<Vec<FeeTier>, ContractError> {
     let config = CONFIG.load(deps.storage)?;

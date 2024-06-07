@@ -161,5 +161,8 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         } => to_binary(&get_liquidity_ticks_amount(
             deps, pool_key, lower_tick, upper_tick,
         )?),
+        QueryMsg::PoolsForPair { token0, token1 } => {
+            to_binary(&get_all_pools_for_pair(deps, token0, token1)?)
+        }
     }
 }
