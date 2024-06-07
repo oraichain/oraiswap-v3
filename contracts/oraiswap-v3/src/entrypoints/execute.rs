@@ -564,3 +564,75 @@ pub fn quote_route(
         .add_attribute("action", "quote_route")
         .add_attribute("token_amount", token_amount.to_string()))
 }
+
+/// Allows admin to add a custom fee tier.
+///
+/// # Parameters
+/// - `fee_tier`: A struct identifying the pool fee and tick spacing.
+///
+/// # Errors
+/// - Fails if an unauthorized user attempts to create a fee tier.
+/// - Fails if the tick spacing is invalid.
+/// - Fails if the fee tier already exists.
+/// - Fails if fee is invalid
+pub fn add_fee_tier(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    fee_tier: FeeTier,
+) -> Result<Response, ContractError> {
+    let caller = info.sender;
+
+    let mut config = CONFIG.load(deps.storage)?;
+
+    if fee_tier.tick_spacing == 0 || fee_tier.tick_spacing > 100 {
+        return Err(ContractError::InvalidTickSpacing);
+    }
+
+    if fee_tier.fee.0 >= 1 {
+        return Err(ContractError::InvalidFee);
+    }
+
+    if caller != config.admin {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    config.fee_tiers.push(fee_tier);
+
+    CONFIG.save(deps.storage, &config)?;
+
+    Ok(Response::new().add_attribute("action", "add_fee_tier"))
+}
+
+/// Removes an existing fee tier.
+///
+/// # Parameters
+/// - `fee_tier`: A struct identifying the pool fee and tick spacing.
+///
+/// # Errors
+/// - Fails if an unauthorized user attempts to remove a fee tier.
+/// - Fails if fee tier does not exist
+pub fn remove_fee_tier(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    fee_tier: FeeTier,
+) -> Result<Response, ContractError> {
+    let caller = info.sender;
+
+    let mut config = CONFIG.load(deps.storage)?;
+
+    if caller != config.admin {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    if let Some(pos) = config.fee_tiers.iter().position(|x| *x == fee_tier) {
+        config.fee_tiers.remove(pos);
+    } else {
+        return Err(ContractError::FeeTierNotFound);
+    }
+
+    CONFIG.save(deps.storage, &config)?;
+
+    Ok(Response::new().add_attribute("action", "remove_fee_tier"))
+}

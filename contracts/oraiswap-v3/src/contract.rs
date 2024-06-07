@@ -105,6 +105,8 @@ pub fn execute(
             init_sqrt_price,
             init_tick,
         ),
+        ExecuteMsg::AddFeeTier { fee_tier } => add_fee_tier(deps, env, info, fee_tier),
+        ExecuteMsg::RemoveFeeTier { fee_tier } => remove_fee_tier(deps, env, info, fee_tier),
     }
 }
 
