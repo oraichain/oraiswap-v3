@@ -1,7 +1,7 @@
 use decimal::Factories;
-use test_tube::{Account, Module, Wasm};
+use test_tube::Account;
 
-use crate::{msg::QueryMsg, percentage::Percentage, FeeTier};
+use crate::{percentage::Percentage, FeeTier};
 
 use super::helper::TestTubeScenario;
 
