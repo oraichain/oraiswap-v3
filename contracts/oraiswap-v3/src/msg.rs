@@ -61,6 +61,12 @@ pub enum ExecuteMsg {
         init_sqrt_price: SqrtPrice,
         init_tick: i32,
     },
+    AddFeeTier {
+        fee_tier: FeeTier,
+    },
+    RemoveFeeTier {
+        fee_tier: FeeTier,
+    },
 }
 
 #[cw_serde]

@@ -173,6 +173,9 @@ pub enum ContractError {
 
     #[error("pool not created")]
     CreatePoolError,
+
+    #[error("FeeTierNotFound")]
+    FeeTierNotFound,
 }
 
 impl From<ContractError> for StdError {
