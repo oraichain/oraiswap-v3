@@ -126,5 +126,40 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             token_1,
             fee_tier,
         } => to_binary(&get_pool(deps, token_0, token_1, fee_tier)?),
+        QueryMsg::Pools { limit, offset } => to_binary(&get_pools(deps, limit, offset)?),
+        QueryMsg::Tick { key, index } => to_binary(&get_tick(deps, key, index)?),
+        QueryMsg::IsTickInitialized { key, index } => {
+            to_binary(&is_tick_initialized(deps, key, index)?)
+        }
+        QueryMsg::FeeTiers {} => to_binary(&get_fee_tiers(deps)?),
+        QueryMsg::PositionTicks { owner, offset } => {
+            to_binary(&get_position_ticks(deps, owner, offset)?)
+        }
+        QueryMsg::UserPositionAmount { owner } => {
+            to_binary(&get_user_position_amount(deps, owner)?)
+        }
+        QueryMsg::TickMap {
+            pool_key,
+            lower_tick_index,
+            upper_tick_index,
+            x_to_y,
+        } => to_binary(&get_tickmap(
+            deps,
+            pool_key,
+            lower_tick_index,
+            upper_tick_index,
+            x_to_y,
+        )?),
+        QueryMsg::LiquidityTicks {
+            pool_key,
+            tick_indexes,
+        } => to_binary(&get_liquidity_ticks(deps, pool_key, tick_indexes)?),
+        QueryMsg::LiquidityTicksAmount {
+            pool_key,
+            lower_tick,
+            upper_tick,
+        } => to_binary(&get_liquidity_ticks_amount(
+            deps, pool_key, lower_tick, upper_tick,
+        )?),
     }
 }

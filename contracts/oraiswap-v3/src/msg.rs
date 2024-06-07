@@ -1,11 +1,10 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
 
-use crate::fee_growth::FeeGrowth;
 #[allow(unused_imports)]
 use crate::{
-    interface::SwapHop, liquidity::Liquidity, percentage::Percentage, sqrt_price::SqrtPrice,
-    token_amount::TokenAmount, FeeTier, Pool, PoolKey, Position,
+    fee_growth::FeeGrowth, interface::SwapHop, liquidity::Liquidity, percentage::Percentage,
+    sqrt_price::SqrtPrice, token_amount::TokenAmount, FeeTier, Pool, PoolKey, Position, Tick,
 };
 
 #[cw_serde]
@@ -96,6 +95,48 @@ pub enum QueryMsg {
         token_0: Addr,
         token_1: Addr,
         fee_tier: FeeTier,
+    },
+
+    #[returns(Vec<PoolKey>)]
+    Pools {
+        limit: Option<u32>,
+        offset: Option<u32>,
+    },
+
+    #[returns(Tick)]
+    Tick { key: PoolKey, index: i32 },
+
+    #[returns(bool)]
+    IsTickInitialized { key: PoolKey, index: i32 },
+
+    #[returns(Vec<FeeTier>)]
+    FeeTiers {},
+
+    #[returns(Vec<PositionTick>)]
+    PositionTicks { owner: Addr, offset: u32 },
+
+    #[returns(u32)]
+    UserPositionAmount { owner: Addr },
+
+    #[returns(Vec<(u16, u64)>)]
+    TickMap {
+        pool_key: PoolKey,
+        lower_tick_index: i32,
+        upper_tick_index: i32,
+        x_to_y: bool,
+    },
+
+    #[returns(Vec<LiquidityTick>)]
+    LiquidityTicks {
+        pool_key: PoolKey,
+        tick_indexes: Vec<i32>,
+    },
+
+    #[returns(u32)]
+    LiquidityTicksAmount {
+        pool_key: PoolKey,
+        lower_tick: i32,
+        upper_tick: i32,
     },
 }
 

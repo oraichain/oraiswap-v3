@@ -1,10 +1,15 @@
 use cosmwasm_std::{Addr, Deps};
 
 use crate::{
+    get_max_chunk, get_min_chunk,
     percentage::Percentage,
-    state::{self, get_bitmap, get_position_length, CONFIG, MAX_LIMIT},
-    ContractError, FeeTier, LiquidityTick, Pool, PoolKey, Position, PositionTick, Tick,
+    sqrt_price::{get_max_tick, get_min_tick},
+    state::{self, CONFIG, MAX_LIMIT},
+    tick_to_position, ContractError, FeeTier, LiquidityTick, Pool, PoolKey, Position, PositionTick,
+    Tick, CHUNK_SIZE,
 };
+
+use super::tickmap_slice;
 
 /// Retrieves the protocol fee represented as a percentage.
 pub fn get_protocol_fee(deps: Deps) -> Result<Percentage, ContractError> {
@@ -84,7 +89,7 @@ pub fn get_tick(deps: Deps, key: PoolKey, index: i32) -> Result<Tick, ContractEr
 /// - `key`: A unique key that identifies the specified pool.
 /// - `index`: The tick index in the tickmap.
 pub fn is_tick_initialized(deps: Deps, key: PoolKey, index: i32) -> Result<bool, ContractError> {
-    Ok(get_bitmap(
+    Ok(state::get_bitmap(
         deps.storage,
         index,
         key.fee_tier.tick_spacing,
@@ -119,7 +124,7 @@ pub fn get_position_ticks(
     owner: Addr,
     offset: u32,
 ) -> Result<Vec<PositionTick>, ContractError> {
-    let positions_length = get_position_length(deps.storage, &owner);
+    let positions_length = state::get_position_length(deps.storage, &owner);
     let mut ticks = vec![];
 
     if offset > positions_length {
@@ -161,58 +166,135 @@ pub fn get_position_ticks(
     Ok(ticks)
 }
 
-// /// Retrieves the amount of positions held by the user.
-// ///
-// /// # Parameters
-// /// - `owner`: An `Addr` identifying the user who owns the position.
-// pub fn get_user_position_amount(deps: Deps, owner: Addr) -> Result<u32, ContractError> {}
+/// Retrieves the amount of positions held by the user.
+///
+/// # Parameters
+/// - `owner`: An `Addr` identifying the user who owns the position.
+pub fn get_user_position_amount(deps: Deps, owner: Addr) -> Result<u32, ContractError> {
+    Ok(state::get_position_length(deps.storage, &owner))
+}
 
-// /// Retrieves tickmap chunks
-// ///
-// /// # Parameters
-// /// - `pool_key`: A unique key that identifies the specified pool.
-// /// - `start_tick_index`: offset tick index.
-// /// - `end_tick_index`: limiting tick index.
-// /// - `x_to_y`: direction of the query.
-// pub fn get_tickmap(
-//     deps: Deps,
-//     pool_key: PoolKey,
-//     start_tick_index: i32,
-//     end_tick_index: i32,
-//     x_to_y: bool,
-// ) -> Result<Vec<(u16, u64)>, ContractError> {
-// }
+/// Retrieves tickmap chunks
+///
+/// # Parameters
+/// - `pool_key`: A unique key that identifies the specified pool.
+/// - `lower_tick_index`: offset tick index.
+/// - `upper_tick_index`: limiting tick index.
+/// - `x_to_y`: direction of the query.
+pub fn get_tickmap(
+    deps: Deps,
+    pool_key: PoolKey,
+    lower_tick_index: i32,
+    upper_tick_index: i32,
+    x_to_y: bool,
+) -> Result<Vec<(u16, u64)>, ContractError> {
+    let tick_spacing = pool_key.fee_tier.tick_spacing;
+    let (start_chunk, _) = tick_to_position(lower_tick_index, tick_spacing);
+    let (end_chunk, _) = tick_to_position(upper_tick_index, tick_spacing);
 
-// /// Retrieves ticks of a specified pool.
-// ///
-// /// # Parameters
-// /// - `pool_key`: A unique key that identifies the specified pool.
-// /// - `tick_indexes`: Indexes of the tick to be retrieved.
-// ///
-// /// # Errors
-// /// - Fails if tick_indexes are too large
-// /// - Fails if tick is not found
-// ///
-// pub fn get_liquidity_ticks(
-//     deps: Deps,
-//     pool_key: PoolKey,
-//     tick_indexes: Vec<i32>,
-// ) -> Result<Vec<LiquidityTick>, ContractError> {
-// }
-// /// Retrieves the amount of liquidity ticks of a specified pool.
-// ///
-// /// # Parameters
-// /// - `pool_key`: A unique key that identifies the specified pool. For poolkeys with tick_spacing equal to 1 the query has to be split into 2 smaller queries
-// /// - `lower_tick`: index to start counting from(inclusive)
-// /// - `upper_tick`: index to stop counting after(inclusive)
-// ///
-// /// # Errors
-// /// - Fails if lower_tick or upper_tick are invalid
-// /// - Fails if tick_spacing is invalid
-// pub fn get_liquidity_ticks_amount(
-//     deps: Deps,
-//     pool_key: PoolKey,
-//     lower_tick: i32,
-//     upper_tick: i32,
-// ) -> Result<u32, ContractError> {
-// }
+    let min_chunk_index = get_min_chunk(tick_spacing).max(start_chunk);
+    let max_chunk_index = get_max_chunk(tick_spacing).min(end_chunk);
+
+    let tickmaps = if x_to_y {
+        tickmap_slice(
+            deps.storage,
+            (min_chunk_index..=max_chunk_index).rev(),
+            &pool_key,
+        )
+    } else {
+        tickmap_slice(deps.storage, min_chunk_index..=max_chunk_index, &pool_key)
+    };
+
+    Ok(tickmaps)
+}
+
+/// Retrieves ticks of a specified pool.
+///
+/// # Parameters
+/// - `pool_key`: A unique key that identifies the specified pool.
+/// - `tick_indexes`: Indexes of the tick to be retrieved.
+///
+/// # Errors
+/// - Fails if tick_indexes are too large
+/// - Fails if tick is not found
+///
+pub fn get_liquidity_ticks(
+    deps: Deps,
+    pool_key: PoolKey,
+    tick_indexes: Vec<i32>,
+) -> Result<Vec<LiquidityTick>, ContractError> {
+    let mut liqudity_ticks: Vec<LiquidityTick> = vec![];
+
+    if tick_indexes.len() > MAX_LIMIT as usize {
+        return Err(ContractError::TickLimitReached);
+    }
+
+    for index in tick_indexes {
+        let tick = LiquidityTick::from(state::get_tick(deps.storage, &pool_key, index)?);
+
+        liqudity_ticks.push(tick);
+    }
+
+    Ok(liqudity_ticks)
+}
+
+/// Retrieves the amount of liquidity ticks of a specified pool.
+///
+/// # Parameters
+/// - `pool_key`: A unique key that identifies the specified pool. For poolkeys with tick_spacing equal to 1 the query has to be split into 2 smaller queries
+/// - `lower_tick`: index to start counting from(inclusive)
+/// - `upper_tick`: index to stop counting after(inclusive)
+///
+/// # Errors
+/// - Fails if lower_tick or upper_tick are invalid
+/// - Fails if tick_spacing is invalid
+pub fn get_liquidity_ticks_amount(
+    deps: Deps,
+    pool_key: PoolKey,
+    lower_tick: i32,
+    upper_tick: i32,
+) -> Result<u32, ContractError> {
+    let tick_spacing = pool_key.fee_tier.tick_spacing;
+    if tick_spacing == 0 {
+        return Err(ContractError::InvalidTickSpacing);
+    };
+
+    if lower_tick % (tick_spacing as i32) != 0 || upper_tick % (tick_spacing as i32) != 0 {
+        return Err(ContractError::InvalidTickIndex);
+    }
+
+    let max_tick = get_max_tick(tick_spacing);
+    let min_tick = get_min_tick(tick_spacing);
+
+    if lower_tick < min_tick || upper_tick > max_tick {
+        return Err(ContractError::InvalidTickIndex);
+    };
+
+    let (min_chunk_index, min_bit) = tick_to_position(lower_tick, tick_spacing);
+    let (max_chunk_index, max_bit) = tick_to_position(upper_tick, tick_spacing);
+
+    let active_bits_in_range = |chunk, min_bit, max_bit| {
+        let range: u64 = (chunk >> min_bit) & ((1u64 << (max_bit - min_bit + 1)) - 1);
+        range.count_ones()
+    };
+
+    let min_chunk = state::get_bitmap_item(deps.storage, min_chunk_index, &pool_key).unwrap_or(0);
+
+    if max_chunk_index == min_chunk_index {
+        return Ok(active_bits_in_range(min_chunk, min_bit, max_bit));
+    }
+
+    let max_chunk = state::get_bitmap_item(deps.storage, max_chunk_index, &pool_key).unwrap_or(0);
+
+    let mut amount: u32 = 0;
+    amount += active_bits_in_range(min_chunk, min_bit, (CHUNK_SIZE - 1) as u8);
+    amount += active_bits_in_range(max_chunk, 0, max_bit);
+
+    for i in (min_chunk_index + 1)..max_chunk_index {
+        let chunk = state::get_bitmap_item(deps.storage, i, &pool_key).unwrap_or(0);
+
+        amount += chunk.count_ones();
+    }
+
+    Ok(amount)
+}

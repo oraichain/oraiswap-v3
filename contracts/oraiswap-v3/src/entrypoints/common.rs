@@ -6,7 +6,10 @@ use crate::{
     check_tick, compute_swap_step,
     interface::{CalculateSwapResult, SwapHop},
     sqrt_price::{get_max_tick, get_min_tick, SqrtPrice},
-    state::{self, add_tick, flip_bitmap, get_closer_limit, get_tick, update_tick, CONFIG, POOLS},
+    state::{
+        self, add_tick, flip_bitmap, get_closer_limit, get_tick, update_tick, CONFIG, MAX_LIMIT,
+        POOLS,
+    },
     token_amount::TokenAmount,
     ContractError, PoolKey, Tick, UpdatePoolTick, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
 };
@@ -292,4 +295,24 @@ pub fn route(
     }
 
     Ok(next_swap_amount)
+}
+
+pub fn tickmap_slice(
+    store: &dyn Storage,
+    range: impl Iterator<Item = u16>,
+    pool_key: &PoolKey,
+) -> Vec<(u16, u64)> {
+    let mut tickmap_slice: Vec<(u16, u64)> = vec![];
+
+    for chunk_index in range {
+        if let Ok(chunk) = state::get_bitmap_item(store, chunk_index, pool_key) {
+            tickmap_slice.push((chunk_index, chunk));
+
+            if tickmap_slice.len() == MAX_LIMIT as usize {
+                return tickmap_slice;
+            }
+        }
+    }
+
+    tickmap_slice
 }

@@ -375,9 +375,18 @@ pub fn get_closer_limit(
 
 pub fn get_bitmap(store: &dyn Storage, tick: i32, tick_spacing: u16, pool_key: &PoolKey) -> bool {
     let (chunk, bit) = tick_to_position(tick, tick_spacing);
-    let db_key = bitmap_key(chunk, pool_key);
-    let returned_chunk = BITMAP.load(store, &db_key).unwrap_or(0);
+    let returned_chunk = get_bitmap_item(store, chunk, &pool_key).unwrap_or(0);
     get_bit_at_position(returned_chunk, bit) == 1
+}
+
+pub fn get_bitmap_item(
+    store: &dyn Storage,
+    chunk: u16,
+    pool_key: &PoolKey,
+) -> Result<u64, ContractError> {
+    let db_key = bitmap_key(chunk, pool_key);
+    let returned_chunk = BITMAP.load(store, &db_key)?;
+    Ok(returned_chunk)
 }
 
 pub fn flip_bitmap(
