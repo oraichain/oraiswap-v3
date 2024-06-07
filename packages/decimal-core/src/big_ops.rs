@@ -15,7 +15,7 @@ pub fn generate_big_ops(characteristics: DecimalCharacteristics) -> proc_macro::
     let underlying_str = &underlying_type.to_string();
     let big_str = &big_type.to_string();
 
-    let module_name = string_to_ident("tests_big_ops_", &name_str);
+    let module_name = string_to_ident("tests_big_ops_", name_str);
 
     proc_macro::TokenStream::from(quote!(
         impl<T: Decimal> BigOps<T> for #struct_name

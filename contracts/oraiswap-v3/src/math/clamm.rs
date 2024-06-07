@@ -146,13 +146,13 @@ pub fn get_delta_y(
         true => delta
             .big_mul_to_value_up(liquidity)
             .checked_add(SqrtPrice::almost_one())
-            .ok_or_else(|| ContractError::Add)?
+            .ok_or(ContractError::Add)?
             .checked_div(SqrtPrice::one())
-            .ok_or_else(|| ContractError::Div)?,
+            .ok_or(ContractError::Div)?,
         false => delta
             .big_mul_to_value(liquidity)
             .checked_div(SqrtPrice::one())
-            .ok_or_else(|| ContractError::Div)?,
+            .ok_or(ContractError::Div)?,
     };
 
     Ok(TokenAmount(
@@ -166,14 +166,13 @@ fn get_next_sqrt_price_from_input(
     amount: TokenAmount,
     x_to_y: bool,
 ) -> Result<SqrtPrice, ContractError> {
-    let result = if x_to_y {
+    if x_to_y {
         // add x to pool, decrease sqrt_price
         get_next_sqrt_price_x_up(starting_sqrt_price, liquidity, amount, true)
     } else {
         // add y to pool, increase sqrt_price
         get_next_sqrt_price_y_down(starting_sqrt_price, liquidity, amount, true)
-    };
-    result
+    }
 }
 
 fn get_next_sqrt_price_from_output(
@@ -182,14 +181,13 @@ fn get_next_sqrt_price_from_output(
     amount: TokenAmount,
     x_to_y: bool,
 ) -> Result<SqrtPrice, ContractError> {
-    let result = if x_to_y {
+    if x_to_y {
         // remove y from pool, decrease sqrt_price
         get_next_sqrt_price_y_down(starting_sqrt_price, liquidity, amount, false)
     } else {
         // remove x from pool, increase sqrt_price
         get_next_sqrt_price_x_up(starting_sqrt_price, liquidity, amount, false)
-    };
-    result
+    }
 }
 
 pub fn get_next_sqrt_price_x_up(
@@ -208,7 +206,7 @@ pub fn get_next_sqrt_price_x_up(
         true => price_delta.checked_add(starting_sqrt_price.big_mul_to_value(x)),
         false => price_delta.checked_sub(starting_sqrt_price.big_mul_to_value(x)),
     }
-    .ok_or_else(|| ContractError::BigLiquidityOverflow))?; // never should be triggered
+    .ok_or(ContractError::BigLiquidityOverflow))?; // never should be triggered
 
     SqrtPrice::checked_big_div_values_up(
         starting_sqrt_price.big_mul_to_value_up(liquidity),

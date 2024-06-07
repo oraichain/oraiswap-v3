@@ -24,14 +24,14 @@ impl SqrtPrice {
 
         let intermediate_u320 = nominator
             .checked_mul(Self::one::<U320>())
-            .ok_or_else(|| ContractError::Mul)?
+            .ok_or(ContractError::Mul)?
             .checked_div(denominator)
-            .ok_or_else(|| ContractError::Div)?;
+            .ok_or(ContractError::Div)?;
 
         let result = checked_u320_to_u256(intermediate_u320)
-            .ok_or_else(|| ContractError::U320ToU256)?
+            .ok_or(ContractError::U320ToU256)?
             .checked_div(Self::one::<U256>())
-            .ok_or_else(|| ContractError::Div)?
+            .ok_or(ContractError::Div)?
             .try_into()
             .map_err(|_| ContractError::Cast)?;
         Ok(TokenAmount(result))
@@ -46,18 +46,18 @@ impl SqrtPrice {
 
         let intermediate_u320 = nominator
             .checked_mul(Self::one::<U320>())
-            .ok_or_else(|| ContractError::Mul)?
+            .ok_or(ContractError::Mul)?
             .checked_add(denominator - 1)
-            .ok_or_else(|| ContractError::Add)?
+            .ok_or(ContractError::Add)?
             .checked_div(denominator)
-            .ok_or_else(|| ContractError::Div)?;
+            .ok_or(ContractError::Div)?;
 
         let result = checked_u320_to_u256(intermediate_u320)
-            .ok_or_else(|| ContractError::U320ToU256)?
+            .ok_or(ContractError::U320ToU256)?
             .checked_add(Self::almost_one::<U256>())
-            .ok_or_else(|| ContractError::Add)?
+            .ok_or(ContractError::Add)?
             .checked_div(Self::one::<U256>())
-            .ok_or_else(|| ContractError::Div)?
+            .ok_or(ContractError::Div)?
             .try_into()
             .map_err(|_| ContractError::Cast)?;
         Ok(TokenAmount::new(result))
@@ -84,9 +84,9 @@ impl SqrtPrice {
         Ok(SqrtPrice::new(
             nominator
                 .checked_mul(Self::one::<U256>())
-                .ok_or_else(|| ContractError::Mul)?
+                .ok_or(ContractError::Mul)?
                 .checked_div(denominator)
-                .ok_or_else(|| ContractError::Div)?
+                .ok_or(ContractError::Div)?
                 .try_into()
                 .map_err(|_| ContractError::Cast)?,
         ))
@@ -101,15 +101,15 @@ impl SqrtPrice {
         Ok(SqrtPrice::new(
             u256_to_u320(nominator)
                 .checked_mul(Self::one::<U320>())
-                .ok_or_else(|| ContractError::Mul)?
+                .ok_or(ContractError::Mul)?
                 .checked_add(
                     denominator
                         .checked_sub(U320::from(1u32))
-                        .ok_or_else(|| ContractError::Sub)?,
+                        .ok_or(ContractError::Sub)?,
                 )
-                .ok_or_else(|| ContractError::Add)?
+                .ok_or(ContractError::Add)?
                 .checked_div(denominator)
-                .ok_or_else(|| ContractError::Div)?
+                .ok_or(ContractError::Div)?
                 .try_into()
                 .map_err(|_| ContractError::Cast)?,
         ))

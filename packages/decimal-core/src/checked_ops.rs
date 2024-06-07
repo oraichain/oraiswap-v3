@@ -7,7 +7,7 @@ pub fn generate_checked_ops(characteristics: DecimalCharacteristics) -> proc_mac
     let DecimalCharacteristics { struct_name, .. } = characteristics;
 
     let name_str = &struct_name.to_string();
-    let module_name = string_to_ident("tests_checked_ops_", &name_str);
+    let module_name = string_to_ident("tests_checked_ops_", name_str);
 
     proc_macro::TokenStream::from(quote!(
         impl CheckedOps for #struct_name {

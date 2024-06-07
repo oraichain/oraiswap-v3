@@ -21,7 +21,7 @@ pub fn create_tick(
     index: i32,
 ) -> Result<Tick, ContractError> {
     check_tick(index, pool_key.fee_tier.tick_spacing)?;
-    let pool = state::get_pool(store, &pool_key)?;
+    let pool = state::get_pool(store, pool_key)?;
 
     let tick = Tick::create(index, &pool, current_timestamp);
     add_tick(store, pool_key, index, &tick)?;
@@ -44,7 +44,7 @@ pub fn calculate_swap(
     }
 
     let mut ticks: Vec<Tick> = vec![];
-    let mut pool = state::get_pool(store, &pool_key)?;
+    let mut pool = state::get_pool(store, pool_key)?;
 
     if x_to_y {
         if pool.sqrt_price <= sqrt_price_limit || sqrt_price_limit > SqrtPrice::new(MAX_SQRT_PRICE)
@@ -172,6 +172,7 @@ pub fn calculate_swap(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn swap_internal(
     store: &mut dyn Storage,
     msgs: &mut Vec<WasmMsg>,
@@ -197,7 +198,7 @@ pub fn swap_internal(
     let mut crossed_tick_indexes: Vec<i32> = vec![];
 
     for tick in calculate_swap_result.ticks.iter() {
-        update_tick(store, &pool_key, tick.index, tick)?;
+        update_tick(store, pool_key, tick.index, tick)?;
         crossed_tick_indexes.push(tick.index);
     }
 

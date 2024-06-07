@@ -12,7 +12,7 @@ pub fn generate_by_number(characteristics: DecimalCharacteristics) -> proc_macro
 
     let name_str = &struct_name.to_string();
 
-    let module_name = string_to_ident("tests_by_number_", &name_str);
+    let module_name = string_to_ident("tests_by_number_", name_str);
 
     proc_macro::TokenStream::from(quote!(
         impl ByNumber<#big_type> for #struct_name {

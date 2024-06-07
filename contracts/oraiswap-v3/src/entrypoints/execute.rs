@@ -36,24 +36,24 @@ pub fn withdraw_protocol_fee(
     let (fee_protocol_token_x, fee_protocol_token_y) = pool.withdraw_protocol_fee();
     POOLS.save(deps.storage, &pool_key_db, &pool)?;
 
-    let mut msgs = vec![];
-
-    msgs.push(WasmMsg::Execute {
-        contract_addr: pool_key.token_x.to_string(),
-        msg: to_binary(&Cw20ExecuteMsg::Transfer {
-            recipient: pool.fee_receiver.to_string(),
-            amount: fee_protocol_token_x.into(),
-        })?,
-        funds: vec![],
-    });
-    msgs.push(WasmMsg::Execute {
-        contract_addr: pool_key.token_y.to_string(),
-        msg: to_binary(&Cw20ExecuteMsg::Transfer {
-            recipient: pool.fee_receiver.to_string(),
-            amount: fee_protocol_token_y.into(),
-        })?,
-        funds: vec![],
-    });
+    let msgs = vec![
+        WasmMsg::Execute {
+            contract_addr: pool_key.token_x.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: pool.fee_receiver.to_string(),
+                amount: fee_protocol_token_x.into(),
+            })?,
+            funds: vec![],
+        },
+        WasmMsg::Execute {
+            contract_addr: pool_key.token_y.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: pool.fee_receiver.to_string(),
+                amount: fee_protocol_token_y.into(),
+            })?,
+            funds: vec![],
+        },
+    ];
 
     Ok(Response::new()
         .add_messages(msgs)
@@ -131,6 +131,7 @@ pub fn change_fee_receiver(
 /// - Fails if the price has reached the slippage limit.
 /// - Fails if the allowance is insufficient or the user balance transfer fails.
 /// - Fails if pool does not exist
+#[allow(clippy::too_many_arguments)]
 pub fn create_position(
     deps: DepsMut,
     env: Env,
@@ -188,26 +189,26 @@ pub fn create_position(
     update_tick(deps.storage, &pool_key, lower_tick.index, &lower_tick)?;
     update_tick(deps.storage, &pool_key, upper_tick.index, &upper_tick)?;
 
-    let mut msgs = vec![];
-
-    msgs.push(WasmMsg::Execute {
-        contract_addr: pool_key.token_x.to_string(),
-        msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-            owner: info.sender.to_string(),
-            recipient: env.contract.address.to_string(),
-            amount: x.into(),
-        })?,
-        funds: vec![],
-    });
-    msgs.push(WasmMsg::Execute {
-        contract_addr: pool_key.token_y.to_string(),
-        msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-            owner: info.sender.to_string(),
-            recipient: env.contract.address.to_string(),
-            amount: y.into(),
-        })?,
-        funds: vec![],
-    });
+    let msgs = vec![
+        WasmMsg::Execute {
+            contract_addr: pool_key.token_x.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                owner: info.sender.to_string(),
+                recipient: env.contract.address.to_string(),
+                amount: x.into(),
+            })?,
+            funds: vec![],
+        },
+        WasmMsg::Execute {
+            contract_addr: pool_key.token_y.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                owner: info.sender.to_string(),
+                recipient: env.contract.address.to_string(),
+                amount: y.into(),
+            })?,
+            funds: vec![],
+        },
+    ];
 
     let event_attributes = vec![
         attr("timestamp", "remove_position"),
@@ -243,7 +244,8 @@ pub fn create_position(
 /// - Fails if the user would receive zero tokens.
 /// - Fails if the allowance is insufficient or the user balance transfer fails.
 /// - Fails if there is insufficient liquidity in pool
-/// - Fails if pool does not exist
+/// - Fails if pool does not
+#[allow(clippy::too_many_arguments)]
 pub fn swap(
     deps: DepsMut,
     env: Env,
@@ -499,6 +501,7 @@ pub fn remove_pos(
 /// - Fails if Pool with same tokens and fee tier already exist.
 /// - Fails if the init tick is not divisible by the tick spacing.
 /// - Fails if the init sqrt price is not related to the init tick.
+#[allow(clippy::too_many_arguments)]
 pub fn create_pool(
     deps: DepsMut,
     env: Env,

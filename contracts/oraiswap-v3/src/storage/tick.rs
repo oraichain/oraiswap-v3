@@ -105,7 +105,7 @@ impl Tick {
 
         let seconds_passed: u64 = current_timestamp
             .checked_sub(pool.start_timestamp)
-            .ok_or_else(|| ContractError::TimestampSubOverflow)?;
+            .ok_or(ContractError::TimestampSubOverflow)?;
         self.seconds_outside = seconds_passed.wrapping_sub(self.seconds_outside);
 
         pool.last_timestamp = current_timestamp;

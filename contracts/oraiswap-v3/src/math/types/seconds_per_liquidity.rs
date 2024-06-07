@@ -30,11 +30,11 @@ impl SecondsPerLiquidity {
         Ok(Self::new(
             U256::from(delta_time)
                 .checked_mul(SecondsPerLiquidity::one())
-                .ok_or_else(|| ContractError::Mul)?
+                .ok_or(ContractError::Mul)?
                 .checked_mul(Liquidity::one())
-                .ok_or_else(|| ContractError::Mul)?
+                .ok_or(ContractError::Mul)?
                 .checked_div(liquidity.here())
-                .ok_or_else(|| ContractError::Div)?
+                .ok_or(ContractError::Div)?
                 .try_into()
                 .map_err(|_| ContractError::Cast)?,
         ))

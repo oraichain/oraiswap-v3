@@ -13,7 +13,7 @@ pub fn generate_ops(characteristics: DecimalCharacteristics) -> proc_macro::Toke
     let name_str = &struct_name.to_string();
     let underlying_str = &underlying_type.to_string();
 
-    let module_name = string_to_ident("tests_", &name_str);
+    let module_name = string_to_ident("tests_", name_str);
 
     proc_macro::TokenStream::from(quote!(
         impl core::ops::Add for #struct_name {

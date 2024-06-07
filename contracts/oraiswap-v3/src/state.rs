@@ -375,7 +375,7 @@ pub fn get_closer_limit(
 
 pub fn get_bitmap(store: &dyn Storage, tick: i32, tick_spacing: u16, pool_key: &PoolKey) -> bool {
     let (chunk, bit) = tick_to_position(tick, tick_spacing);
-    let returned_chunk = get_bitmap_item(store, chunk, &pool_key).unwrap_or(0);
+    let returned_chunk = get_bitmap_item(store, chunk, pool_key).unwrap_or(0);
     get_bit_at_position(returned_chunk, bit) == 1
 }
 

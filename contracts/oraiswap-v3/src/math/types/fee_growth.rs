@@ -23,11 +23,11 @@ impl FeeGrowth {
         Ok(Self::new(
             U256::from(fee.get())
                 .checked_mul(FeeGrowth::one())
-                .ok_or_else(|| (ContractError::Mul))?
+                .ok_or(ContractError::Mul)?
                 .checked_mul(Liquidity::one())
-                .ok_or_else(|| (ContractError::Mul))?
+                .ok_or(ContractError::Mul)?
                 .checked_div(liquidity.here())
-                .ok_or_else(|| (ContractError::Div))?
+                .ok_or(ContractError::Div)?
                 .try_into()
                 .map_err(|_| (ContractError::Cast))?,
         ))
@@ -37,11 +37,11 @@ impl FeeGrowth {
         Ok(TokenAmount::new(
             U256::from(self.get())
                 .checked_mul(liquidity.here())
-                .ok_or_else(|| (ContractError::Mul))?
+                .ok_or(ContractError::Mul)?
                 .checked_div(
                     U256::from(10).pow(U256::from(FeeGrowth::scale() + Liquidity::scale())),
                 )
-                .ok_or_else(|| (ContractError::Mul))?
+                .ok_or(ContractError::Mul)?
                 .try_into()
                 .map_err(|_| (ContractError::Cast))?,
         ))

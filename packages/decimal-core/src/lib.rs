@@ -23,10 +23,7 @@ pub fn decimal(
     let args_str = attr.to_string();
     let args: Vec<&str> = args_str.split(',').collect();
 
-    let parsed_scale = match args[0].parse::<u8>() {
-        Ok(scale) => scale,
-        Err(_) => 0,
-    };
+    let parsed_scale = args[0].parse::<u8>().unwrap_or(0);
 
     let big_type = match args.len() {
         1 => string_to_ident("", "U256"),
