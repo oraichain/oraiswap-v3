@@ -10,10 +10,8 @@ use crate::state::{
 use crate::token_amount::TokenAmount;
 use crate::{check_tick, FeeTier, Pool, PoolKey, Position};
 
-use cosmwasm_std::{
-    attr, to_binary, Addr, DepsMut, Env, MessageInfo, Response, WasmMsg,
-};
 use super::{create_tick, route, swap_internal};
+use cosmwasm_std::{attr, to_binary, Addr, DepsMut, Env, MessageInfo, Response, WasmMsg};
 use cw20::Cw20ExecuteMsg;
 
 /// Allows an fee receiver to withdraw collected fees.
@@ -326,8 +324,8 @@ pub fn claim_fee(
 
     let mut lower_tick = get_tick(deps.storage, &position.pool_key, position.lower_tick_index)?;
     let mut upper_tick = get_tick(deps.storage, &position.pool_key, position.upper_tick_index)?;
-
-    let mut pool = POOLS.load(deps.storage, &position.pool_key.key())?;
+    let pool_key_db = position.pool_key.key();
+    let mut pool = POOLS.load(deps.storage, &pool_key_db)?;
 
     let (x, y) = position.claim_fee(
         &mut pool,
@@ -337,7 +335,7 @@ pub fn claim_fee(
     )?;
 
     update_position(deps.storage, &caller, index, &position)?;
-    POOLS.save(deps.storage, &position.pool_key.key(), &pool)?;
+    POOLS.save(deps.storage, &pool_key_db, &pool)?;
     update_tick(
         deps.storage,
         &position.pool_key,
@@ -407,7 +405,8 @@ pub fn remove_pos(
     let mut lower_tick = get_tick(deps.storage, &position.pool_key, position.lower_tick_index)?;
     let mut upper_tick = get_tick(deps.storage, &position.pool_key, position.upper_tick_index)?;
 
-    let mut pool = POOLS.load(deps.storage, &position.pool_key.key())?;
+    let pool_key_db = position.pool_key.key();
+    let mut pool = POOLS.load(deps.storage, &pool_key_db)?;
 
     let (amount_x, amount_y, deinitialize_lower_tick, deinitialize_upper_tick) = position.remove(
         &mut pool,
@@ -417,7 +416,7 @@ pub fn remove_pos(
         position.pool_key.fee_tier.tick_spacing,
     )?;
 
-    POOLS.save(deps.storage, &position.pool_key.key(), &pool)?;
+    POOLS.save(deps.storage, &pool_key_db, &pool)?;
 
     if deinitialize_lower_tick {
         remove_tick(deps.storage, &position.pool_key, lower_tick.index)?;

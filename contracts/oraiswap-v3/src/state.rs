@@ -20,6 +20,11 @@ pub const BITMAP: Map<&[u8], u64> = Map::new("bitmap");
 
 pub const MAX_LIMIT: u32 = 100;
 
+pub fn get_pool(store: &dyn Storage, pool_key: &PoolKey) -> Result<Pool, ContractError> {
+    let pool = POOLS.load(store, &pool_key.key())?;
+    Ok(pool)
+}
+
 pub fn tick_key(pool_key: &PoolKey, index: i32) -> Vec<u8> {
     let mut db_key = pool_key.key();
     db_key.extend_from_slice(&index.to_be_bytes());

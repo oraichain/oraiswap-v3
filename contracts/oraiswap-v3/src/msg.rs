@@ -1,9 +1,10 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
 
+#[allow(unused_imports)]
 use crate::{
     interface::SwapHop, liquidity::Liquidity, percentage::Percentage, sqrt_price::SqrtPrice,
-    token_amount::TokenAmount, FeeTier, PoolKey, Position,
+    token_amount::TokenAmount, FeeTier, Pool, PoolKey, Position,
 };
 
 #[cw_serde]
@@ -78,5 +79,15 @@ pub enum QueryMsg {
         owner_id: Addr,
         limit: Option<u32>,
         offset: Option<u32>,
+    },
+
+    #[returns(bool)]
+    FeeTierExist { fee_tier: FeeTier },
+
+    #[returns(Pool)]
+    Pool {
+        token_0: Addr,
+        token_1: Addr,
+        fee_tier: FeeTier,
     },
 }

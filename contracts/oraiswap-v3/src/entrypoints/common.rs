@@ -6,7 +6,7 @@ use crate::{
     check_tick, compute_swap_step,
     interface::{CalculateSwapResult, SwapHop},
     sqrt_price::{get_max_tick, get_min_tick, SqrtPrice},
-    state::{add_tick, flip_bitmap, get_closer_limit, get_tick, update_tick, CONFIG, POOLS},
+    state::{self, add_tick, flip_bitmap, get_closer_limit, get_tick, update_tick, CONFIG, POOLS},
     token_amount::TokenAmount,
     ContractError, PoolKey, Tick, UpdatePoolTick, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
 };
@@ -18,8 +18,7 @@ pub fn create_tick(
     index: i32,
 ) -> Result<Tick, ContractError> {
     check_tick(index, pool_key.fee_tier.tick_spacing)?;
-    let pool_key_db = pool_key.key();
-    let pool = POOLS.load(store, &pool_key_db)?;
+    let pool = state::get_pool(store, &pool_key)?;
 
     let tick = Tick::create(index, &pool, current_timestamp);
     add_tick(store, pool_key, index, &tick)?;
@@ -42,8 +41,7 @@ pub fn calculate_swap(
     }
 
     let mut ticks: Vec<Tick> = vec![];
-
-    let mut pool = POOLS.load(store, &pool_key.key())?;
+    let mut pool = state::get_pool(store, &pool_key)?;
 
     if x_to_y {
         if pool.sqrt_price <= sqrt_price_limit || sqrt_price_limit > SqrtPrice::new(MAX_SQRT_PRICE)

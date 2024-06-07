@@ -22,6 +22,7 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     let config = Config {
+        fee_tiers: vec![],
         admin: info.sender,
         protocol_fee: msg.protocol_fee,
     };
@@ -117,5 +118,11 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
             limit,
             offset,
         } => to_binary(&get_positions(deps, owner_id, limit, offset)?),
+        QueryMsg::FeeTierExist { fee_tier } => to_binary(&fee_tier_exist(deps, fee_tier)?),
+        QueryMsg::Pool {
+            token_0,
+            token_1,
+            fee_tier,
+        } => to_binary(&get_pool(deps, token_0, token_1, fee_tier)?),
     }
 }
