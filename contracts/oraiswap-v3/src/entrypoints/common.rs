@@ -91,11 +91,11 @@ pub fn calculate_swap(
         if by_amount_in {
             remaining_amount = remaining_amount
                 .checked_sub(result.amount_in + result.fee_amount)
-                .map_err(|_| ContractError::SubtractionError)?;
+                .map_err(|_| ContractError::Sub)?;
         } else {
             remaining_amount = remaining_amount
                 .checked_sub(result.amount_out)
-                .map_err(|_| ContractError::SubtractionError)?;
+                .map_err(|_| ContractError::Sub)?;
         }
 
         pool.add_fee(result.fee_amount, x_to_y, CONFIG.load(store)?.protocol_fee)?;

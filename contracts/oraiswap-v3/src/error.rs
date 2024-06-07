@@ -6,26 +6,29 @@ pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
 
-    #[error("Invalid tick spacing")]
+    #[error("invalid tick spacing")]
     InvalidTickSpacing,
 
-    #[error("Invalid fee")]
+    #[error("invalid fee")]
     InvalidFee,
 
-    #[error("InvalidTickIndex")]
+    #[error("invalid tick index")]
     InvalidTickIndex,
 
-    #[error("InvalidTick")]
+    #[error("invalid tick")]
     InvalidTick,
 
-    #[error("Tokens are the same")]
+    #[error("tokens are the same")]
     TokensAreSame,
 
-    #[error("Invalid tick")]
+    #[error("invalid tick")]
     InvalidInitTick,
 
-    #[error("Invalid sqrt price")]
+    #[error("invalid sqrt price")]
     InvalidInitSqrtPrice,
+
+    #[error("invalid offset")]
+    InvalidOffset,
 
     #[error("multiplication overflow")]
     Mul,
@@ -48,7 +51,7 @@ pub enum ContractError {
     #[error("update_liquidity: liquidity - liquidity_delta underflow")]
     UpdateLiquidityMinusOverflow,
 
-    #[error("EmptyPositionPokes")]
+    #[error("empty position pokes")]
     EmptyPositionPokes,
 
     #[error("position not found")]
@@ -60,10 +63,10 @@ pub enum ContractError {
     #[error("position remove liquidity underflow")]
     PositionRemoveLiquidityUnderflow,
 
-    #[error("PriceLimitReached")]
+    #[error("price limit reached")]
     PriceLimitReached,
 
-    #[error("InsufficientLiquidity")]
+    #[error("insufficient liquidity")]
     InsufficientLiquidity,
 
     #[error("current_timestamp - pool.start_timestamp underflow")]
@@ -102,7 +105,7 @@ pub enum ContractError {
     #[error("current_timestamp > last_timestamp failed")]
     TimestampCheckFailed,
 
-    #[error("Can't parse from u320 to u256")]
+    #[error("can not parse from u320 to u256")]
     U320ToU256,
 
     #[error("tick over bounds")]
@@ -135,46 +138,41 @@ pub enum ContractError {
     #[error("Upper Sqrt Price < Current Sqrt Price")]
     UpperSqrtPriceLess,
 
-    #[error("Overflow in calculating liquidity")]
+    #[error("overflow in calculating liquidity")]
     OverflowInCalculatingLiquidity,
 
     #[error("Current Sqrt Price < Lower Sqrt Price")]
     CurrentSqrtPriceLess,
 
-    #[error("Overflow while casting to TokenAmount")]
+    #[error("overflow while casting to TokenAmount")]
     OverflowCastingTokenAmount,
 
-    #[error("Unauthorized")]
+    #[error("unauthorized")]
     Unauthorized {},
 
-    #[error("AmountIsZero")]
+    #[error("amount is zero")]
     AmountIsZero,
 
-    #[error("WrongLimit")]
+    #[error("wrong limit")]
     WrongLimit,
 
-    #[error("SubtractionError")]
-    SubtractionError,
-
-    #[error("NoGainSwap")]
+    #[error("no gain swap")]
     NoGainSwap,
 
-    #[error("SwapFailed")]
+    #[error("swap failed")]
     SwapFailed,
 
-    #[error("AmountUnderMinimumAmountOut")]
+    #[error("amount under minimum amount out")]
     AmountUnderMinimumAmountOut,
 
-    #[error("InvalidPoolKey")]
+    #[error("invalid pool key")]
     InvalidPoolKey,
 
-    #[error("PoolAlreadyExist")]
+    #[error("pool already exist")]
     PoolAlreadyExist,
 
-    #[error("PoolNotCreated")]
+    #[error("pool not created")]
     CreatePoolError,
-
-    
 }
 
 impl From<ContractError> for StdError {

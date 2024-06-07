@@ -1,6 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
 
+use crate::fee_growth::FeeGrowth;
 #[allow(unused_imports)]
 use crate::{
     interface::SwapHop, liquidity::Liquidity, percentage::Percentage, sqrt_price::SqrtPrice,
@@ -90,4 +91,19 @@ pub enum QueryMsg {
         token_1: Addr,
         fee_tier: FeeTier,
     },
+}
+
+#[cw_serde]
+pub struct PositionTick {
+    pub index: i32,
+    pub fee_growth_outside_x: FeeGrowth,
+    pub fee_growth_outside_y: FeeGrowth,
+    pub seconds_outside: u64,
+}
+
+#[cw_serde]
+pub struct LiquidityTick {
+    pub index: i32,
+    pub liquidity_change: Liquidity,
+    pub sign: bool,
 }

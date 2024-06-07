@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Storage};
+use cosmwasm_std::{Addr, StdResult, Storage};
 use cw_storage_plus::{Item, Map};
 
 use crate::{
@@ -10,6 +10,9 @@ use crate::{
 pub const CONFIG: Item<Config> = Item::new("config");
 
 pub const POOLS: Map<&[u8], Pool> = Map::new("pools");
+pub const POOL_KEYS: Map<&[u8], u16> = Map::new("pool_keys");
+pub const POOL_KEYS_BY_INDEX: Map<u16, PoolKey> = Map::new("pool_keys_by_index");
+pub const POOL_KEYS_LENGTH: Item<u16> = Item::new("pool_keys_length");
 
 pub const POSITIONS_LENGTH: Map<&[u8], u32> = Map::new("positions_length");
 pub const POSITIONS: Map<&[u8], Position> = Map::new("positions");
@@ -23,6 +26,25 @@ pub const MAX_LIMIT: u32 = 100;
 pub fn get_pool(store: &dyn Storage, pool_key: &PoolKey) -> Result<Pool, ContractError> {
     let pool = POOLS.load(store, &pool_key.key())?;
     Ok(pool)
+}
+
+pub fn get_pool_keys_length(store: &dyn Storage) -> u16 {
+    POOL_KEYS_LENGTH.load(store).unwrap_or(0)
+}
+
+pub fn get_all_pool_keys(
+    store: &dyn Storage,
+    limit: Option<u32>,
+    offset: Option<u32>,
+) -> Result<Vec<PoolKey>, ContractError> {
+    let from_idx = offset.unwrap_or(0) as u16;
+    let to_idx = get_pool_keys_length(store).min(from_idx + limit.unwrap_or(MAX_LIMIT) as u16);
+
+    let pool_keys = (from_idx..to_idx)
+        .map(|index| POOL_KEYS_BY_INDEX.load(store, index))
+        .collect::<StdResult<Vec<PoolKey>>>()?;
+
+    Ok(pool_keys)
 }
 
 pub fn tick_key(pool_key: &PoolKey, index: i32) -> Vec<u8> {
