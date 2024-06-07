@@ -1,4 +1,5 @@
 use crate::error::ContractError;
+use crate::interface::{CalculateSwapResult, SwapHop};
 use crate::liquidity::Liquidity;
 use crate::percentage::Percentage;
 use crate::sqrt_price::SqrtPrice;
@@ -10,11 +11,10 @@ use crate::token_amount::TokenAmount;
 use crate::{check_tick, FeeTier, Pool, PoolKey, Position};
 
 use cosmwasm_std::{
-    attr, to_binary, Addr, Attribute, DepsMut, Env, MessageInfo, Response, WasmMsg,
+    attr, to_binary, Addr, DepsMut, Env, MessageInfo, Response, WasmMsg,
 };
+use super::{create_tick, route, swap_internal};
 use cw20::Cw20ExecuteMsg;
-
-use super::{calculate_swap, create_tick};
 
 /// Allows an fee receiver to withdraw collected fees.
 ///
@@ -90,7 +90,7 @@ pub fn change_protocol_fee(
 ///
 /// # Parameters
 /// - `pool_key`: A unique key that identifies the specified pool.
-/// - `fee_receiver`: An `AccountId` identifying the user authorized to claim fees.
+/// - `fee_receiver`: An `Addr` identifying the user authorized to claim fees.
 ///
 /// # Errors
 /// - Reverts the call when the caller is an unauthorized user.
@@ -250,113 +250,36 @@ pub fn swap(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    pool_key: PoolKey,
+    pool_key: &PoolKey,
     x_to_y: bool,
     amount: TokenAmount,
     by_amount_in: bool,
     sqrt_price_limit: SqrtPrice,
 ) -> Result<Response, ContractError> {
-    let current_timestamp = env.block.time.nanos();
+    let mut msgs = vec![];
 
-    let calculate_swap_result = calculate_swap(
+    let CalculateSwapResult {
+        amount_in,
+        amount_out,
+        ..
+    } = swap_internal(
         deps.storage,
-        current_timestamp,
-        pool_key.clone(),
+        &mut msgs,
+        &info.sender,
+        &env.contract.address,
+        env.block.time.nanos(),
+        pool_key,
         x_to_y,
         amount,
         by_amount_in,
         sqrt_price_limit,
     )?;
 
-    let mut crossed_tick_indexes: Vec<i32> = vec![];
-
-    for tick in calculate_swap_result.ticks.iter() {
-        update_tick(deps.storage, &pool_key, tick.index, tick)?;
-        crossed_tick_indexes.push(tick.index);
-    }
-
-    let mut cross_tick_events: Vec<Attribute> = Vec::new();
-    if !crossed_tick_indexes.is_empty() {
-        cross_tick_events = vec![
-            attr("timestamp", "remove_position"),
-            attr("address", info.sender.to_string()),
-            attr("pool", String::from_utf8(pool_key.key()).unwrap()),
-            attr(
-                "indexes",
-                crossed_tick_indexes
-                    .iter()
-                    .map(|i| i.to_string())
-                    .collect::<Vec<String>>()
-                    .join(", "),
-            ),
-        ];
-    }
-
-    POOLS.save(deps.storage, &pool_key.key(), &calculate_swap_result.pool)?;
-
-    let mut msgs = vec![];
-
-    if x_to_y {
-        msgs.push(WasmMsg::Execute {
-            contract_addr: pool_key.token_x.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                owner: info.sender.to_string(),
-                recipient: env.contract.address.to_string(),
-                amount: calculate_swap_result.amount_in.into(),
-            })?,
-            funds: vec![],
-        });
-        msgs.push(WasmMsg::Execute {
-            contract_addr: pool_key.token_y.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: info.sender.to_string(),
-                amount: calculate_swap_result.amount_out.into(),
-            })?,
-            funds: vec![],
-        });
-    } else {
-        msgs.push(WasmMsg::Execute {
-            contract_addr: pool_key.token_y.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                owner: info.sender.to_string(),
-                recipient: env.contract.address.to_string(),
-                amount: calculate_swap_result.amount_in.into(),
-            })?,
-            funds: vec![],
-        });
-        msgs.push(WasmMsg::Execute {
-            contract_addr: pool_key.token_x.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: info.sender.to_string(),
-                amount: calculate_swap_result.amount_out.into(),
-            })?,
-            funds: vec![],
-        });
-    }
-
-    let swap_events = vec![
-        attr("timestamp", "swap"),
-        attr("address", calculate_swap_result.amount_out.to_string()),
-        attr("pool", String::from_utf8(pool_key.key()).unwrap()),
-        attr("amount_in", calculate_swap_result.amount_in.to_string()),
-        attr("amount_out", calculate_swap_result.amount_out.to_string()),
-        attr("fee", calculate_swap_result.fee.to_string()),
-        attr(
-            "start_sqrt_price",
-            calculate_swap_result.start_sqrt_price.to_string(),
-        ),
-        attr(
-            "target_sqrt_price",
-            calculate_swap_result.target_sqrt_price.to_string(),
-        ),
-        attr("x_to_y", x_to_y.to_string()),
-    ];
-
     Ok(Response::new()
         .add_messages(msgs)
         .add_attribute("action", "swap")
-        .add_attributes(cross_tick_events)
-        .add_attributes(swap_events))
+        .add_attribute("amount_in", amount_in.to_string())
+        .add_attribute("amount_out", amount_out.to_string()))
 }
 
 /// Transfers a position between users.
@@ -614,4 +537,31 @@ pub fn create_pool(
     POOLS.save(deps.storage, &pool_key.key(), &pool)?;
 
     Ok(Response::new().add_attribute("action", "create_pool"))
+}
+
+/// Simulates multiple swaps without its execution.
+///
+/// # Parameters
+/// - `amount_in`: The amount of tokens that the user wants to swap.
+/// - `swaps`: A vector containing all parameters needed to identify separate swap steps.
+///
+/// # Errors
+/// - Fails if the user attempts to perform a swap with zero amounts.
+/// - Fails if the user would receive zero tokens.
+/// - Fails if pool does not exist
+pub fn quote_route(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    amount_in: TokenAmount,
+    swaps: Vec<SwapHop>,
+) -> Result<Response, ContractError> {
+    let mut msgs = vec![];
+
+    let token_amount = route(deps, env, info, &mut msgs, false, amount_in, swaps)?;
+
+    Ok(Response::new()
+        .add_messages(msgs)
+        .add_attribute("action", "quote_route")
+        .add_attribute("token_amount", token_amount.to_string()))
 }

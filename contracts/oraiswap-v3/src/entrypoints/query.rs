@@ -1,59 +1,38 @@
-use cosmwasm_std::{Deps, Env, StdResult};
-use decimal::Decimal;
+use cosmwasm_std::{Addr, Deps};
 
 use crate::{
-    interface::SwapHop, percentage::Percentage, sqrt_price::SqrtPrice, state::CONFIG,
-    token_amount::TokenAmount, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
+    percentage::Percentage,
+    state::{self, CONFIG},
+    ContractError, Position,
 };
 
-use super::calculate_swap;
-
 /// Retrieves the protocol fee represented as a percentage.
-pub fn get_protocol_fee(deps: Deps) -> StdResult<Percentage> {
+pub fn get_protocol_fee(deps: Deps) -> Result<Percentage, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     Ok(config.protocol_fee)
 }
 
-/// Simulates multiple swaps without its execution.
+/// Retrieves information about a single position.
 ///
 /// # Parameters
-/// - `amount_in`: The amount of tokens that the user wants to swap.
-/// - `swaps`: A vector containing all parameters needed to identify separate swap steps.
+/// - `owner_id`: An `Addr` identifying the user who owns the position.
+/// - `index`: The index of the user position.
 ///
 /// # Errors
-/// - Fails if the user attempts to perform a swap with zero amounts.
-/// - Fails if the user would receive zero tokens.
-/// - Fails if pool does not exist
-pub fn quote_route(
+/// - Fails if position cannot be found    
+pub fn get_position(deps: Deps, owner_id: Addr, index: u32) -> Result<Position, ContractError> {
+    state::get_position(deps.storage, &owner_id, index)
+}
+
+// /// Retrieves a vector containing all positions held by the user.
+// ///
+// /// # Parameters
+// /// - `owner_id`: An `Addr` identifying the user who owns the positions.
+pub fn get_positions(
     deps: Deps,
-    env: Env,
-    amount_in: TokenAmount,
-    swaps: Vec<SwapHop>,
-) -> StdResult<TokenAmount> {
-    let mut next_swap_amount = amount_in;
-
-    for swap_hop in swaps.iter() {
-        let SwapHop { pool_key, x_to_y } = swap_hop;
-
-        let sqrt_price_limit = if *x_to_y {
-            SqrtPrice::new(MIN_SQRT_PRICE)
-        } else {
-            SqrtPrice::new(MAX_SQRT_PRICE)
-        };
-
-        let res = calculate_swap(
-            deps.storage,
-            env.block.time.nanos(),
-            pool_key.clone(),
-            *x_to_y,
-            next_swap_amount,
-            true,
-            sqrt_price_limit,
-        )
-        .unwrap();
-
-        next_swap_amount = res.amount_out;
-    }
-
-    Ok(next_swap_amount)
+    owner_id: Addr,
+    limit: Option<u32>,
+    offset: Option<u32>,
+) -> Result<Vec<Position>, ContractError> {
+    state::get_all_positions(deps.storage, &owner_id, limit, offset)
 }

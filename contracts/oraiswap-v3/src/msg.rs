@@ -2,7 +2,8 @@ use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
 
 use crate::{
-    interface::SwapHop, liquidity::Liquidity, percentage::Percentage, sqrt_price::SqrtPrice, token_amount::TokenAmount, FeeTier, PoolKey
+    interface::SwapHop, liquidity::Liquidity, percentage::Percentage, sqrt_price::SqrtPrice,
+    token_amount::TokenAmount, FeeTier, PoolKey, Position,
 };
 
 #[cw_serde]
@@ -37,6 +38,10 @@ pub enum ExecuteMsg {
         by_amount_in: bool,
         sqrt_price_limit: SqrtPrice,
     },
+    QuoteRoute {
+        amount_in: TokenAmount,
+        swaps: Vec<SwapHop>,
+    },
     TransferPosition {
         index: u32,
         receiver: String,
@@ -65,9 +70,13 @@ pub enum QueryMsg {
     #[returns(Percentage)]
     ProtocolFee {},
 
-    #[returns(TokenAmount)]
-    QuoteRoute {
-        amount_in: TokenAmount,
-        swaps: Vec<SwapHop>,
+    #[returns(Position)]
+    Position { owner_id: Addr, index: u32 },
+
+    #[returns(Vec<Position>)]
+    Positions {
+        owner_id: Addr,
+        limit: Option<u32>,
+        offset: Option<u32>,
     },
 }

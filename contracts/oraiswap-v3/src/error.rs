@@ -176,3 +176,9 @@ pub enum ContractError {
 
     
 }
+
+impl From<ContractError> for StdError {
+    fn from(source: ContractError) -> Self {
+        Self::generic_err(source.to_string())
+    }
+}

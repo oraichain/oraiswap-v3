@@ -18,6 +18,8 @@ pub const TICKS: Map<&[u8], Tick> = Map::new("ticks");
 
 pub const BITMAP: Map<&[u8], u64> = Map::new("bitmap");
 
+pub const MAX_LIMIT: u32 = 100;
+
 pub fn tick_key(pool_key: &PoolKey, index: i32) -> Vec<u8> {
     let mut db_key = pool_key.key();
     db_key.extend_from_slice(&index.to_be_bytes());
@@ -161,6 +163,20 @@ pub fn get_position(
         .map_err(|_| ContractError::PositionNotFound)?;
 
     Ok(position)
+}
+
+pub fn get_all_positions(
+    store: &dyn Storage,
+    account_id: &Addr,
+    limit: Option<u32>,
+    offset: Option<u32>,
+) -> Result<Vec<Position>, ContractError> {
+    let from_idx = offset.unwrap_or(0);
+    // maximum 100 items
+    let to_idx = get_position_length(store, account_id).min(from_idx + limit.unwrap_or(MAX_LIMIT));
+    (from_idx..to_idx)
+        .map(|index| get_position(store, account_id, index))
+        .collect()
 }
 
 pub fn get_position_length(store: &dyn Storage, account_id: &Addr) -> u32 {
