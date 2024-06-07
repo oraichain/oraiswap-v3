@@ -1,0 +1,171 @@
+use cosmwasm_std::Storage;
+use decimal::{CheckedOps, Decimal};
+
+use crate::{
+    check_tick, compute_swap_step,
+    interface::CalculateSwapResult,
+    sqrt_price::{get_max_tick, get_min_tick, SqrtPrice},
+    state::{add_tick, flip_bitmap, get_closer_limit, get_tick, CONFIG, POOLS},
+    token_amount::TokenAmount,
+    ContractError, PoolKey, Tick, UpdatePoolTick, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
+};
+
+pub fn create_tick(
+    store: &mut dyn Storage,
+    current_timestamp: u64,
+    pool_key: &PoolKey,
+    index: i32,
+) -> Result<Tick, ContractError> {
+    check_tick(index, pool_key.fee_tier.tick_spacing)?;
+    let pool_key_db = pool_key.key();
+    let pool = POOLS.load(store, &pool_key_db)?;
+
+    let tick = Tick::create(index, &pool, current_timestamp);
+    add_tick(store, pool_key, index, &tick)?;
+    flip_bitmap(store, true, index, pool_key.fee_tier.tick_spacing, pool_key)?;
+
+    Ok(tick)
+}
+
+pub fn calculate_swap(
+    store: &dyn Storage,
+    current_timestamp: u64,
+    pool_key: PoolKey,
+    x_to_y: bool,
+    amount: TokenAmount,
+    by_amount_in: bool,
+    sqrt_price_limit: SqrtPrice,
+) -> Result<CalculateSwapResult, ContractError> {
+    if amount.is_zero() {
+        return Err(ContractError::AmountIsZero {});
+    }
+
+    let mut ticks: Vec<Tick> = vec![];
+
+    let mut pool = POOLS.load(store, &pool_key.key())?;
+
+    if x_to_y {
+        if pool.sqrt_price <= sqrt_price_limit || sqrt_price_limit > SqrtPrice::new(MAX_SQRT_PRICE)
+        {
+            return Err(ContractError::WrongLimit {});
+        }
+    } else if pool.sqrt_price >= sqrt_price_limit
+        || sqrt_price_limit < SqrtPrice::new(MIN_SQRT_PRICE)
+    {
+        return Err(ContractError::WrongLimit {});
+    }
+
+    let tick_limit = if x_to_y {
+        get_min_tick(pool_key.fee_tier.tick_spacing)
+    } else {
+        get_max_tick(pool_key.fee_tier.tick_spacing)
+    };
+
+    let mut remaining_amount = amount;
+
+    let mut total_amount_in = TokenAmount::new(0);
+    let mut total_amount_out = TokenAmount::new(0);
+
+    let event_start_sqrt_price = pool.sqrt_price;
+    let mut event_fee_amount = TokenAmount::new(0);
+
+    while !remaining_amount.is_zero() {
+        let (swap_limit, limiting_tick) = get_closer_limit(
+            store,
+            sqrt_price_limit,
+            x_to_y,
+            pool.current_tick_index,
+            pool_key.fee_tier.tick_spacing,
+            &pool_key,
+        )?;
+
+        let result = compute_swap_step(
+            pool.sqrt_price,
+            swap_limit,
+            pool.liquidity,
+            remaining_amount,
+            by_amount_in,
+            pool_key.fee_tier.fee,
+        )?;
+
+        // make remaining amount smaller
+        if by_amount_in {
+            remaining_amount = remaining_amount
+                .checked_sub(result.amount_in + result.fee_amount)
+                .map_err(|_| ContractError::SubtractionError)?;
+        } else {
+            remaining_amount = remaining_amount
+                .checked_sub(result.amount_out)
+                .map_err(|_| ContractError::SubtractionError)?;
+        }
+
+        pool.add_fee(result.fee_amount, x_to_y, CONFIG.load(store)?.protocol_fee)?;
+        event_fee_amount += result.fee_amount;
+
+        pool.sqrt_price = result.next_sqrt_price;
+
+        total_amount_in += result.amount_in + result.fee_amount;
+        total_amount_out += result.amount_out;
+
+        // Fail if price would go over swap limit
+        if pool.sqrt_price == sqrt_price_limit && !remaining_amount.is_zero() {
+            return Err(ContractError::PriceLimitReached {});
+        }
+
+        let mut tick_update = {
+            if let Some((tick_index, is_initialized)) = limiting_tick {
+                if is_initialized {
+                    let tick = get_tick(store, &pool_key, tick_index)?;
+                    UpdatePoolTick::TickInitialized(tick)
+                } else {
+                    UpdatePoolTick::TickUninitialized(tick_index)
+                }
+            } else {
+                UpdatePoolTick::NoTick
+            }
+        };
+
+        let (amount_to_add, amount_after_tick_update, has_crossed) = pool.update_tick(
+            result,
+            swap_limit,
+            &mut tick_update,
+            remaining_amount,
+            by_amount_in,
+            x_to_y,
+            current_timestamp,
+            CONFIG.load(store)?.protocol_fee,
+            pool_key.fee_tier,
+        )?;
+
+        remaining_amount = amount_after_tick_update;
+        total_amount_in += amount_to_add;
+
+        if let UpdatePoolTick::TickInitialized(tick) = tick_update {
+            if has_crossed {
+                ticks.push(tick)
+            }
+        }
+
+        let reached_tick_limit = match x_to_y {
+            true => pool.current_tick_index <= tick_limit,
+            false => pool.current_tick_index >= tick_limit,
+        };
+
+        if reached_tick_limit {
+            return Err(ContractError::TickLimitReached {});
+        }
+    }
+    if total_amount_out.is_zero() {
+        return Err(ContractError::NoGainSwap {});
+    }
+
+    Ok(CalculateSwapResult {
+        amount_in: total_amount_in,
+        amount_out: total_amount_out,
+        start_sqrt_price: event_start_sqrt_price,
+        target_sqrt_price: pool.sqrt_price,
+        fee: event_fee_amount,
+        pool,
+        ticks,
+    })
+}

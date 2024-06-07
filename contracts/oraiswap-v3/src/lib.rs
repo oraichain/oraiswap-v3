@@ -1,5 +1,7 @@
-pub mod contract;
 mod error;
+
+pub mod contract;
+pub mod entrypoints;
 pub mod interface;
 pub mod msg;
 pub mod state;
