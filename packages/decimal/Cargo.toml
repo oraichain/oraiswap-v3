@@ -1,0 +1,18 @@
+[package]
+name = "decimal"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+documentation = { workspace = true }
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+
+[dependencies]
+decimal-core = { workspace = true }
+integer-sqrt = "0.1.5"
+uint = { version = "0.9", default-features = false }
+num-traits = { version = "0.2.14", default-features = false }
