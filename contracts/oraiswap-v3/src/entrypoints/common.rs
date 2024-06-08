@@ -72,6 +72,7 @@ pub fn calculate_swap(
     let mut event_fee_amount = TokenAmount::new(0);
 
     while !remaining_amount.is_zero() {
+        // println!("{:?}", remaining_amount);
         let (swap_limit, limiting_tick) = get_closer_limit(
             store,
             sqrt_price_limit,
@@ -92,6 +93,7 @@ pub fn calculate_swap(
 
         // make remaining amount smaller
         if by_amount_in {
+            // println!("result.amount_in: {:?}, result.fee_amount: {:?}", result.amount_in, result.fee_amount);
             remaining_amount = remaining_amount
                 .checked_sub(result.amount_in + result.fee_amount)
                 .map_err(|_| ContractError::Sub)?;
