@@ -3,14 +3,13 @@ use decimal::{Decimal, Factories};
 
 use crate::{
     create_entry_points_testing,
-    fee_growth::FeeGrowth,
     liquidity::Liquidity,
     msg::{ExecuteMsg, QueryMsg},
     percentage::Percentage,
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
     tests::helper::MockApp,
     token_amount::TokenAmount,
-    FeeTier, Pool, PoolKey, Tick, MIN_SQRT_PRICE,
+    FeeTier, Pool, PoolKey, MIN_SQRT_PRICE,
 };
 
 #[test]
@@ -18,7 +17,7 @@ fn test_cross_both_side() {
     let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 10).unwrap();
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
-    let initial_mint = 10u128.pow(10); // Tăng số lượng mint ban đầu
+    let initial_mint = 10u128.pow(10); 
     let mint_token = 10u128.pow(5);
 
     let mut app = MockApp::new(&[
@@ -291,7 +290,7 @@ fn test_cross_both_side() {
 //     let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 10).unwrap();
 //     let init_tick = 0;
 //     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
-//     let initial_mint = 10u128.pow(11); // Tăng số lượng mint ban đầu
+//     let initial_mint = 10u128.pow(11);
 
 //     let mut app = MockApp::new(&[
 //         ("owner", &[coin(initial_mint, "orai")]),
