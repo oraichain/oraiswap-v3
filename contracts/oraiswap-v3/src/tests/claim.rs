@@ -104,7 +104,6 @@ fn test_claim() {
     )
     .unwrap();
 
-    // Claim fee
     let user_amount_before_claim = app.query_token_balance(token_x.as_str(), "alice").unwrap();
     let dex_amount_before_claim = app.query_token_balance(token_x.as_str(), clmm_addr.as_str()).unwrap();
 

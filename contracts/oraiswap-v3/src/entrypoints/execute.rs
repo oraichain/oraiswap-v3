@@ -511,7 +511,11 @@ pub fn create_pool(
 ) -> Result<Response, ContractError> {
     let current_timestamp = env.block.time.nanos();
 
-    // check fee tier?
+    let config = CONFIG.load(deps.storage)?;
+
+    if !config.fee_tiers.contains(&fee_tier) {
+        return Err(ContractError::FeeTierNotFound);
+    }
 
     check_tick(init_tick, fee_tier.tick_spacing).map_err(|_| ContractError::InvalidInitTick)?;
 
