@@ -212,9 +212,8 @@ pub fn create_position(
     ];
 
     let event_attributes = vec![
-        attr("timestamp", "remove_position"),
-        attr("address", info.sender.to_string()),
-        attr("pool", String::from_utf8(pool_key_db).unwrap()),
+        attr("action", "create_position"),
+        attr("address", info.sender.as_str()),
         attr("liquidity", liquidity_delta.to_string()),
         attr("lower_tick", lower_tick.index.to_string()),
         attr("upper_tick", upper_tick.index.to_string()),
@@ -251,7 +250,7 @@ pub fn swap(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    pool_key: &PoolKey,
+    pool_key: PoolKey,
     x_to_y: bool,
     amount: TokenAmount,
     by_amount_in: bool,
@@ -269,7 +268,7 @@ pub fn swap(
         &info.sender,
         &env.contract.address,
         env.block.time.nanos(),
-        pool_key,
+        &pool_key,
         x_to_y,
         amount,
         by_amount_in,
@@ -399,10 +398,9 @@ pub fn remove_pos(
     info: MessageInfo,
     index: u32,
 ) -> Result<Response, ContractError> {
-    let caller = info.sender;
     let current_timestamp = env.block.time.nanos();
 
-    let mut position = get_position(deps.storage, &caller, index)?;
+    let mut position = get_position(deps.storage, &info.sender, index)?;
     let withdrawed_liquidity = position.liquidity;
 
     let mut lower_tick = get_tick(deps.storage, &position.pool_key, position.lower_tick_index)?;
@@ -443,7 +441,7 @@ pub fn remove_pos(
         )?;
     }
 
-    remove_position(deps.storage, &caller, index)?;
+    remove_position(deps.storage, &info.sender, index)?;
 
     let mut msgs = vec![];
 
@@ -451,7 +449,7 @@ pub fn remove_pos(
         msgs.push(WasmMsg::Execute {
             contract_addr: position.pool_key.token_x.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: caller.to_string(),
+                recipient: info.sender.to_string(),
                 amount: amount_x.into(),
             })?,
             funds: vec![],
@@ -462,7 +460,7 @@ pub fn remove_pos(
         msgs.push(WasmMsg::Execute {
             contract_addr: position.pool_key.token_y.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: caller.to_string(),
+                recipient: info.sender.to_string(),
                 amount: amount_y.into(),
             })?,
             funds: vec![],
@@ -471,9 +469,7 @@ pub fn remove_pos(
 
     let event_attributes = vec![
         attr("action", "remove_position"),
-        attr("timestamp", "remove_position"),
-        attr("address", caller),
-        attr("pool", String::from_utf8(position.pool_key.key()).unwrap()),
+        attr("address", info.sender.as_str()),
         attr("liquidity", withdrawed_liquidity.to_string()),
         attr("lower_tick", lower_tick.index.to_string()),
         attr("upper_tick", upper_tick.index.to_string()),

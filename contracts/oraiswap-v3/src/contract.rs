@@ -78,7 +78,7 @@ pub fn execute(
             deps,
             env,
             info,
-            &pool_key,
+            pool_key,
             x_to_y,
             amount,
             by_amount_in,
@@ -111,7 +111,7 @@ pub fn execute(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::ProtocolFee {} => to_binary(&get_protocol_fee(deps)?),
         QueryMsg::Position { owner_id, index } => to_binary(&get_position(deps, owner_id, index)?),
@@ -164,5 +164,20 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::PoolsForPair { token0, token1 } => {
             to_binary(&get_all_pools_for_pair(deps, token0, token1)?)
         }
+        QueryMsg::Quote {
+            pool_key,
+            x_to_y,
+            amount,
+            by_amount_in,
+            sqrt_price_limit,
+        } => to_binary(&quote(
+            deps,
+            env,
+            pool_key,
+            x_to_y,
+            amount,
+            by_amount_in,
+            sqrt_price_limit,
+        )?),
     }
 }

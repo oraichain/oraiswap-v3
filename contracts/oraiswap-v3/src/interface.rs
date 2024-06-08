@@ -1,19 +1,7 @@
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::Addr;
 
 use crate::{sqrt_price::SqrtPrice, token_amount::TokenAmount, Pool, PoolKey, Tick};
-
-#[cw_serde]
-pub struct Asset {
-    pub info: AssetInfo,
-    pub amount: Uint128,
-}
-
-#[cw_serde]
-pub enum AssetInfo {
-    Token { contract_addr: Addr },
-    NativeToken { denom: String },
-}
 
 #[cw_serde]
 pub struct NftExtentions {

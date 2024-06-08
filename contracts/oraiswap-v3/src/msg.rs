@@ -141,6 +141,15 @@ pub enum QueryMsg {
 
     #[returns(Vec<Pool>)]
     PoolsForPair { token0: Addr, token1: Addr },
+
+    #[returns(QuoteResult)]
+    Quote {
+        pool_key: PoolKey,
+        x_to_y: bool,
+        amount: TokenAmount,
+        by_amount_in: bool,
+        sqrt_price_limit: SqrtPrice,
+    },
 }
 
 #[cw_serde]
@@ -156,4 +165,12 @@ pub struct LiquidityTick {
     pub index: i32,
     pub liquidity_change: Liquidity,
     pub sign: bool,
+}
+
+#[cw_serde]
+pub struct QuoteResult {
+    pub amount_in: TokenAmount,
+    pub amount_out: TokenAmount,
+    pub target_sqrt_price: SqrtPrice,
+    pub ticks: Vec<Tick>,
 }

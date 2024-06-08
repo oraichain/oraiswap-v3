@@ -1,15 +1,17 @@
-use cosmwasm_std::{Addr, Deps};
+use cosmwasm_std::{Addr, Deps, Env};
 
 use crate::{
     get_max_chunk, get_min_chunk,
+    msg::QuoteResult,
     percentage::Percentage,
-    sqrt_price::{get_max_tick, get_min_tick},
+    sqrt_price::{get_max_tick, get_min_tick, SqrtPrice},
     state::{self, CONFIG, MAX_LIMIT},
-    tick_to_position, ContractError, FeeTier, LiquidityTick, Pool, PoolKey, Position, PositionTick,
-    Tick, CHUNK_SIZE,
+    tick_to_position,
+    token_amount::TokenAmount,
+    ContractError, FeeTier, LiquidityTick, Pool, PoolKey, Position, PositionTick, Tick, CHUNK_SIZE,
 };
 
-use super::tickmap_slice;
+use super::{calculate_swap, tickmap_slice};
 
 /// Retrieves the protocol fee represented as a percentage.
 pub fn get_protocol_fee(deps: Deps) -> Result<Percentage, ContractError> {
@@ -317,4 +319,45 @@ pub fn get_liquidity_ticks_amount(
     }
 
     Ok(amount)
+}
+
+/// Simulates the swap without its execution.
+///
+/// # Parameters
+/// - `pool_key`: A unique key that identifies the specified pool.
+/// - `x_to_y`: A boolean specifying the swap direction.
+/// - `amount`: The amount of tokens that the user wants to swap.
+/// - `by_amount_in`: A boolean specifying whether the user provides the amount to swap or expects the amount out.
+/// - `sqrt_price_limit`: A square root of price limit allowing the price to move for the swap to occur.
+///
+/// # Errors
+/// - Fails if the user attempts to perform a swap with zero amounts.
+/// - Fails if the price has reached the specified limit.
+/// - Fails if the user would receive zero tokens.
+/// - Fails if pool does not exist
+pub fn quote(
+    deps: Deps,
+    env: Env,
+    pool_key: PoolKey,
+    x_to_y: bool,
+    amount: TokenAmount,
+    by_amount_in: bool,
+    sqrt_price_limit: SqrtPrice,
+) -> Result<QuoteResult, ContractError> {
+    let calculate_swap_result = calculate_swap(
+        deps.storage,
+        env.block.time.nanos(),
+        &pool_key,
+        x_to_y,
+        amount,
+        by_amount_in,
+        sqrt_price_limit,
+    )?;
+
+    Ok(QuoteResult {
+        amount_in: calculate_swap_result.amount_in,
+        amount_out: calculate_swap_result.amount_out,
+        target_sqrt_price: calculate_swap_result.pool.sqrt_price,
+        ticks: calculate_swap_result.ticks,
+    })
 }

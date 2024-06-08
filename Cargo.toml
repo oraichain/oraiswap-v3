@@ -34,11 +34,9 @@ cw-storage-plus = { version = "1.0.1" }
 cw-multi-test = "0.16.6"
 cw-utils = "0.16.0"
 
+oraiswap = { git = "https://github.com/oraichain/oraiswap.git", rev = "29decac" }
 decimal-core = { path = "./packages/decimal-core" }
 decimal = { path = "./packages/decimal" }
-
-osmosis-test-tube = { git = "https://github.com/oraichain/test-tube.git", rev = "354d580" }
-test-tube = { git = "https://github.com/oraichain/test-tube.git", rev = "354d580" }
 
 [profile.release]
 opt-level = 3
