@@ -250,6 +250,24 @@ impl MockApp {
         }
     }
 
+    pub fn mint_token(
+        &mut self,
+        sender: &str,
+        recipient: &str,
+        cw20_addr: &str,
+        amount: u128,
+    ) -> Result<AppResponse, String> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(cw20_addr),
+            &cw20::Cw20ExecuteMsg::Mint {
+                recipient: recipient.to_string(),
+                amount: amount.into(),
+            },
+            &[],
+        )
+    }
+
     pub fn set_token_balances_from(
         &mut self,
         sender: &str,
@@ -266,15 +284,7 @@ impl MockApp {
             // mint for each recipient
             for (recipient, amount) in balances.iter() {
                 if !amount.is_zero() {
-                    self.execute(
-                        Addr::unchecked(sender),
-                        contract_addr.clone(),
-                        &cw20::Cw20ExecuteMsg::Mint {
-                            recipient: recipient.to_string(),
-                            amount: (*amount).into(),
-                        },
-                        &[],
-                    )?;
+                    self.mint_token(sender, recipient, contract_addr.as_str(), *amount)?;
                 }
             }
         }
