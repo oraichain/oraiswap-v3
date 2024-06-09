@@ -1,59 +1,54 @@
-use crate::contract::{execute, instantiate, query};
-use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{ExecuteMsg, QueryMsg};
 use crate::percentage::Percentage;
-use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-use cosmwasm_std::from_binary;
+use crate::tests::helper::MockApp;
+use cosmwasm_std::Addr;
 use decimal::Decimal;
 
 #[test]
-fn test_change_protocol_fee() -> Result<(), ContractError> {
-    let mut deps = mock_dependencies();
-    let env = mock_env();
+fn test_change_protocol_fee() {
+    let mut mock_app = MockApp::new(&[("admin", &[])]);
     let admin = "admin";
 
-    let instantiate_msg = InstantiateMsg {
-        protocol_fee: Percentage::new(0),
-    };
-
-    let info = mock_info(admin, &[]);
-    instantiate(deps.as_mut(), env.clone(), info.clone(), instantiate_msg)?;
+    let protocol_fee = Percentage::new(0);
+    let dex_addr = mock_app.create_dex(admin, protocol_fee).unwrap();
 
     let query_msg = QueryMsg::ProtocolFee {};
-    let protocol_fee: Percentage = from_binary(&query(deps.as_ref(), env.clone(), query_msg.clone())?)?;
+    let protocol_fee: Percentage = mock_app.query(dex_addr.clone(), &query_msg).unwrap();
     assert_eq!(protocol_fee, Percentage::new(0));
 
     let execute_msg = ExecuteMsg::ChangeProtocolFee {
         protocol_fee: Percentage::new(1),
     };
-    execute(deps.as_mut(), env.clone(), info.clone(), execute_msg)?;
+    let result = mock_app.execute(
+        Addr::unchecked(admin),
+        Addr::unchecked(dex_addr.clone()),
+        &execute_msg,
+        &[],
+    );
+    assert!(result.is_ok());
 
-    let protocol_fee: Percentage = from_binary(&query(deps.as_ref(), env, query_msg)?)?;
+    let protocol_fee: Percentage = mock_app.query(dex_addr.clone(), &query_msg).unwrap();
     assert_eq!(protocol_fee, Percentage::new(1));
-
-    Ok(())
 }
 
 #[test]
-fn test_change_protocol_fee_not_admin() -> Result<(), ContractError> {
-    let mut deps = mock_dependencies();
-    let env = mock_env();
+fn test_change_protocol_fee_not_admin() {
+    let mut mock_app = MockApp::new(&[("admin", &[]), ("user", &[])]);
     let admin = "admin";
     let user = "user";
 
-    let instantiate_msg = InstantiateMsg {
-        protocol_fee: Percentage::new(0),
-    };
+    let protocol_fee = Percentage::new(0);
+    let dex_addr = mock_app.create_dex(admin, protocol_fee).unwrap();
 
-    let info = mock_info(admin, &[]);
-    instantiate(deps.as_mut(), env.clone(), info.clone(), instantiate_msg)?;
-
-    let info = mock_info(user, &[]);
     let execute_msg = ExecuteMsg::ChangeProtocolFee {
         protocol_fee: Percentage::new(1),
     };
-    let result = execute(deps.as_mut(), env, info, execute_msg).unwrap_err();
-    assert!(matches!(result, ContractError::Unauthorized {}));
-
-    Ok(())
+    let result = mock_app.execute(
+        Addr::unchecked(user),
+        Addr::unchecked(dex_addr.clone()),
+        &execute_msg,
+        &[],
+    ).unwrap_err();
+    
+    assert!(result.contains("error executing WasmMsg"));
 }

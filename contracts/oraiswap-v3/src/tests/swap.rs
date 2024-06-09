@@ -16,18 +16,15 @@ use super::helper::MockApp;
 fn test_swap_x_to_y() {
     let protocol_fee = Percentage::from_scale(6, 3);
     let initial_amount = 10u128.pow(10);
-    let mut app = MockApp::new(&[
-        ("owner", &[coin(initial_amount, "orai")]),
-        ("alice", &[coin(initial_amount, "orai")]),
-    ]);
+    let mut app = MockApp::new(&[("alice", &[coin(initial_amount, "orai")])]);
     app.set_token_contract(Box::new(crate::create_entry_points_testing!(cw20_base)));
 
     let fee_tier = FeeTier::new(protocol_fee, 10).unwrap();
 
-    let clmm_addr = app.create_dex("owner", protocol_fee).unwrap();
+    let clmm_addr = app.create_dex("alice", protocol_fee).unwrap();
 
     let _res = app
-        .add_fee_tier("owner", clmm_addr.as_str(), fee_tier)
+        .add_fee_tier("alice", clmm_addr.as_str(), fee_tier)
         .unwrap();
 
     let init_tick = 0;
@@ -98,7 +95,7 @@ fn test_swap_x_to_y() {
     let amount = 1000;
     let swap_amount = TokenAmount(amount);
 
-    app.set_token_balances("alice", &[("tokenx", &[("bob", amount)])])
+    app.mint_token("alice", "bob", token_x.as_str(), amount)
         .unwrap();
     app.approve_token("tokenx", "bob", clmm_addr.as_str(), amount)
         .unwrap();
