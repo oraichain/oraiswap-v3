@@ -658,3 +658,136 @@ mod tests {
         );
     }
 }
+
+pub mod macros {
+    macro_rules! create_tokens {
+        ($app:ident, $token_x_supply:expr, $token_y_supply:expr) => {{
+            let token_x = $app.create_token("alice", "tokenx", $token_x_supply);
+            let token_y = $app.create_token("alice", "tokeny", $token_y_supply);
+            (token_x, token_y)
+        }};
+    }
+    pub(crate) use create_tokens;
+
+    macro_rules! create_pool {
+        ($app:ident, $dex_address:expr, $token_0:expr, $token_1:expr, $fee_tier:expr, $init_sqrt_price:expr, $init_tick:expr, $caller:tt) => {{
+            $app.create_pool(
+                $caller,
+                $dex_address.as_str(),
+                $token_0.as_str(),
+                $token_1.as_str(),
+                $fee_tier,
+                $init_sqrt_price,
+                $init_tick,
+            )
+        }};
+    }
+    pub(crate) use create_pool;
+
+    macro_rules! add_fee_tier {
+        ($app:ident, $dex_address:expr, $fee_tier:expr, $caller:tt) => {{
+            $app.add_fee_tier($caller, $dex_address.as_str(), $fee_tier)
+        }};
+    }
+    pub(crate) use add_fee_tier;
+
+    macro_rules! approve {
+        ($app:ident, $token_address:expr, $spender:expr, $value:expr, $caller:tt) => {{
+            $app.approve_token($token_address.as_str(), $caller, $spender.as_str(), $value)
+        }};
+    }
+    pub(crate) use approve;
+
+    macro_rules! create_position {
+        ($app:ident, $dex_address:expr, $pool_key:expr, $lower_tick:expr, $upper_tick:expr, $liquidity_delta:expr, $slippage_limit_lower:expr, $slippage_limit_upper:expr, $caller:tt) => {{
+            $app.create_position(
+                $caller,
+                $dex_address.as_str(),
+                &$pool_key,
+                $lower_tick,
+                $upper_tick,
+                $liquidity_delta,
+                $slippage_limit_lower,
+                $slippage_limit_upper,
+            )
+        }};
+    }
+    pub(crate) use create_position;
+
+    macro_rules! get_pool {
+        ($app:ident, $dex_address:expr, $token_0:expr, $token_1:expr, $fee_tier:expr) => {{
+            $app.get_pool(
+                $dex_address.as_str(),
+                $token_0.as_str(),
+                $token_1.as_str(),
+                $fee_tier,
+            )
+        }};
+    }
+    pub(crate) use get_pool;
+
+    macro_rules! get_tick {
+        ($app:ident, $dex_address:expr, $key:expr, $index:expr) => {{
+            $app.get_tick($dex_address.as_str(), &$key, $index)
+        }};
+    }
+    pub(crate) use get_tick;
+
+    macro_rules! is_tick_initialized {
+        ($app:ident, $dex_address:expr, $key:expr, $index:expr) => {{
+            $app.is_tick_initialized($dex_address.as_str(), &$key, $index)
+                .unwrap()
+        }};
+    }
+    pub(crate) use is_tick_initialized;
+
+    macro_rules! mint {
+        ($app:ident, $token_address:expr, $to:tt, $value:expr, $caller:tt) => {{
+            $app.mint_token($caller, $to, $token_address.as_str(), $value)
+        }};
+    }
+    pub(crate) use mint;
+
+    macro_rules! quote {
+        ($app:ident,  $dex_address:expr, $pool_key:expr, $x_to_y:expr, $amount:expr, $by_amount_in:expr, $sqrt_price_limit:expr) => {{
+            $app.quote(
+                $dex_address.as_str(),
+                &$pool_key,
+                $x_to_y,
+                $amount,
+                $by_amount_in,
+                $sqrt_price_limit,
+            )
+        }};
+    }
+    pub(crate) use quote;
+
+    macro_rules! balance_of {
+        ($app:ident, $token_address:expr, $owner:ident) => {{
+            $app.query_token_balance($token_address.as_str(), $owner.as_str())
+                .unwrap()
+                .u128()
+        }};
+        ($app:ident, $token_address:expr, $owner:tt) => {{
+            $app.query_token_balance($token_address.as_str(), $owner)
+                .unwrap()
+                .u128()
+        }};
+    }
+    pub(crate) use balance_of;
+
+    macro_rules! swap {
+        ($app:ident, $dex_address:expr, $pool_key:expr, $x_to_y:expr, $amount:expr, $by_amount_in:expr, $sqrt_price_limit:expr, $caller:tt) => {{
+            $app.swap(
+                $caller,
+                $dex_address.as_str(),
+                &$pool_key,
+                $x_to_y,
+                $amount,
+                $by_amount_in,
+                $sqrt_price_limit,
+            )
+        }};
+    }
+    pub(crate) use swap;
+}
