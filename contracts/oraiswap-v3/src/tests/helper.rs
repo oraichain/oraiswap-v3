@@ -20,8 +20,6 @@ use crate::{
     FeeTier, Pool, PoolKey, Tick,
 };
 
-// pub const APP_OWNER: &str = "admin";
-
 #[macro_export]
 macro_rules! create_entry_points_testing {
     ($contract:ident) => {
@@ -394,6 +392,40 @@ impl MockApp {
         )
     }
 
+    pub fn withdraw_protocol_fee(
+        &mut self,
+        sender: &str,
+        clmm_addr: &str,
+        pool_key: &PoolKey,
+    ) -> Result<AppResponse, String> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(clmm_addr),
+            &msg::ExecuteMsg::WithdrawProtocolFee {
+                pool_key: pool_key.clone(),
+            },
+            &[],
+        )
+    }
+
+    pub fn change_fee_receiver(
+        &mut self,
+        sender: &str,
+        clmm_addr: &str,
+        pool_key: &PoolKey,
+        fee_recevier: &str,
+    ) -> Result<AppResponse, String> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(clmm_addr),
+            &msg::ExecuteMsg::ChangeFeeReceiver {
+                pool_key: pool_key.clone(),
+                fee_receiver: Addr::unchecked(fee_recevier),
+            },
+            &[],
+        )
+    }
+
     pub fn create_position(
         &mut self,
         sender: &str,
@@ -731,8 +763,9 @@ pub mod macros {
     pub(crate) use quote;
 
     macro_rules! balance_of {
-        ($app:ident, $token_address:expr, $owner:ident) => {{
-            $app.query_token_balance($token_address.as_str(), $owner.as_str())
+        // any type that can converted to string
+        ($app:ident, $token_address:expr, $owner:expr) => {{
+            $app.query_token_balance($token_address.as_str(), &$owner.to_string())
                 .unwrap()
                 .u128()
         }};
@@ -874,7 +907,7 @@ pub mod macros {
             add_fee_tier!($app, $dex_address, fee_tier, "alice").unwrap();
 
             let init_tick = 0;
-            let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
+            let init_sqrt_price = crate::sqrt_price::calculate_sqrt_price(init_tick).unwrap();
             create_pool!(
                 $app,
                 $dex_address,
@@ -905,7 +938,7 @@ pub mod macros {
                 PoolKey::new($token_x_address.clone(), $token_y_address.clone(), fee_tier).unwrap();
             let lower_tick = -20;
             let upper_tick = 10;
-            let liquidity = Liquidity::from_integer(1000000);
+            let liquidity = crate::math::types::liquidity::Liquidity::from_integer(1000000);
 
             let pool_before = get_pool!(
                 $app,
@@ -976,6 +1009,113 @@ pub mod macros {
         }};
     }
     pub(crate) use swap_exact_limit;
+
+    macro_rules! init_dex_and_tokens {
+        ($app:ident) => {{
+            let mint_amount = 10u128.pow(10);
+            let (token_x, token_y) = create_tokens!($app, mint_amount, mint_amount);
+
+            let protocol_fee = Percentage::from_scale(1, 2);
+            let dex = $app.create_dex("alice", protocol_fee).unwrap();
+            (dex, token_x, token_y)
+        }};
+    }
+    pub(crate) use init_dex_and_tokens;
+
+    macro_rules! init_basic_swap {
+        ($app:ident, $dex_address:ident, $token_x_address:ident, $token_y_address:ident) => {{
+            let fee = Percentage::from_scale(6, 3);
+            let tick_spacing = 10;
+            let fee_tier = FeeTier { fee, tick_spacing };
+            let pool_key =
+                PoolKey::new($token_x_address.clone(), $token_y_address.clone(), fee_tier).unwrap();
+            let lower_tick = -20;
+
+            let amount = 1000;
+
+            mint!($app, $token_x_address, "bob", amount, "bob").unwrap();
+            let amount_x = balance_of!($app, $token_x_address, "bob");
+            assert_eq!(amount_x, amount);
+            approve!($app, $token_x_address, $dex_address, amount, "bob").unwrap();
+
+            let amount_x = balance_of!($app, $token_x_address, $dex_address);
+            let amount_y = balance_of!($app, $token_y_address, $dex_address);
+            assert_eq!(amount_x, 500);
+            assert_eq!(amount_y, 1000);
+
+            let pool_before = get_pool!(
+                $app,
+                $dex_address,
+                $token_x_address,
+                $token_y_address,
+                pool_key.fee_tier
+            )
+            .unwrap();
+
+            let swap_amount = TokenAmount::new(amount);
+            let slippage = crate::sqrt_price::SqrtPrice::new(crate::MIN_SQRT_PRICE);
+            swap!(
+                $app,
+                $dex_address,
+                pool_key,
+                true,
+                swap_amount,
+                true,
+                slippage,
+                "bob"
+            )
+            .unwrap();
+
+            let pool_after = get_pool!(
+                $app,
+                $dex_address,
+                $token_x_address,
+                $token_y_address,
+                fee_tier
+            )
+            .unwrap();
+            assert_eq!(pool_after.liquidity, pool_before.liquidity);
+            assert_eq!(pool_after.current_tick_index, lower_tick);
+            assert_ne!(pool_after.sqrt_price, pool_before.sqrt_price);
+
+            let amount_x = balance_of!($app, $token_x_address, "bob");
+            let amount_y = balance_of!($app, $token_y_address, "bob");
+            assert_eq!(amount_x, 0);
+            assert_eq!(amount_y, 993);
+
+            let amount_x = balance_of!($app, $token_x_address, $dex_address);
+            let amount_y = balance_of!($app, $token_y_address, $dex_address);
+            assert_eq!(amount_x, 1500);
+            assert_eq!(amount_y, 7);
+
+            assert_eq!(
+                pool_after.fee_growth_global_x,
+                crate::fee_growth::FeeGrowth::new(50000000000000000000000)
+            );
+            assert_eq!(
+                pool_after.fee_growth_global_y,
+                crate::fee_growth::FeeGrowth::new(0)
+            );
+
+            assert_eq!(pool_after.fee_protocol_token_x, TokenAmount::new(1));
+            assert_eq!(pool_after.fee_protocol_token_y, TokenAmount::new(0));
+        }};
+    }
+    pub(crate) use init_basic_swap;
+
+    macro_rules! withdraw_protocol_fee {
+        ($app:ident, $dex_address:expr, $pool_key:expr, $caller:tt) => {{
+            $app.withdraw_protocol_fee($caller, $dex_address.as_str(), &$pool_key)
+        }};
+    }
+    pub(crate) use withdraw_protocol_fee;
+
+    macro_rules! change_fee_receiver {
+        ($app:ident,  $dex_address:expr, $pool_key:expr, $fee_receiver:tt, $caller:tt) => {{
+            $app.change_fee_receiver($caller, $dex_address.as_str(), &$pool_key, $fee_receiver)
+        }};
+    }
+    pub(crate) use change_fee_receiver;
 }
 
 #[cfg(test)]
