@@ -395,3 +395,93 @@ fn test_swap_not_enough_liquidity_token_x() {
     )
     .unwrap_err();
 }
+
+#[test]
+fn test_swap_not_enough_liquidity_token_y() {
+    let initial_amount = 10u128.pow(10);
+    let protocol_fee = Percentage::from_scale(6, 3);
+    let mut app = MockApp::new(&[("alice", &[coin(initial_amount, "orai")])]);
+    app.set_token_contract(Box::new(crate::create_entry_points_testing!(cw20_base)));
+    let dex = app.create_dex("alice", protocol_fee).unwrap();
+
+    let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
+
+    let fee_tier = FeeTier::new(protocol_fee, 10).unwrap();
+
+    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
+
+    let init_tick = 0;
+    let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
+    create_pool!(
+        app,
+        dex,
+        token_x,
+        token_y,
+        fee_tier,
+        init_sqrt_price,
+        init_tick,
+        "alice"
+    )
+    .unwrap();
+
+    approve!(app, token_x, dex, initial_amount, "alice").unwrap();
+    approve!(app, token_y, dex, initial_amount, "alice").unwrap();
+
+    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+
+    let lower_tick_index = -20;
+    let middle_tick_index = -10;
+    let upper_tick_index = 10;
+
+    let liquidity_delta = Liquidity::from_integer(1000000);
+
+    create_position!(
+        app,
+        dex,
+        pool_key,
+        lower_tick_index,
+        upper_tick_index,
+        liquidity_delta,
+        SqrtPrice::new(0),
+        SqrtPrice::max_instance(),
+        "alice"
+    )
+    .unwrap();
+
+    create_position!(
+        app,
+        dex,
+        pool_key,
+        lower_tick_index - 20,
+        middle_tick_index,
+        liquidity_delta,
+        SqrtPrice::new(0),
+        SqrtPrice::max_instance(),
+        "alice"
+    )
+    .unwrap();
+
+    let pool = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
+
+    assert_eq!(pool.liquidity, liquidity_delta);
+
+    let amount = 1000;
+    let swap_amount = TokenAmount(amount);
+
+    mint!(app, token_y, "bob", amount, "alice").unwrap();
+    approve!(app, token_y, dex, amount, "bob").unwrap();
+
+    let slippage = SqrtPrice::new(MAX_SQRT_PRICE);
+
+    swap!(
+        app,
+        dex,
+        pool_key,
+        false,
+        swap_amount,
+        true,
+        slippage,
+        "bob"
+    )
+    .unwrap_err();
+}
