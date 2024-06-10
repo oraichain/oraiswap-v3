@@ -1302,6 +1302,29 @@ pub mod macros {
         }};
     }
     pub(crate) use liquidity_tick_equals;
+
+    macro_rules! get_position_ticks {
+        ($app:ident, $dex_address:expr, $owner:expr, $offset:expr) => {{
+            $app.query(
+                Addr::unchecked($dex_address.as_str()),
+                &msg::QueryMsg::PositionTicks {
+                    owner: $owner,
+                    offset: $offset,
+                },
+            )
+        }};
+    }
+    pub(crate) use get_position_ticks;
+
+    macro_rules! position_tick_equals {
+        ($a:expr, $b:expr) => {{
+            assert_eq!($a.index, $b.index);
+            assert_eq!($a.fee_growth_outside_x, $b.fee_growth_outside_x);
+            assert_eq!($a.fee_growth_outside_y, $b.fee_growth_outside_y);
+            assert_eq!($a.seconds_outside, $b.seconds_outside);
+        }};
+    }
+    pub(crate) use position_tick_equals;
 }
 
 #[cfg(test)]
