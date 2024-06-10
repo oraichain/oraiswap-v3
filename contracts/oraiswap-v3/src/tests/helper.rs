@@ -1306,6 +1306,57 @@ pub mod macros {
         }};
     }
     pub(crate) use init_cross_swap;
+
+    macro_rules! get_liquidity_ticks_amount {
+        ($app:ident, $dex_address:expr, $pool_key:expr, $lower_tick:expr, $upper_tick:expr) => {{
+            $app.query(
+                Addr::unchecked($dex_address.as_str()),
+                &msg::QueryMsg::LiquidityTicksAmount {
+                    pool_key: $pool_key.clone(),
+                    lower_tick: $lower_tick,
+                    upper_tick: $upper_tick,
+                },
+            )
+        }};
+    }
+    pub(crate) use get_liquidity_ticks_amount;
+
+    macro_rules! get_tickmap {
+        ($app:ident, $dex_address:expr, $pool_key:expr, $lower_tick_index:expr, $upper_tick_index:expr , $x_to_y:expr, $caller:expr) => {{
+            $app.query(
+                Addr::unchecked($dex_address.as_str()),
+                &msg::QueryMsg::TickMap {
+                    pool_key: $pool_key.clone(),
+                    lower_tick_index: $lower_tick_index,
+                    upper_tick_index: $upper_tick_index,
+                    x_to_y: $x_to_y,
+                },
+            )
+        }};
+    }
+    pub(crate) use get_tickmap;
+
+    macro_rules! get_liquidity_ticks {
+        ($app:ident, $dex_address:expr, $pool_key:expr, $offset:expr) => {{
+            $app.query(
+                Addr::unchecked($dex_address.as_str()),
+                &msg::QueryMsg::LiquidityTicks {
+                    pool_key: $pool_key.clone(),
+                    tick_indexes: $offset,
+                },
+            )
+        }};
+    }
+    pub(crate) use get_liquidity_ticks;
+
+    macro_rules! liquidity_tick_equals {
+        ($a:expr, $b:expr) => {{
+            assert_eq!($a.index, $b.index);
+            assert_eq!($a.liquidity_change, $b.liquidity_change);
+            assert_eq!($a.sign, $b.sign);
+        }};
+    }
+    pub(crate) use liquidity_tick_equals;
 }
 
 #[cfg(test)]

@@ -5,6 +5,7 @@ mod claim;
 mod create_pool;
 mod cross;
 mod cross_both_size;
+mod get_liquidity_ticks;
 mod helper;
 mod position;
 mod protocol_fee;

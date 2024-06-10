@@ -8,7 +8,7 @@ use crate::{
     state::{self, CONFIG, MAX_LIMIT},
     tick_to_position,
     token_amount::TokenAmount,
-    ContractError, FeeTier, LiquidityTick, Pool, PoolKey, Position, PositionTick, Tick, CHUNK_SIZE,
+    ContractError, FeeTier, LiquidityTick, Pool, PoolKey, Position, PositionTick, Tick, CHUNK_SIZE, LIQUIDITY_TICK_LIMIT,
 };
 
 use super::{calculate_swap, tickmap_slice};
@@ -247,7 +247,7 @@ pub fn get_liquidity_ticks(
 ) -> Result<Vec<LiquidityTick>, ContractError> {
     let mut liqudity_ticks: Vec<LiquidityTick> = vec![];
 
-    if tick_indexes.len() > MAX_LIMIT as usize {
+    if tick_indexes.len() > LIQUIDITY_TICK_LIMIT {
         return Err(ContractError::TickLimitReached);
     }
 
