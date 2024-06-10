@@ -35,6 +35,7 @@ pub fn withdraw_protocol_fee(
     }
 
     let (fee_protocol_token_x, fee_protocol_token_y) = pool.withdraw_protocol_fee();
+    println!("{:?} {:?}", fee_protocol_token_x, fee_protocol_token_y);
     POOLS.save(deps.storage, &pool_key_db, &pool)?;
 
     let msgs = vec![
@@ -484,12 +485,12 @@ pub fn remove_pos(
             &upper_tick,
         )?;
     }
-
     remove_position(deps.storage, &info.sender, index)?;
-
+    
     let mut msgs = vec![];
-
+    
     if amount_x > TokenAmount::new(0) {
+        println!("x {:?}", amount_x);
         msgs.push(WasmMsg::Execute {
             contract_addr: position.pool_key.token_x.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
@@ -499,8 +500,9 @@ pub fn remove_pos(
             funds: vec![],
         });
     }
-
+    
     if amount_y > TokenAmount::new(0) {
+        println!("y {:?}", amount_y);
         msgs.push(WasmMsg::Execute {
             contract_addr: position.pool_key.token_y.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
@@ -510,7 +512,7 @@ pub fn remove_pos(
             funds: vec![],
         });
     }
-
+    
     let event_attributes = vec![
         attr("action", "remove_position"),
         attr("address", info.sender.as_str()),
