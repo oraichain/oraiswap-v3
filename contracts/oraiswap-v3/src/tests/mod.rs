@@ -7,6 +7,7 @@ mod cross;
 mod cross_both_size;
 mod get_liquidity_ticks;
 mod get_position_ticks;
+mod get_tickmap;
 mod helper;
 mod position;
 mod protocol_fee;
