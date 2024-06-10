@@ -1087,7 +1087,7 @@ pub mod macros {
 
             let amount = 1000;
 
-            mint!($app, $token_x_address, "bob", amount, "bob").unwrap();
+            mint!($app, $token_x_address, "bob", amount, "alice").unwrap();
             let amount_x = balance_of!($app, $token_x_address, "bob");
             assert_eq!(amount_x, amount);
             approve!($app, $token_x_address, $dex_address, amount, "bob").unwrap();
