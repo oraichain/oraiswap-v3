@@ -672,6 +672,9 @@ pub mod macros {
         ($app:ident, $token_x_supply:expr, $token_y_supply:expr) => {{
             create_tokens!($app, $token_x_supply, $token_y_supply, "alice")
         }};
+        ($app:ident, $token_supply:expr) => {{
+            create_tokens!($app, $token_supply, $token_supply, "alice")
+        }};
     }
 
     pub(crate) use create_tokens;
@@ -1120,13 +1123,13 @@ pub mod macros {
     pub(crate) use swap_exact_limit;
 
     macro_rules! init_dex_and_tokens {
-        ($app:ident) => {{
-            let mint_amount = 10u128.pow(10);
-            let (token_x, token_y) = create_tokens!($app, mint_amount, mint_amount);
-
-            let protocol_fee = Percentage::from_scale(1, 2);
-            let dex = $app.create_dex("alice", protocol_fee).unwrap();
+        ($app:ident, $mint_amount:expr,$protocol_fee:expr) => {{
+            let (token_x, token_y) = create_tokens!($app, $mint_amount, $mint_amount);
+            let dex = $app.create_dex("alice", $protocol_fee).unwrap();
             (dex, token_x, token_y)
+        }};
+        ($app:ident) => {{
+            init_dex_and_tokens!($app, 10u128.pow(10), Percentage::from_scale(1, 2))
         }};
     }
     pub(crate) use init_dex_and_tokens;

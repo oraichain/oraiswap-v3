@@ -10,6 +10,7 @@ mod get_position_ticks;
 mod get_tickmap;
 mod helper;
 mod position;
+mod position_slippage;
 mod protocol_fee;
 mod remove_fee_tier;
 mod slippage;

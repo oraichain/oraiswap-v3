@@ -5,10 +5,11 @@ use crate::{
     msg::QuoteResult,
     percentage::Percentage,
     sqrt_price::{get_max_tick, get_min_tick, SqrtPrice},
-    state::{self, CONFIG, MAX_LIMIT},
+    state::{self, CONFIG},
     tick_to_position,
     token_amount::TokenAmount,
-    ContractError, FeeTier, LiquidityTick, Pool, PoolKey, Position, PositionTick, Tick, CHUNK_SIZE, LIQUIDITY_TICK_LIMIT, POSITION_TICK_LIMIT,
+    ContractError, FeeTier, LiquidityTick, Pool, PoolKey, Position, PositionTick, Tick, CHUNK_SIZE,
+    LIQUIDITY_TICK_LIMIT, POSITION_TICK_LIMIT,
 };
 
 use super::{calculate_swap, tickmap_slice};
