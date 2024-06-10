@@ -163,7 +163,7 @@ impl Tick {
         max_liquidity_per_tick: Liquidity,
     ) -> Result<Liquidity, ContractError> {
         // validate in decrease liquidity case
-        if !sign && { self.liquidity_gross } < liquidity_delta {
+        if !sign && self.liquidity_gross < liquidity_delta {
             return Err(ContractError::InvalidTickLiquidity);
         }
         let new_liquidity = match sign {

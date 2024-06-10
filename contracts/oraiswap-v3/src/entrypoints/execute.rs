@@ -3,14 +3,11 @@ use crate::interface::{CalculateSwapResult, SwapHop};
 use crate::liquidity::Liquidity;
 use crate::percentage::Percentage;
 use crate::sqrt_price::SqrtPrice;
-use crate::state::{
-    add_position, get_position, get_tick, remove_position, remove_tick, update_position,
-    update_tick, CONFIG, POOLS,
-};
+use crate::state::{self, CONFIG, POOLS};
 use crate::token_amount::TokenAmount;
-use crate::{check_tick, FeeTier, Pool, PoolKey, Position};
+use crate::{calculate_min_amount_out, check_tick, FeeTier, Pool, PoolKey, Position};
 
-use super::{create_tick, route, swap_internal};
+use super::{create_tick, remove_tick_and_flip_bitmap, route, swap_internal};
 use cosmwasm_std::{attr, to_binary, Addr, DepsMut, Env, MessageInfo, Response, WasmMsg};
 use cw20::Cw20ExecuteMsg;
 use decimal::Decimal;
@@ -160,12 +157,12 @@ pub fn create_position(
         .load(deps.storage, &pool_key_db)
         .map_err(|_| ContractError::PoolNotFound {})?;
 
-    let mut lower_tick = match get_tick(deps.storage, &pool_key, lower_tick) {
+    let mut lower_tick = match state::get_tick(deps.storage, &pool_key, lower_tick) {
         Ok(tick) => tick,
         _ => create_tick(deps.storage, current_timestamp, &pool_key, lower_tick)?,
     };
 
-    let mut upper_tick = match get_tick(deps.storage, &pool_key, upper_tick) {
+    let mut upper_tick = match state::get_tick(deps.storage, &pool_key, upper_tick) {
         Ok(tick) => tick,
         _ => create_tick(deps.storage, current_timestamp, &pool_key, upper_tick)?,
     };
@@ -185,10 +182,10 @@ pub fn create_position(
 
     POOLS.save(deps.storage, &pool_key_db, &pool)?;
 
-    add_position(deps.storage, &info.sender, &position)?;
+    state::add_position(deps.storage, &info.sender, &position)?;
 
-    update_tick(deps.storage, &pool_key, lower_tick.index, &lower_tick)?;
-    update_tick(deps.storage, &pool_key, upper_tick.index, &upper_tick)?;
+    state::update_tick(deps.storage, &pool_key, lower_tick.index, &lower_tick)?;
+    state::update_tick(deps.storage, &pool_key, upper_tick.index, &upper_tick)?;
 
     let msgs = vec![
         WasmMsg::Execute {
@@ -282,6 +279,50 @@ pub fn swap(
         .add_attribute("amount_out", amount_out.to_string()))
 }
 
+/// Performs atomic swap involving several pools based on the provided parameters.
+///
+/// # Parameters
+/// - `amount_in`: The amount of tokens that the user wants to swap.
+/// - `expected_amount_out`: The amount of tokens that the user wants to receive as a result of the swaps.
+/// - `slippage`: The max acceptable percentage difference between the expected and actual amount of output tokens in a trade, not considering square root of target price as in the case of a swap.
+/// - `swaps`: A vector containing all parameters needed to identify separate swap steps.
+///
+/// # Events
+/// - On every successful swap, emits a `Swap` event for the freshly made swap.
+/// - On every successful swap, emits a `Cross Tick` event for every single tick crossed.
+///
+/// # Errors
+/// - Fails if the user attempts to perform a swap with zero amounts.
+/// - Fails if the user would receive zero tokens.
+/// - Fails if the allowance is insufficient or the user balance transfer fails.
+/// - Fails if the minimum amount out after a single swap is insufficient to perform the next swap to achieve the expected amount out.
+/// - Fails if pool does not exist
+///
+/// # External contracts
+pub fn swap_route(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    amount_in: TokenAmount,
+    expected_amount_out: TokenAmount,
+    slippage: Percentage,
+    swaps: Vec<SwapHop>,
+) -> Result<Response, ContractError> {
+    let mut msgs = vec![];
+    let amount_out = route(deps, env, info, &mut msgs, true, amount_in, swaps)?;
+
+    let min_amount_out = calculate_min_amount_out(expected_amount_out, slippage);
+
+    if amount_out < min_amount_out {
+        return Err(ContractError::AmountUnderMinimumAmountOut);
+    }
+
+    Ok(Response::new()
+        .add_messages(msgs)
+        .add_attribute("action", "swap_route")
+        .add_attribute("amount_out", amount_out.to_string()))
+}
+
 /// Transfers a position between users.
 ///
 /// # Parameters
@@ -296,12 +337,12 @@ pub fn transfer_position(
 ) -> Result<Response, ContractError> {
     let caller = info.sender;
 
-    let position = get_position(deps.storage, &caller, index)?;
+    let position = state::get_position(deps.storage, &caller, index)?;
 
-    remove_position(deps.storage, &caller, index)?;
+    state::remove_position(deps.storage, &caller, index)?;
 
     let receiver_addr = deps.api.addr_validate(&receiver)?;
-    add_position(deps.storage, &receiver_addr, &position)?;
+    state::add_position(deps.storage, &receiver_addr, &position)?;
 
     Ok(Response::new().add_attribute("action", "transfer_position"))
 }
@@ -319,13 +360,14 @@ pub fn claim_fee(
     info: MessageInfo,
     index: u32,
 ) -> Result<Response, ContractError> {
-    let caller = info.sender;
     let current_timestamp = env.block.time.nanos();
 
-    let mut position = get_position(deps.storage, &caller, index)?;
+    let mut position = state::get_position(deps.storage, &info.sender, index)?;
 
-    let mut lower_tick = get_tick(deps.storage, &position.pool_key, position.lower_tick_index)?;
-    let mut upper_tick = get_tick(deps.storage, &position.pool_key, position.upper_tick_index)?;
+    let mut lower_tick =
+        state::get_tick(deps.storage, &position.pool_key, position.lower_tick_index)?;
+    let mut upper_tick =
+        state::get_tick(deps.storage, &position.pool_key, position.upper_tick_index)?;
     let pool_key_db = position.pool_key.key();
     let mut pool = POOLS.load(deps.storage, &pool_key_db)?;
 
@@ -336,15 +378,15 @@ pub fn claim_fee(
         current_timestamp,
     )?;
 
-    update_position(deps.storage, &caller, index, &position)?;
+    state::update_position(deps.storage, &info.sender, index, &position)?;
     POOLS.save(deps.storage, &pool_key_db, &pool)?;
-    update_tick(
+    state::update_tick(
         deps.storage,
         &position.pool_key,
         upper_tick.index,
         &upper_tick,
     )?;
-    update_tick(
+    state::update_tick(
         deps.storage,
         &position.pool_key,
         lower_tick.index,
@@ -353,22 +395,22 @@ pub fn claim_fee(
 
     let mut msgs = vec![];
 
-    if x > TokenAmount::new(0) {
+    if !x.is_zero() {
         msgs.push(WasmMsg::Execute {
             contract_addr: position.pool_key.token_x.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: caller.to_string(),
+                recipient: info.sender.to_string(),
                 amount: x.into(),
             })?,
             funds: vec![],
         });
     }
 
-    if y > TokenAmount::new(0) {
+    if !y.is_zero() {
         msgs.push(WasmMsg::Execute {
             contract_addr: position.pool_key.token_y.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: caller.to_string(),
+                recipient: info.sender.to_string(),
                 amount: y.into(),
             })?,
             funds: vec![],
@@ -392,7 +434,7 @@ pub fn claim_fee(
 ///
 /// # Errors
 /// - Fails if Position cannot be found
-pub fn remove_pos(
+pub fn remove_position(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -400,11 +442,13 @@ pub fn remove_pos(
 ) -> Result<Response, ContractError> {
     let current_timestamp = env.block.time.nanos();
 
-    let mut position = get_position(deps.storage, &info.sender, index)?;
+    let mut position = state::get_position(deps.storage, &info.sender, index)?;
     let withdrawed_liquidity = position.liquidity;
 
-    let mut lower_tick = get_tick(deps.storage, &position.pool_key, position.lower_tick_index)?;
-    let mut upper_tick = get_tick(deps.storage, &position.pool_key, position.upper_tick_index)?;
+    let mut lower_tick =
+        state::get_tick(deps.storage, &position.pool_key, position.lower_tick_index)?;
+    let mut upper_tick =
+        state::get_tick(deps.storage, &position.pool_key, position.upper_tick_index)?;
 
     let pool_key_db = position.pool_key.key();
     let mut pool = POOLS.load(deps.storage, &pool_key_db)?;
@@ -420,9 +464,9 @@ pub fn remove_pos(
     POOLS.save(deps.storage, &pool_key_db, &pool)?;
 
     if deinitialize_lower_tick {
-        remove_tick(deps.storage, &position.pool_key, lower_tick.index)?;
+        remove_tick_and_flip_bitmap(deps.storage, &position.pool_key, &lower_tick)?;
     } else {
-        update_tick(
+        state::update_tick(
             deps.storage,
             &position.pool_key,
             position.lower_tick_index,
@@ -431,21 +475,20 @@ pub fn remove_pos(
     }
 
     if deinitialize_upper_tick {
-        remove_tick(deps.storage, &position.pool_key, upper_tick.index)?;
+        remove_tick_and_flip_bitmap(deps.storage, &position.pool_key, &upper_tick)?;
     } else {
-        update_tick(
+        state::update_tick(
             deps.storage,
             &position.pool_key,
             position.upper_tick_index,
             &upper_tick,
         )?;
     }
-
-    remove_position(deps.storage, &info.sender, index)?;
+    let position = state::remove_position(deps.storage, &info.sender, index)?;
 
     let mut msgs = vec![];
 
-    if amount_x > TokenAmount::new(0) {
+    if !amount_x.is_zero() {
         msgs.push(WasmMsg::Execute {
             contract_addr: position.pool_key.token_x.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
@@ -456,7 +499,7 @@ pub fn remove_pos(
         });
     }
 
-    if amount_y > TokenAmount::new(0) {
+    if !amount_y.is_zero() {
         msgs.push(WasmMsg::Execute {
             contract_addr: position.pool_key.token_y.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
@@ -561,12 +604,12 @@ pub fn quote_route(
 ) -> Result<Response, ContractError> {
     let mut msgs = vec![];
 
-    let token_amount = route(deps, env, info, &mut msgs, false, amount_in, swaps)?;
+    let amount_out = route(deps, env, info, &mut msgs, false, amount_in, swaps)?;
 
     Ok(Response::new()
         .add_messages(msgs)
         .add_attribute("action", "quote_route")
-        .add_attribute("token_amount", token_amount.to_string()))
+        .add_attribute("amount_out", amount_out.to_string()))
 }
 
 /// Allows admin to add a custom fee tier.

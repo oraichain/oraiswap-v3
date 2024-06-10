@@ -6,12 +6,10 @@ use crate::{
     check_tick, compute_swap_step,
     interface::{CalculateSwapResult, SwapHop},
     sqrt_price::{get_max_tick, get_min_tick, SqrtPrice},
-    state::{
-        self, add_tick, flip_bitmap, get_closer_limit, get_tick, update_tick, CONFIG, MAX_LIMIT,
-        POOLS,
-    },
+    state::{self, CONFIG, POOLS},
     token_amount::TokenAmount,
-    ContractError, PoolKey, Tick, UpdatePoolTick, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
+    ContractError, PoolKey, Tick, UpdatePoolTick, MAX_SQRT_PRICE, MAX_TICKMAP_QUERY_SIZE,
+    MIN_SQRT_PRICE,
 };
 
 pub fn create_tick(
@@ -24,8 +22,8 @@ pub fn create_tick(
     let pool = state::get_pool(store, pool_key)?;
 
     let tick = Tick::create(index, &pool, current_timestamp);
-    add_tick(store, pool_key, index, &tick)?;
-    flip_bitmap(store, true, index, pool_key.fee_tier.tick_spacing, pool_key)?;
+    state::add_tick(store, pool_key, index, &tick)?;
+    state::flip_bitmap(store, true, index, pool_key.fee_tier.tick_spacing, pool_key)?;
 
     Ok(tick)
 }
@@ -72,8 +70,7 @@ pub fn calculate_swap(
     let mut event_fee_amount = TokenAmount::new(0);
 
     while !remaining_amount.is_zero() {
-        // println!("{:?}", remaining_amount);
-        let (swap_limit, limiting_tick) = get_closer_limit(
+        let (swap_limit, limiting_tick) = state::get_closer_limit(
             store,
             sqrt_price_limit,
             x_to_y,
@@ -93,7 +90,6 @@ pub fn calculate_swap(
 
         // make remaining amount smaller
         if by_amount_in {
-            // println!("result.amount_in: {:?}, result.fee_amount: {:?}", result.amount_in, result.fee_amount);
             remaining_amount = remaining_amount
                 .checked_sub(result.amount_in + result.fee_amount)
                 .map_err(|_| ContractError::Sub)?;
@@ -119,7 +115,7 @@ pub fn calculate_swap(
         let mut tick_update = {
             if let Some((tick_index, is_initialized)) = limiting_tick {
                 if is_initialized {
-                    let tick = get_tick(store, pool_key, tick_index)?;
+                    let tick = state::get_tick(store, pool_key, tick_index)?;
                     UpdatePoolTick::TickInitialized(tick)
                 } else {
                     UpdatePoolTick::TickUninitialized(tick_index)
@@ -200,7 +196,7 @@ pub fn swap_internal(
     let mut crossed_tick_indexes: Vec<i32> = vec![];
 
     for tick in calculate_swap_result.ticks.iter() {
-        update_tick(store, pool_key, tick.index, tick)?;
+        state::update_tick(store, pool_key, tick.index, tick)?;
         crossed_tick_indexes.push(tick.index);
     }
 
@@ -311,11 +307,27 @@ pub fn tickmap_slice(
         if let Ok(chunk) = state::get_bitmap_item(store, chunk_index, pool_key) {
             tickmap_slice.push((chunk_index, chunk));
 
-            if tickmap_slice.len() == MAX_LIMIT as usize {
+            if tickmap_slice.len() == MAX_TICKMAP_QUERY_SIZE {
                 return tickmap_slice;
             }
         }
     }
 
     tickmap_slice
+}
+
+pub fn remove_tick_and_flip_bitmap(
+    storage: &mut dyn Storage,
+    key: &PoolKey,
+    tick: &Tick,
+) -> Result<(), ContractError> {
+    if !tick.liquidity_gross.is_zero() {
+        return Err(ContractError::NotEmptyTickDeinitialization);
+    }
+
+    state::flip_bitmap(storage, false, tick.index, key.fee_tier.tick_spacing, key)?;
+
+    state::remove_tick(storage, key, tick.index)?;
+
+    Ok(())
 }

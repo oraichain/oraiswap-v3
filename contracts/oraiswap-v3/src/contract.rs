@@ -84,11 +84,25 @@ pub fn execute(
             by_amount_in,
             sqrt_price_limit,
         ),
+        ExecuteMsg::SwapRoute {
+            amount_in,
+            expected_amount_out,
+            slippage,
+            swaps,
+        } => swap_route(
+            deps,
+            env,
+            info,
+            amount_in,
+            expected_amount_out,
+            slippage,
+            swaps,
+        ),
         ExecuteMsg::TransferPosition { index, receiver } => {
             transfer_position(deps, env, info, index, receiver)
         }
         ExecuteMsg::ClaimFee { index } => claim_fee(deps, env, info, index),
-        ExecuteMsg::RemovePosition { index } => remove_pos(deps, env, info, index),
+        ExecuteMsg::RemovePosition { index } => remove_position(deps, env, info, index),
         ExecuteMsg::CreatePool {
             token_0,
             token_1,
@@ -126,7 +140,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             token_1,
             fee_tier,
         } => to_binary(&get_pool(deps, token_0, token_1, fee_tier)?),
-        QueryMsg::Pools { limit, offset } => to_binary(&get_pools(deps, limit, offset)?),
+        QueryMsg::Pools { limit, start_after } => to_binary(&get_pools(deps, limit, start_after)?),
         QueryMsg::Tick { key, index } => to_binary(&get_tick(deps, key, index)?),
         QueryMsg::IsTickInitialized { key, index } => {
             to_binary(&is_tick_initialized(deps, key, index)?)

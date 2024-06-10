@@ -113,32 +113,30 @@ impl Pool {
         upper_tick: i32,
         lower_tick: i32,
     ) -> Result<(TokenAmount, TokenAmount), ContractError> {
-        let (x, y, update_liquidity) = (calculate_amount_delta(
+        let (x, y, update_liquidity) = calculate_amount_delta(
             self.current_tick_index,
             self.sqrt_price,
             liquidity_delta,
             liquidity_sign,
             upper_tick,
             lower_tick,
-        ))?;
+        )?;
 
-        if !update_liquidity {
-            return Ok((x, y));
+        if update_liquidity {
+            if liquidity_sign {
+                self.liquidity = self
+                    .liquidity
+                    .checked_add(liquidity_delta)
+                    .map_err(|_| ContractError::UpdateLiquidityPlusOverflow)?;
+            } else {
+                self.liquidity = self
+                    .liquidity
+                    .checked_sub(liquidity_delta)
+                    .map_err(|_| ContractError::UpdateLiquidityMinusOverflow)?;
+            }
         }
 
-        if liquidity_sign {
-            self.liquidity = self
-                .liquidity
-                .checked_add(liquidity_delta)
-                .map_err(|_| ContractError::UpdateLiquidityPlusOverflow)?;
-            Ok((x, y))
-        } else {
-            self.liquidity = self
-                .liquidity
-                .checked_sub(liquidity_delta)
-                .map_err(|_| ContractError::UpdateLiquidityMinusOverflow)?;
-            Ok((x, y))
-        }
+        Ok((x, y))
     }
 
     #[allow(clippy::too_many_arguments)]

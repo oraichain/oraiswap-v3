@@ -77,6 +77,9 @@ mod tests {
 
         let pool_key = PoolKey::new(token_x, token_y, fee_tier).unwrap();
 
-        println!("key {:?}", pool_key.key());
+        assert_eq!(
+            pool_key.key(),
+            [b"token_0", b"token_1", fee_tier.key().as_slice()].concat()
+        );
     }
 }
