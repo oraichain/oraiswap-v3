@@ -4,6 +4,7 @@ mod change_protocol_fee;
 mod claim;
 mod create_pool;
 mod cross_both_size;
+mod cross;
 mod helper;
 mod slippage;
 mod swap;
