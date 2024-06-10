@@ -3,9 +3,17 @@ use cw20::Cw20ExecuteMsg;
 use decimal::{CheckedOps, Decimal};
 
 use crate::{
-    check_tick, compute_swap_step, interface::{CalculateSwapResult, SwapHop}, liquidity::Liquidity, sqrt_price::{get_max_tick, get_min_tick, SqrtPrice}, state::{
-        self, add_tick, flip_bitmap, get_closer_limit, get_tick, remove_tick, update_tick, CONFIG, MAX_LIMIT, POOLS
-    }, token_amount::TokenAmount, ContractError, PoolKey, Tick, UpdatePoolTick, MAX_SQRT_PRICE, MAX_TICKMAP_QUERY_SIZE, MIN_SQRT_PRICE
+    check_tick, compute_swap_step,
+    interface::{CalculateSwapResult, SwapHop},
+    liquidity::Liquidity,
+    sqrt_price::{get_max_tick, get_min_tick, SqrtPrice},
+    state::{
+        self, add_tick, flip_bitmap, get_closer_limit, get_tick, remove_tick, update_tick, CONFIG,
+        POOLS,
+    },
+    token_amount::TokenAmount,
+    ContractError, PoolKey, Tick, UpdatePoolTick, MAX_SQRT_PRICE, MAX_TICKMAP_QUERY_SIZE,
+    MIN_SQRT_PRICE,
 };
 
 pub fn create_tick(

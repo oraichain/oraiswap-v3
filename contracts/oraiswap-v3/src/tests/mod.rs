@@ -11,6 +11,7 @@ mod get_tickmap;
 mod helper;
 mod interaction_with_pool_on_removed_fee_tier;
 mod position;
+mod position_slippage;
 mod protocol_fee;
 mod remove_fee_tier;
 mod slippage;
