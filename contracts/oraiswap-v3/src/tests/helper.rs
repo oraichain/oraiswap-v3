@@ -977,6 +977,60 @@ pub mod macros {
     }
     pub(crate) use init_basic_position;
 
+    macro_rules! init_cross_position {
+        ($app:ident, $dex_address:ident, $token_x_address:ident, $token_y_address:ident) => {{
+            let fee_tier = FeeTier {
+                fee: Percentage::from_scale(6, 3),
+                tick_spacing: 10,
+            };
+
+            let mint_amount = 10u128.pow(10);
+            approve!($app, $token_x_address, $dex_address, mint_amount, "alice").unwrap();
+            approve!($app, $token_y_address, $dex_address, mint_amount, "alice").unwrap();
+
+            let pool_key =
+                PoolKey::new($token_x_address.clone(), $token_y_address.clone(), fee_tier).unwrap();
+            let lower_tick = -40;
+            let upper_tick = -10;
+            let liquidity = Liquidity::from_integer(1000000);
+
+            let pool_before = get_pool!(
+                $app,
+                $dex_address,
+                $token_x_address,
+                $token_y_address,
+                fee_tier
+            )
+            .unwrap();
+            let slippage_limit_lower = pool_before.sqrt_price;
+            let slippage_limit_upper = pool_before.sqrt_price;
+            create_position!(
+                $app,
+                $dex_address,
+                pool_key,
+                lower_tick,
+                upper_tick,
+                liquidity,
+                slippage_limit_lower,
+                slippage_limit_upper,
+                "alice"
+            )
+            .unwrap();
+
+            let pool_after = get_pool!(
+                $app,
+                $dex_address,
+                $token_x_address,
+                $token_y_address,
+                fee_tier
+            )
+            .unwrap();
+
+            assert_eq!(pool_after.liquidity, liquidity);
+        }};
+    }
+    pub(crate) use init_cross_position;
+
     macro_rules! swap_exact_limit {
         ($app:ident, $dex_address:ident, $pool_key:expr, $x_to_y:expr, $amount:expr, $by_amount_in:expr, $caller:tt) => {{
             let sqrt_price_limit = if $x_to_y {
@@ -1116,6 +1170,87 @@ pub mod macros {
         }};
     }
     pub(crate) use change_fee_receiver;
+
+    macro_rules! init_cross_swap {
+        ($app:ident, $dex_address:ident, $token_x_address:expr, $token_y_address:expr) => {{
+            let fee = Percentage::from_scale(6, 3);
+            let tick_spacing = 10;
+            let fee_tier = FeeTier { fee, tick_spacing };
+            let pool_key = PoolKey::new($token_x_address, $token_y_address, fee_tier).unwrap();
+            let lower_tick = -20;
+
+            let amount = 1000;
+            let bob = "bob";
+            mint!($app, $token_x_address, "bob", amount, "alice").unwrap();
+            let amount_x = balance_of!($app, $token_x_address, "bob");
+            assert_eq!(amount_x, amount);
+            approve!($app, $token_x_address, $dex_address, amount, bob).unwrap();
+
+            let amount_x = balance_of!($app, $token_x_address, $dex_address);
+            let amount_y = balance_of!($app, $token_y_address, $dex_address);
+            assert_eq!(amount_x, 500);
+            assert_eq!(amount_y, 2499);
+
+            let pool_before = get_pool!(
+                $app,
+                $dex_address,
+                $token_x_address,
+                $token_y_address,
+                fee_tier
+            )
+            .unwrap();
+
+            let swap_amount = TokenAmount::new(amount);
+            let slippage = SqrtPrice::new(MIN_SQRT_PRICE);
+            swap!(
+                $app,
+                $dex_address,
+                pool_key,
+                true,
+                swap_amount,
+                true,
+                slippage,
+                bob
+            )
+            .unwrap();
+
+            let pool_after = get_pool!(
+                $app,
+                $dex_address,
+                $token_x_address,
+                $token_y_address,
+                fee_tier
+            )
+            .unwrap();
+            let position_liquidity = Liquidity::from_integer(1000000);
+            assert_eq!(
+                pool_after.liquidity - position_liquidity,
+                pool_before.liquidity
+            );
+            assert_eq!(pool_after.current_tick_index, lower_tick);
+            assert_ne!(pool_after.sqrt_price, pool_before.sqrt_price);
+
+            let amount_x = balance_of!($app, $token_x_address, "bob");
+            let amount_y = balance_of!($app, $token_y_address, "bob");
+            assert_eq!(amount_x, 0);
+            assert_eq!(amount_y, 990);
+
+            let amount_x = balance_of!($app, $token_x_address, $dex_address);
+            let amount_y = balance_of!($app, $token_y_address, $dex_address);
+            assert_eq!(amount_x, 1500);
+            assert_eq!(amount_y, 1509);
+
+            assert_eq!(
+                pool_after.fee_growth_global_x,
+                FeeGrowth::new(40000000000000000000000)
+            );
+            assert_eq!(pool_after.fee_growth_global_y, FeeGrowth::new(0));
+
+            assert_eq!(pool_after.fee_protocol_token_x, TokenAmount::new(2));
+            assert_eq!(pool_after.fee_protocol_token_y, TokenAmount::new(0));
+        }};
+    }
+    pub(crate) use init_cross_swap;
 }
 
 #[cfg(test)]
