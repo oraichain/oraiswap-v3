@@ -8,7 +8,7 @@ use crate::{
     state::{self, CONFIG, MAX_LIMIT},
     tick_to_position,
     token_amount::TokenAmount,
-    ContractError, FeeTier, LiquidityTick, Pool, PoolKey, Position, PositionTick, Tick, CHUNK_SIZE, LIQUIDITY_TICK_LIMIT,
+    ContractError, FeeTier, LiquidityTick, Pool, PoolKey, Position, PositionTick, Tick, CHUNK_SIZE, LIQUIDITY_TICK_LIMIT, POSITION_TICK_LIMIT,
 };
 
 use super::{calculate_swap, tickmap_slice};
@@ -180,7 +180,7 @@ pub fn get_position_ticks(
             })
             .ok();
 
-        if ticks.len() >= MAX_LIMIT as usize {
+        if ticks.len() >= POSITION_TICK_LIMIT {
             break;
         }
     }
