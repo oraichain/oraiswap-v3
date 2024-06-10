@@ -1380,6 +1380,62 @@ pub mod macros {
         }};
     }
     pub(crate) use position_tick_equals;
+
+    macro_rules! get_pools {
+        ($app:ident, $dex_address:expr, $size:expr, $offset:expr) => {{
+            $app.query(
+                Addr::unchecked($dex_address.as_str()),
+                &msg::QueryMsg::Pools {
+                    limit: $size,
+                    offset: $offset,
+                },
+            )
+        }};
+    }
+    pub(crate) use get_pools;
+
+    macro_rules! get_all_positions {
+        ($app:ident, $dex_address:expr, $caller:expr) => {{
+            $app.query(
+                Addr::unchecked($dex_address.as_str()),
+                &msg::QueryMsg::Positions {
+                    owner_id: Addr::unchecked($caller),
+                    limit: Some(0),
+                    offset: Some(MAX_LIMIT),
+                },
+            )
+        }};
+    }
+    pub(crate) use get_all_positions;
+
+    macro_rules! transfer_position {
+        ($app:ident, $dex_address:expr, $index:expr, $receiver:expr, $caller:expr) => {{
+            $app.execute(
+                Addr::unchecked($caller),
+                Addr::unchecked($dex_address),
+                &msg::ExecuteMsg::TransferPosition {
+                    index: $index,
+                    receiver: $receiver,
+                },
+                &[],
+            )
+        }};
+    }
+    pub(crate) use transfer_position;
+
+    macro_rules! positions_equals {
+        ($a:expr, $b:expr) => {{
+            assert_eq!($a.fee_growth_inside_x, $b.fee_growth_inside_x);
+            assert_eq!($a.fee_growth_inside_y, $b.fee_growth_inside_y);
+            assert_eq!($a.liquidity, $b.liquidity);
+            assert_eq!($a.lower_tick_index, $b.lower_tick_index);
+            assert_eq!($a.upper_tick_index, $b.upper_tick_index);
+            assert_eq!($a.pool_key, $b.pool_key);
+            assert_eq!($a.tokens_owed_x, $b.tokens_owed_x);
+            assert_eq!($a.tokens_owed_y, $b.tokens_owed_y);
+        }};
+    }
+    pub(crate) use positions_equals;
 }
 
 #[cfg(test)]
