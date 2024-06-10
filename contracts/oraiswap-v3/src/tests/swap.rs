@@ -383,7 +383,7 @@ fn test_swap_not_enough_liquidity_token_x() {
 
     let target_sqrt_price = SqrtPrice::new(MIN_SQRT_PRICE);
 
-    let error = swap!(
+    swap!(
         app,
         dex,
         pool_key,
