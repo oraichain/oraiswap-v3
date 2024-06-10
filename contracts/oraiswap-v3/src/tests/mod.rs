@@ -10,6 +10,8 @@ mod get_position_ticks;
 mod get_tickmap;
 mod helper;
 // mod interaction_with_pool_on_removed_fee_tier;
+mod limits;
+mod liquidity_gap;
 mod max_tick_cross;
 mod multiple_swap;
 mod position;

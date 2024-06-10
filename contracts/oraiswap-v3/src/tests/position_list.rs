@@ -11,7 +11,8 @@ use crate::{
 
 #[test]
 fn test_remove_position_from_empty_list() {
-    let (mut app, dex) = create_dex!(Percentage::from_scale(6, 3));
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::from_scale(6, 3));
     let initial_amount = 10u128.pow(10);
     let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
 
@@ -40,7 +41,8 @@ fn test_remove_position_from_empty_list() {
 fn test_add_multiple_positions() {
     let init_tick = -23028;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
-    let (mut app, dex) = create_dex!(Percentage::new(0));
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::new(0));
     let initial_balance = 10u128.pow(10);
 
     let (token_x, token_y) = create_tokens!(app, initial_balance, initial_balance);
@@ -224,7 +226,8 @@ fn test_only_owner_can_modify_position_list() {
     let init_tick = -23028;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
 
-    let (mut app, dex) = create_dex!(Percentage::new(0));
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::new(0));
     let initial_balance = 10u128.pow(10);
 
     let (token_x, token_y) = create_tokens!(app, initial_balance, initial_balance);
@@ -381,7 +384,8 @@ fn test_transfer_position_ownership() {
     let init_tick = -23028;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
 
-    let (mut app, dex) = create_dex!(Percentage::new(0));
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::new(0));
     let initial_balance = 10u128.pow(10);
 
     let (token_x, token_y) = create_tokens!(app, initial_balance, initial_balance);
@@ -580,7 +584,8 @@ fn test_only_owner_can_transfer_position() {
     let init_tick = -23028;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
 
-    let (mut app, dex) = create_dex!(Percentage::new(0));
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::new(0));
     let initial_balance = 10u128.pow(10);
 
     let (token_x, token_y) = create_tokens!(app, initial_balance, initial_balance);
@@ -677,7 +682,8 @@ fn test_only_owner_can_transfer_position() {
 fn test_multiple_positions_on_same_tick() {
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
-    let (mut app, dex) = create_dex!(Percentage::new(0));
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::new(0));
     let initial_balance = 100_000_000;
 
     let (token_x, token_y) = create_tokens!(app, initial_balance, initial_balance);

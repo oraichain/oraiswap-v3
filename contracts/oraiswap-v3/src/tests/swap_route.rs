@@ -14,7 +14,8 @@ use crate::{
 fn swap_route() {
     let protocol_fee = Percentage::from_scale(6, 3);
     let initial_amount = 10u128.pow(10);
-    let (mut app, dex) = create_dex!(protocol_fee);
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, protocol_fee);
 
     let (token_x, token_y, token_z) =
         create_3_tokens!(app, initial_amount, initial_amount, initial_amount);

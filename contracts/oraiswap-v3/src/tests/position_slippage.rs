@@ -10,7 +10,9 @@ use crate::{
 
 #[test]
 fn test_position_slippage_zero_slippage_and_inside_range() {
-    let (mut app, dex) = create_dex!(Percentage::from_scale(1, 2));
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::from_scale(1, 2));
+
     let (token_x, token_y) = create_tokens!(app, 10u128.pow(23));
     let pool_key = init_slippage_pool_with_liquidity!(app, dex, token_x, token_y);
 
@@ -59,7 +61,8 @@ fn test_position_slippage_zero_slippage_and_inside_range() {
 
 #[test]
 fn test_position_slippage_below_range() {
-    let (mut app, dex) = create_dex!(Percentage::from_scale(1, 2));
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::from_scale(1, 2));
     let (token_x, token_y) = create_tokens!(app, 10u128.pow(23));
     let pool_key = init_slippage_pool_with_liquidity!(app, dex, token_x, token_y);
 
@@ -85,7 +88,8 @@ fn test_position_slippage_below_range() {
 
 #[test]
 fn test_position_slippage_above_range() {
-    let (mut app, dex) = create_dex!(Percentage::from_scale(1, 2));
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::from_scale(1, 2));
     let (token_x, token_y) = create_tokens!(app, 10u128.pow(23));
     let pool_key = init_slippage_pool_with_liquidity!(app, dex, token_x, token_y);
 

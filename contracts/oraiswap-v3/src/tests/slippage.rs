@@ -11,8 +11,9 @@ use crate::{
 
 #[test]
 fn test_basic_slippage() {
-    let protocol_fee = Percentage::from_scale(1, 2);
-    let (mut app, dex) = create_dex!(protocol_fee);
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::from_scale(1, 2));
+
     let mint_amount = 10u128.pow(23);
     let (token_x, token_y) = create_tokens!(app, mint_amount, mint_amount);
 
@@ -41,8 +42,8 @@ fn test_basic_slippage() {
 
 #[test]
 fn test_swap_close_to_limit() {
-    let protocol_fee = Percentage::from_scale(1, 2);
-    let (mut app, dex) = create_dex!(protocol_fee);
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::from_scale(1, 2));
     let mint_amount = 10u128.pow(23);
     let (token_x, token_y) = create_tokens!(app, mint_amount, mint_amount);
     let pool_key = init_slippage_pool_with_liquidity!(app, dex, token_x, token_y);
@@ -80,9 +81,9 @@ fn test_swap_close_to_limit() {
 
 #[test]
 fn test_swap_exact_limit() {
-    let protocol_fee = Percentage::from_scale(1, 2);
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::from_scale(1, 2));
     let initial_amount = 10u128.pow(10);
-    let (mut app, dex) = create_dex!(protocol_fee);
     let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
     init_basic_pool!(app, dex, token_x, token_y);
     init_basic_position!(app, dex, token_x, token_y);

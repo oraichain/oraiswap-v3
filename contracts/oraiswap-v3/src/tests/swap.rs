@@ -15,7 +15,8 @@ use super::helper::MockApp;
 #[test]
 fn test_swap_x_to_y() {
     let protocol_fee = Percentage::from_scale(6, 3);
-    let (mut app, dex) = create_dex!(protocol_fee);
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, protocol_fee);
 
     let fee_tier = FeeTier::new(protocol_fee, 10).unwrap();
     add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
@@ -154,8 +155,8 @@ fn test_swap_x_to_y() {
 #[test]
 fn test_swap_y_to_x() {
     let protocol_fee = Percentage::from_scale(6, 3);
-
-    let (mut app, dex) = create_dex!(protocol_fee);
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, protocol_fee);
     let initial_amount = 10u128.pow(10);
     let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
 
@@ -303,7 +304,8 @@ fn test_swap_y_to_x() {
 #[test]
 fn test_swap_not_enough_liquidity_token_x() {
     let protocol_fee = Percentage::from_scale(6, 3);
-    let (mut app, dex) = create_dex!(protocol_fee);
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, protocol_fee);
 
     let initial_amount = 10u128.pow(10);
     let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
@@ -390,7 +392,8 @@ fn test_swap_not_enough_liquidity_token_x() {
 #[test]
 fn test_swap_not_enough_liquidity_token_y() {
     let protocol_fee = Percentage::from_scale(6, 3);
-    let (mut app, dex) = create_dex!(protocol_fee);
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, protocol_fee);
     let initial_amount = 10u128.pow(10);
     let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
 

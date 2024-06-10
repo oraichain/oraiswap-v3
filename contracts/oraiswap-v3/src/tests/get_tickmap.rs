@@ -22,7 +22,8 @@ fn _to_binary(v: (u16, u64)) {
 
 #[test]
 fn test_get_tickmap() {
-    let (mut app, dex) = create_dex!(Percentage::new(0));
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::new(0));
     let initial_amount = 10u128.pow(10);
     let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
 
@@ -73,7 +74,8 @@ fn test_get_tickmap() {
         get_max_tick(fee_tier.tick_spacing),
         false,
         "alice"
-    ).unwrap();
+    )
+    .unwrap();
 
     assert_eq!(
         tickmap[0],
@@ -87,7 +89,8 @@ fn test_get_tickmap() {
 
 #[test]
 fn test_get_tickmap_tick_spacing_over_one() {
-    let (mut app, dex) = create_dex!(Percentage::new(0));
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::new(0));
     let initial_amount = 10u128.pow(10);
     let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
 
@@ -151,7 +154,8 @@ fn test_get_tickmap_tick_spacing_over_one() {
         get_max_tick(fee_tier.tick_spacing),
         false,
         "alice"
-    ).unwrap();
+    )
+    .unwrap();
 
     assert_eq!(tickmap[0], (0, 0b1));
     assert_eq!(
@@ -167,7 +171,8 @@ fn test_get_tickmap_tick_spacing_over_one() {
 
 #[test]
 fn test_get_tickmap_edge_ticks_intialized() {
-    let (mut app, dex) = create_dex!(Percentage::new(0));
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::new(0));
     let initial_amount = 10u128.pow(10);
     let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
 
@@ -231,7 +236,8 @@ fn test_get_tickmap_edge_ticks_intialized() {
         get_max_tick(fee_tier.tick_spacing),
         false,
         "alice"
-    ).unwrap();
+    )
+    .unwrap();
 
     assert_eq!(tickmap[0], (0, 0b11));
     assert_eq!(
@@ -251,7 +257,8 @@ fn test_get_tickmap_edge_ticks_intialized() {
             get_max_tick(fee_tier.tick_spacing),
             false,
             "alice"
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(tickmap[0], (0, 0b11));
         assert_eq!(
             tickmap[1],
@@ -270,7 +277,8 @@ fn test_get_tickmap_edge_ticks_intialized() {
             get_max_tick(fee_tier.tick_spacing),
             false,
             "alice"
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(tickmap[0], (0, 0b11));
         assert_eq!(
             tickmap[1],
@@ -289,7 +297,8 @@ fn test_get_tickmap_edge_ticks_intialized() {
             get_max_tick(fee_tier.tick_spacing),
             true,
             "alice"
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(tickmap[1], (0, 0b11));
         assert_eq!(
             tickmap[0],
@@ -304,7 +313,8 @@ fn test_get_tickmap_edge_ticks_intialized() {
 
 #[test]
 fn test_get_tickmap_more_chunks_above() {
-    let (mut app, dex) = create_dex!(Percentage::new(0));
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::new(0));
     let initial_amount = 10u128.pow(10);
     let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
 
@@ -357,7 +367,8 @@ fn test_get_tickmap_more_chunks_above() {
         get_max_tick(fee_tier.tick_spacing),
         false,
         "alice"
-    ).unwrap();
+    )
+    .unwrap();
 
     for (i, _) in (0..tickmap.len()).enumerate() {
         let current = 3466 + i as u16;
@@ -367,7 +378,8 @@ fn test_get_tickmap_more_chunks_above() {
 
 #[test]
 fn test_get_tickmap_more_chunks_below() {
-    let (mut app, dex) = create_dex!(Percentage::new(0));
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::new(0));
     let initial_amount = 10u128.pow(10);
     let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
 
@@ -420,7 +432,8 @@ fn test_get_tickmap_more_chunks_below() {
         get_max_tick(fee_tier.tick_spacing),
         false,
         "alice"
-    ).unwrap();
+    )
+    .unwrap();
     for (i, _) in (0..tickmap.len()).enumerate() {
         let current = 2644 + i as u16;
         assert_eq!(
@@ -435,7 +448,8 @@ fn test_get_tickmap_more_chunks_below() {
 
 #[test]
 fn test_get_tickmap_max_chunks_returned() {
-    let (mut app, dex) = create_dex!(Percentage::new(0));
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::new(0));
     let initial_amount = 10u128.pow(10);
     let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
 
@@ -488,7 +502,8 @@ fn test_get_tickmap_max_chunks_returned() {
         get_max_tick(fee_tier.tick_spacing),
         false,
         "alice"
-    ).unwrap();
+    )
+    .unwrap();
 
     assert_eq!(tickmap.len(), 1638);
 }

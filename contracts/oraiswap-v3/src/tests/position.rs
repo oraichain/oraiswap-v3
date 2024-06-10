@@ -12,7 +12,8 @@ use crate::{
 
 #[test]
 fn test_create_position() {
-    let (mut app, dex) = create_dex!(Percentage::new(0));
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::new(0));
     let (token_x, token_y) = create_tokens!(app, 500, 500);
 
     let fee_tier = FeeTier::new(Percentage::new(0), 1).unwrap();
@@ -54,7 +55,8 @@ fn test_create_position() {
 
 #[test]
 fn test_position_same_upper_and_lower_tick() {
-    let (mut app, dex) = create_dex!(Percentage::new(0));
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::new(0));
     let (token_x, token_y) = create_tokens!(app, 500, 500);
 
     let fee_tier = FeeTier::new(Percentage::new(0), 1).unwrap();
@@ -104,7 +106,8 @@ fn test_remove_position() {
 
     let initial_mint = 10u128.pow(10);
 
-    let (mut app, dex) = create_dex!(Percentage::from_scale(1, 2));
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::from_scale(1, 2));
 
     let (token_x, token_y) = create_tokens!(app, initial_mint, initial_mint);
 
@@ -255,7 +258,8 @@ fn test_position_within_current_tick() {
     let init_tick = -23028;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
 
-    let (mut app, dex) = create_dex!(Percentage::new(0));
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::new(0));
     let initial_balance = 100_000_000;
 
     let (token_x, token_y) = create_tokens!(app, initial_balance, initial_balance);
@@ -347,7 +351,8 @@ fn test_position_within_current_tick() {
 fn test_position_below_current_tick() {
     let init_tick = -23028;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
-    let (mut app, dex) = create_dex!(Percentage::new(0));
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::new(0));
     let initial_balance = 10_000_000_000;
 
     let (token_x, token_y) = create_tokens!(app, initial_balance, initial_balance);
@@ -441,7 +446,8 @@ fn test_position_above_current_tick() {
     let init_tick = -23028;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
 
-    let (mut app, dex) = create_dex!(Percentage::new(0));
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::new(0));
     let initial_balance = 10_000_000_000;
 
     let (token_x, token_y) = create_tokens!(app, initial_balance, initial_balance);

@@ -8,8 +8,8 @@ use crate::{
 
 #[test]
 fn test_remove_fee_tier() {
-    let protocol_fee = Percentage::new(0);
-    let (mut app, dex) = create_dex!(protocol_fee);
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::new(0));
 
     let fee_tier = FeeTier::new(Percentage::from_scale(2, 4), 1).unwrap();
     add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
@@ -28,8 +28,8 @@ fn test_remove_fee_tier() {
 
 #[test]
 fn test_remove_not_existing_fee_tier() {
-    let protocol_fee = Percentage::new(0);
-    let (mut app, dex) = create_dex!(protocol_fee);
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::new(0));
 
     let fee_tier = FeeTier::new(Percentage::from_scale(2, 4), 1).unwrap();
     add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
@@ -40,8 +40,8 @@ fn test_remove_not_existing_fee_tier() {
 
 #[test]
 fn test_remove_fee_tier_not_admin() {
-    let protocol_fee = Percentage::new(0);
-    let (mut app, dex) = create_dex!(protocol_fee);
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::new(0));
 
     let fee_tier = FeeTier::new(Percentage::from_scale(2, 4), 1).unwrap();
     add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
