@@ -16,8 +16,9 @@ use crate::{
     msg::{self, QuoteResult},
     percentage::Percentage,
     sqrt_price::SqrtPrice,
+    state::MAX_LIMIT,
     token_amount::TokenAmount,
-    FeeTier, Pool, PoolKey, Position, Tick,
+    FeeTier, LiquidityTick, Pool, PoolKey, Position, Tick,
 };
 
 #[macro_export]
@@ -455,6 +456,24 @@ impl MockApp {
         )
     }
 
+    pub fn transfer_position(
+        &mut self,
+        sender: &str,
+        clmm_addr: &str,
+        index: u32,
+        receiver: &str,
+    ) -> Result<AppResponse, String> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(clmm_addr),
+            &msg::ExecuteMsg::TransferPosition {
+                index,
+                receiver: receiver.to_string(),
+            },
+            &[],
+        )
+    }
+
     pub fn remove_position(
         &mut self,
         sender: &str,
@@ -582,12 +601,50 @@ impl MockApp {
         )
     }
 
+    pub fn get_liquidity_ticks(
+        &self,
+        clmm_addr: &str,
+        pool_key: &PoolKey,
+        tick_indexes: Vec<i32>,
+    ) -> StdResult<Vec<LiquidityTick>> {
+        self.query(
+            Addr::unchecked(clmm_addr),
+            &msg::QueryMsg::LiquidityTicks {
+                pool_key: pool_key.clone(),
+                tick_indexes,
+            },
+        )
+    }
+
+    pub fn get_pools(
+        &self,
+        clmm_addr: &str,
+        limit: Option<u32>,
+        offset: Option<u32>,
+    ) -> StdResult<Pool> {
+        self.query(
+            Addr::unchecked(clmm_addr),
+            &msg::QueryMsg::Pools { limit, offset },
+        )
+    }
+
     pub fn get_position(&self, clmm_addr: &str, owner_id: &str, index: u32) -> StdResult<Position> {
         self.query(
             Addr::unchecked(clmm_addr),
             &msg::QueryMsg::Position {
                 owner_id: Addr::unchecked(owner_id),
                 index,
+            },
+        )
+    }
+
+    pub fn get_all_positions(&self, clmm_addr: &str, owner_id: &str) -> StdResult<Vec<Position>> {
+        self.query(
+            Addr::unchecked(clmm_addr),
+            &msg::QueryMsg::Positions {
+                owner_id: Addr::unchecked(owner_id),
+                limit: Some(MAX_LIMIT),
+                offset: Some(0),
             },
         )
     }
@@ -1092,9 +1149,9 @@ pub mod macros {
     macro_rules! swap_exact_limit {
         ($app:ident, $dex_address:ident, $pool_key:expr, $x_to_y:expr, $amount:expr, $by_amount_in:expr, $caller:tt) => {{
             let sqrt_price_limit = if $x_to_y {
-                SqrtPrice::new(crate::MIN_SQRT_PRICE)
+                crate::sqrt_price::SqrtPrice::new(crate::MIN_SQRT_PRICE)
             } else {
-                SqrtPrice::new(crate::MAX_SQRT_PRICE)
+                crate::sqrt_price::SqrtPrice::new(crate::MAX_SQRT_PRICE)
             };
 
             let quote_result = quote!(
@@ -1129,7 +1186,12 @@ pub mod macros {
             (dex, token_x, token_y)
         }};
         ($app:ident) => {{
-            init_dex_and_tokens!($app, 10u128.pow(10), Percentage::from_scale(1, 2))
+            use decimal::*;
+            init_dex_and_tokens!(
+                $app,
+                10u128.pow(10),
+                crate::percentage::Percentage::from_scale(1, 2)
+            )
         }};
     }
     pub(crate) use init_dex_and_tokens;
@@ -1242,7 +1304,7 @@ pub mod macros {
             mint!($app, $token_x_address, "bob", amount, "alice").unwrap();
             let amount_x = balance_of!($app, $token_x_address, "bob");
             assert_eq!(amount_x, amount);
-            approve!($app, $token_x_address, $dex_address, amount, bob).unwrap();
+            approve!($app, $token_x_address, $dex_address, amount, "bob").unwrap();
 
             let amount_x = balance_of!($app, $token_x_address, $dex_address);
             let amount_y = balance_of!($app, $token_y_address, $dex_address);
@@ -1340,14 +1402,8 @@ pub mod macros {
     pub(crate) use get_tickmap;
 
     macro_rules! get_liquidity_ticks {
-        ($app:ident, $dex_address:expr, $pool_key:expr, $offset:expr) => {{
-            $app.query(
-                Addr::unchecked($dex_address.as_str()),
-                &msg::QueryMsg::LiquidityTicks {
-                    pool_key: $pool_key.clone(),
-                    tick_indexes: $offset,
-                },
-            )
+        ($app:ident, $dex_address:expr, $pool_key:expr, $tick_indexes:expr) => {{
+            $app.get_liquidity_ticks($dex_address.as_str(), $pool_key, $tick_indexes)
         }};
     }
     pub(crate) use get_liquidity_ticks;
@@ -1386,45 +1442,175 @@ pub mod macros {
 
     macro_rules! get_pools {
         ($app:ident, $dex_address:expr, $size:expr, $offset:expr) => {{
-            $app.query(
-                Addr::unchecked($dex_address.as_str()),
-                &msg::QueryMsg::Pools {
-                    limit: $size,
-                    offset: $offset,
-                },
-            )
+            $app.get_pools($dex_address.as_str(), $size, $offset)
         }};
     }
     pub(crate) use get_pools;
 
     macro_rules! get_all_positions {
-        ($app:ident, $dex_address:expr, $caller:expr) => {{
-            $app.query(
-                Addr::unchecked($dex_address.as_str()),
-                &msg::QueryMsg::Positions {
-                    owner_id: Addr::unchecked($caller),
-                    limit: Some(0),
-                    offset: Some(MAX_LIMIT),
-                },
-            )
+        ($app:ident, $dex_address:expr, $caller:tt) => {{
+            $app.get_all_positions($dex_address.as_str(), $caller)
+                .unwrap()
         }};
     }
     pub(crate) use get_all_positions;
 
     macro_rules! transfer_position {
-        ($app:ident, $dex_address:expr, $index:expr, $receiver:expr, $caller:expr) => {{
-            $app.execute(
-                Addr::unchecked($caller),
-                Addr::unchecked($dex_address),
-                &msg::ExecuteMsg::TransferPosition {
-                    index: $index,
-                    receiver: $receiver,
-                },
-                &[],
-            )
+        ($app:ident, $dex_address:expr, $index:expr, $receiver:expr, $caller:tt) => {{
+            $app.transfer_position($caller, $dex_address.as_str(), $index, $receiver)
         }};
     }
     pub(crate) use transfer_position;
+
+    macro_rules! multiple_swap {
+        ($app:ident, $x_to_y:expr) => {{
+            use decimal::*;
+            let (dex, token_x, token_y) = init_dex_and_tokens!($app);
+
+            let fee_tier = crate::FeeTier {
+                fee: crate::percentage::Percentage::from_scale(1, 3),
+                tick_spacing: 1,
+            };
+
+            add_fee_tier!($app, dex, fee_tier, "alice").unwrap();
+
+            let init_tick = 0;
+            let init_sqrt_price = crate::math::sqrt_price::calculate_sqrt_price(init_tick).unwrap();
+            create_pool!(
+                $app,
+                dex,
+                token_x,
+                token_y,
+                fee_tier,
+                init_sqrt_price,
+                init_tick,
+                "alice"
+            )
+            .unwrap();
+
+            let mint_amount = 10u128.pow(10);
+            approve!($app, token_x, dex, mint_amount, "alice").unwrap();
+            approve!($app, token_y, dex, mint_amount, "alice").unwrap();
+
+            let pool_key = crate::PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+            let upper_tick = 953;
+            let lower_tick = -upper_tick;
+
+            let amount = 100;
+            let pool_data = get_pool!($app, dex, token_x, token_y, fee_tier).unwrap();
+            let result = crate::logic::math::get_liquidity(
+                crate::token_amount::TokenAmount(amount),
+                crate::token_amount::TokenAmount(amount),
+                lower_tick,
+                upper_tick,
+                pool_data.sqrt_price,
+                true,
+            )
+            .unwrap();
+            let _amount_x = result.x;
+            let _amount_y = result.y;
+            let liquidity_delta = result.l;
+            let slippage_limit_lower = pool_data.sqrt_price;
+            let slippage_limit_upper = pool_data.sqrt_price;
+
+            create_position!(
+                $app,
+                dex,
+                pool_key,
+                lower_tick,
+                upper_tick,
+                liquidity_delta,
+                slippage_limit_lower,
+                slippage_limit_upper,
+                "alice"
+            )
+            .unwrap();
+
+            if $x_to_y {
+                mint!($app, token_x, "bob", amount, "alice").unwrap();
+                let amount_x = balance_of!($app, token_x, "bob");
+                assert_eq!(amount_x, amount);
+                approve!($app, token_x, dex, amount, "bob").unwrap();
+            } else {
+                mint!($app, token_y, "bob", amount, "alice").unwrap();
+                let amount_y = balance_of!($app, token_y, "bob");
+                assert_eq!(amount_y, amount);
+                approve!($app, token_y, dex, amount, "bob").unwrap();
+            }
+
+            let swap_amount = crate::token_amount::TokenAmount(10);
+            for _ in 1..=10 {
+                swap_exact_limit!($app, dex, pool_key, $x_to_y, swap_amount, true, "bob");
+            }
+
+            let pool = get_pool!($app, dex, token_x, token_y, fee_tier).unwrap();
+            if $x_to_y {
+                assert_eq!(pool.current_tick_index, -821);
+            } else {
+                assert_eq!(pool.current_tick_index, 820);
+            }
+            assert_eq!(
+                pool.fee_growth_global_x,
+                crate::fee_growth::FeeGrowth::new(0)
+            );
+            assert_eq!(
+                pool.fee_growth_global_y,
+                crate::fee_growth::FeeGrowth::new(0)
+            );
+            if $x_to_y {
+                assert_eq!(
+                    pool.fee_protocol_token_x,
+                    crate::token_amount::TokenAmount(10)
+                );
+                assert_eq!(
+                    pool.fee_protocol_token_y,
+                    crate::token_amount::TokenAmount(0)
+                );
+            } else {
+                assert_eq!(
+                    pool.fee_protocol_token_x,
+                    crate::token_amount::TokenAmount(0)
+                );
+                assert_eq!(
+                    pool.fee_protocol_token_y,
+                    crate::token_amount::TokenAmount(10)
+                );
+            }
+            assert_eq!(pool.liquidity, liquidity_delta);
+            if $x_to_y {
+                assert_eq!(
+                    pool.sqrt_price,
+                    crate::sqrt_price::SqrtPrice::new(959805958620596146276151)
+                );
+            } else {
+                assert_eq!(
+                    pool.sqrt_price,
+                    crate::sqrt_price::SqrtPrice::new(1041877257604411525269920)
+                );
+            }
+
+            let dex_amount_x = balance_of!($app, token_x, dex);
+            let dex_amount_y = balance_of!($app, token_y, dex);
+            if $x_to_y {
+                assert_eq!(dex_amount_x, 200);
+                assert_eq!(dex_amount_y, 20);
+            } else {
+                assert_eq!(dex_amount_x, 20);
+                assert_eq!(dex_amount_y, 200);
+            }
+
+            let user_amount_x = balance_of!($app, token_x, "bob");
+            let user_amount_y = balance_of!($app, token_y, "bob");
+            if $x_to_y {
+                assert_eq!(user_amount_x, 0);
+                assert_eq!(user_amount_y, 80);
+            } else {
+                assert_eq!(user_amount_x, 80);
+                assert_eq!(user_amount_y, 0);
+            }
+        }};
+    }
+    pub(crate) use multiple_swap;
 
     macro_rules! positions_equals {
         ($a:expr, $b:expr) => {{
