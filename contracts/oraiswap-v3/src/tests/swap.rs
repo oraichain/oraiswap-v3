@@ -1,5 +1,3 @@
-use cosmwasm_std::coin;
-
 use decimal::{Decimal, Factories};
 
 use crate::{
@@ -17,17 +15,14 @@ use super::helper::MockApp;
 #[test]
 fn test_swap_x_to_y() {
     let protocol_fee = Percentage::from_scale(6, 3);
-    let initial_amount = 10u128.pow(10);
-    let mut app = MockApp::new(&[("alice", &[coin(initial_amount, "orai")])]);
-    app.set_token_contract(Box::new(crate::create_entry_points_testing!(cw20_base)));
-    let fee_tier = FeeTier::new(protocol_fee, 10).unwrap();
-    let dex = app.create_dex("alice", protocol_fee).unwrap();
+    let (mut app, dex) = create_dex!(protocol_fee);
 
+    let fee_tier = FeeTier::new(protocol_fee, 10).unwrap();
     add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
 
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
-
+    let initial_amount = 10u128.pow(10);
     let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
 
     create_pool!(
@@ -159,14 +154,12 @@ fn test_swap_x_to_y() {
 #[test]
 fn test_swap_y_to_x() {
     let protocol_fee = Percentage::from_scale(6, 3);
+
+    let (mut app, dex) = create_dex!(protocol_fee);
     let initial_amount = 10u128.pow(10);
-    let mut app = MockApp::new(&[("alice", &[coin(initial_amount, "orai")])]);
-    app.set_token_contract(Box::new(crate::create_entry_points_testing!(cw20_base)));
     let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
 
     let fee_tier = FeeTier::new(protocol_fee, 10).unwrap();
-    let dex = app.create_dex("alice", protocol_fee).unwrap();
-
     add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
 
     let init_tick = 0;
@@ -309,12 +302,10 @@ fn test_swap_y_to_x() {
 
 #[test]
 fn test_swap_not_enough_liquidity_token_x() {
-    let initial_amount = 10u128.pow(10);
     let protocol_fee = Percentage::from_scale(6, 3);
-    let mut app = MockApp::new(&[("alice", &[coin(initial_amount, "orai")])]);
-    app.set_token_contract(Box::new(crate::create_entry_points_testing!(cw20_base)));
-    let dex = app.create_dex("alice", protocol_fee).unwrap();
+    let (mut app, dex) = create_dex!(protocol_fee);
 
+    let initial_amount = 10u128.pow(10);
     let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
 
     let fee_tier = FeeTier::new(protocol_fee, 10).unwrap();
@@ -398,12 +389,9 @@ fn test_swap_not_enough_liquidity_token_x() {
 
 #[test]
 fn test_swap_not_enough_liquidity_token_y() {
-    let initial_amount = 10u128.pow(10);
     let protocol_fee = Percentage::from_scale(6, 3);
-    let mut app = MockApp::new(&[("alice", &[coin(initial_amount, "orai")])]);
-    app.set_token_contract(Box::new(crate::create_entry_points_testing!(cw20_base)));
-    let dex = app.create_dex("alice", protocol_fee).unwrap();
-
+    let (mut app, dex) = create_dex!(protocol_fee);
+    let initial_amount = 10u128.pow(10);
     let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
 
     let fee_tier = FeeTier::new(protocol_fee, 10).unwrap();

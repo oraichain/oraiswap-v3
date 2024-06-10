@@ -1,4 +1,3 @@
-use cosmwasm_std::coin;
 use decimal::*;
 
 use crate::{
@@ -13,10 +12,7 @@ use crate::{
 #[test]
 fn test_basic_slippage() {
     let protocol_fee = Percentage::from_scale(1, 2);
-    let initial_amount = 10u128.pow(10);
-    let mut app = MockApp::new(&[("alice", &[coin(initial_amount, "orai")])]);
-    app.set_token_contract(Box::new(crate::create_entry_points_testing!(cw20_base)));
-    let dex = app.create_dex("alice", protocol_fee).unwrap();
+    let (mut app, dex) = create_dex!(protocol_fee);
     let mint_amount = 10u128.pow(23);
     let (token_x, token_y) = create_tokens!(app, mint_amount, mint_amount);
 
@@ -46,10 +42,7 @@ fn test_basic_slippage() {
 #[test]
 fn test_swap_close_to_limit() {
     let protocol_fee = Percentage::from_scale(1, 2);
-    let initial_amount = 10u128.pow(10);
-    let mut app = MockApp::new(&[("alice", &[coin(initial_amount, "orai")])]);
-    app.set_token_contract(Box::new(crate::create_entry_points_testing!(cw20_base)));
-    let dex = app.create_dex("alice", protocol_fee).unwrap();
+    let (mut app, dex) = create_dex!(protocol_fee);
     let mint_amount = 10u128.pow(23);
     let (token_x, token_y) = create_tokens!(app, mint_amount, mint_amount);
     let pool_key = init_slippage_pool_with_liquidity!(app, dex, token_x, token_y);
@@ -89,9 +82,7 @@ fn test_swap_close_to_limit() {
 fn test_swap_exact_limit() {
     let protocol_fee = Percentage::from_scale(1, 2);
     let initial_amount = 10u128.pow(10);
-    let mut app = MockApp::new(&[("alice", &[coin(initial_amount, "orai")])]);
-    app.set_token_contract(Box::new(crate::create_entry_points_testing!(cw20_base)));
-    let dex = app.create_dex("alice", protocol_fee).unwrap();
+    let (mut app, dex) = create_dex!(protocol_fee);
     let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
     init_basic_pool!(app, dex, token_x, token_y);
     init_basic_position!(app, dex, token_x, token_y);
