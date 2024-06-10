@@ -10,7 +10,6 @@ use crate::{
 #[test]
 fn test_protocol_fee() {
     let mut app = MockApp::new(&[("alice", &[])]);
-    app.set_token_contract(Box::new(crate::create_entry_points_testing!(cw20_base)));
 
     let (dex, token_x, token_y) = init_dex_and_tokens!(app);
     init_basic_pool!(app, dex, token_x, token_y);
@@ -46,7 +45,6 @@ fn test_protocol_fee() {
 #[test]
 fn test_protocol_fee_not_admin() {
     let mut app = MockApp::new(&[("alice", &[])]);
-    app.set_token_contract(Box::new(crate::create_entry_points_testing!(cw20_base)));
     let (dex, token_x, token_y) = init_dex_and_tokens!(app);
     init_basic_pool!(app, dex, token_x, token_y);
     init_basic_position!(app, dex, token_x, token_y);
@@ -68,7 +66,6 @@ fn test_protocol_fee_not_admin() {
 #[test]
 fn test_withdraw_fee_not_deployer() {
     let mut app = MockApp::new(&[("alice", &[])]);
-    app.set_token_contract(Box::new(crate::create_entry_points_testing!(cw20_base)));
     let (dex, token_x, token_y) = init_dex_and_tokens!(app);
     init_basic_pool!(app, dex, token_x, token_y);
     init_basic_position!(app, dex, token_x, token_y);

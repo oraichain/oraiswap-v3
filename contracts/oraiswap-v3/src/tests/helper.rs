@@ -17,7 +17,7 @@ use crate::{
     percentage::Percentage,
     sqrt_price::SqrtPrice,
     token_amount::TokenAmount,
-    FeeTier, Pool, PoolKey, Tick,
+    FeeTier, Pool, PoolKey, Position, Tick,
 };
 
 #[macro_export]
@@ -53,7 +53,7 @@ pub struct MockApp {
 #[allow(dead_code)]
 impl MockApp {
     pub fn new(init_balances: &[(&str, &[Coin])]) -> Self {
-        let app = App::new(|router, _, storage| {
+        let mut app = App::new(|router, _, storage| {
             for (owner, init_funds) in init_balances.iter() {
                 router
                     .bank
@@ -66,9 +66,12 @@ impl MockApp {
             }
         });
 
+        // default token is cw20_base
+        let token_id = app.store_code(Box::new(crate::create_entry_points_testing!(cw20_base)));
+
         MockApp {
             app,
-            token_id: 0,
+            token_id,
             oracle_addr: Addr::unchecked(""),
             factory_addr: Addr::unchecked(""),
             router_addr: Addr::unchecked(""),
@@ -452,6 +455,20 @@ impl MockApp {
         )
     }
 
+    pub fn remove_position(
+        &mut self,
+        sender: &str,
+        clmm_addr: &str,
+        index: u32,
+    ) -> Result<AppResponse, String> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(clmm_addr),
+            &msg::ExecuteMsg::RemovePosition { index },
+            &[],
+        )
+    }
+
     pub fn swap_route(
         &mut self,
         sender: &str,
@@ -565,6 +582,16 @@ impl MockApp {
         )
     }
 
+    pub fn get_position(&self, clmm_addr: &str, owner_id: &str, index: u32) -> StdResult<Position> {
+        self.query(
+            Addr::unchecked(clmm_addr),
+            &msg::QueryMsg::Position {
+                owner_id: Addr::unchecked(owner_id),
+                index,
+            },
+        )
+    }
+
     pub fn fee_tier_exist(&self, clmm_addr: &str, fee_tier: FeeTier) -> StdResult<bool> {
         self.query(
             Addr::unchecked(clmm_addr),
@@ -607,6 +634,7 @@ impl MockApp {
 }
 
 pub mod macros {
+
     macro_rules! extract_amount {
         ($res:ident, $key: tt) => {{
             $res.events
@@ -622,11 +650,24 @@ pub mod macros {
     }
     pub(crate) use extract_amount;
 
+    macro_rules! create_dex {
+        ($protocol_fee:expr) => {{
+            let mut app = MockApp::new(&[("alice", &[cosmwasm_std::coin(10u128.pow(10), "orai")])]);
+            let dex = app.create_dex("alice", $protocol_fee).unwrap();
+            (app, dex)
+        }};
+    }
+    pub(crate) use create_dex;
+
     macro_rules! create_tokens {
         ($app:ident, $token_x_supply:expr, $token_y_supply:expr, $owner: tt) => {{
             let token_x = $app.create_token($owner, "tokenx", $token_x_supply);
             let token_y = $app.create_token($owner, "tokeny", $token_y_supply);
-            (token_x, token_y)
+            if token_x < token_y {
+                (token_x, token_y)
+            } else {
+                (token_y, token_x)
+            }
         }};
         ($app:ident, $token_x_supply:expr, $token_y_supply:expr) => {{
             create_tokens!($app, $token_x_supply, $token_y_supply, "alice")
@@ -714,6 +755,13 @@ pub mod macros {
     }
     pub(crate) use create_position;
 
+    macro_rules! remove_position {
+        ($app:ident,  $dex_address:expr, $index:expr, $caller:tt) => {{
+            $app.remove_position($caller, $dex_address.as_str(), $index)
+        }};
+    }
+    pub(crate) use remove_position;
+
     macro_rules! get_pool {
         ($app:ident, $dex_address:expr, $token_0:expr, $token_1:expr, $fee_tier:expr) => {{
             $app.get_pool(
@@ -725,6 +773,13 @@ pub mod macros {
         }};
     }
     pub(crate) use get_pool;
+
+    macro_rules! get_position {
+        ($app:ident, $dex_address:expr, $index:expr, $owner:tt) => {{
+            $app.get_position($dex_address.as_str(), $owner, $index)
+        }};
+    }
+    pub(crate) use get_position;
 
     macro_rules! get_tick {
         ($app:ident, $dex_address:expr, $key:expr, $index:expr) => {{
@@ -1339,8 +1394,6 @@ mod tests {
     fn token_balance_querier() {
         let mut app = MockApp::new(&[]);
 
-        app.set_token_contract(Box::new(crate::create_entry_points_testing!(cw20_base)));
-
         app.set_token_balances(
             "owner",
             &[(&"AIRI".to_string(), &[(MOCK_CONTRACT_ADDR, 123u128)])],
@@ -1411,7 +1464,6 @@ mod tests {
     #[test]
     fn supply_querier() {
         let mut app = MockApp::new(&[]);
-        app.set_token_contract(Box::new(crate::create_entry_points_testing!(cw20_base)));
         app.set_token_balances(
             "owner",
             &[(
@@ -1443,7 +1495,6 @@ mod tests {
                 amount: Uint128::from(123u128),
             }],
         )]);
-        app.set_token_contract(Box::new(crate::create_entry_points_testing!(cw20_base)));
 
         app.set_token_balances(
             "owner",
