@@ -68,7 +68,7 @@ fn test_interaction_with_pool_on_removed_fee_tier() {
     }
     // Get Pools
     {
-        let pools = get_pools!(app, dex, Some(1), Some(0));
+        let pools = get_pools!(app, dex, Some(1), None);
         assert_eq!(pools.len(), 1);
     }
     // Transfer position

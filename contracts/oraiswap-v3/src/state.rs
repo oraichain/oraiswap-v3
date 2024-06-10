@@ -1,5 +1,5 @@
-use cosmwasm_std::{Addr, StdResult, Storage};
-use cw_storage_plus::{Item, Map};
+use cosmwasm_std::{Addr, Order, StdResult, Storage};
+use cw_storage_plus::{Bound, Item, Map};
 
 use crate::{
     flip_bit_at_position, get_bit_at_position, get_search_limit,
@@ -28,23 +28,23 @@ pub fn get_pool(store: &dyn Storage, pool_key: &PoolKey) -> Result<Pool, Contrac
     Ok(pool)
 }
 
-pub fn get_pool_keys_length(store: &dyn Storage) -> u16 {
-    POOL_KEYS_LENGTH.load(store).unwrap_or(0)
-}
-
-pub fn get_all_pool_keys(
+pub fn get_pools(
     store: &dyn Storage,
     limit: Option<u32>,
-    offset: Option<u32>,
-) -> Result<Vec<PoolKey>, ContractError> {
-    let from_idx = offset.unwrap_or(0) as u16;
-    let to_idx = get_pool_keys_length(store).min(from_idx + limit.unwrap_or(MAX_LIMIT) as u16);
+    start_after: Option<PoolKey>,
+) -> Result<Vec<Pool>, ContractError> {
+    let limit = limit.unwrap_or(MAX_LIMIT).min(MAX_LIMIT) as usize;
+    let start = start_after
+        .map(|pool_key| pool_key.key())
+        .map(Bound::ExclusiveRaw);
 
-    let pool_keys = (from_idx..to_idx)
-        .map(|index| POOL_KEYS_BY_INDEX.load(store, index))
-        .collect::<StdResult<Vec<PoolKey>>>()?;
+    let pools = POOLS
+        .range(store, start, None, Order::Ascending)
+        .take(limit)
+        .map(|item| item.map(|item| item.1))
+        .collect::<StdResult<Vec<Pool>>>()?;
 
-    Ok(pool_keys)
+    Ok(pools)
 }
 
 pub fn tick_key(pool_key: &PoolKey, index: i32) -> Vec<u8> {

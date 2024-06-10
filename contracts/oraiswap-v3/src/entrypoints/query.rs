@@ -106,9 +106,9 @@ pub fn is_tick_initialized(deps: Deps, key: PoolKey, index: i32) -> Result<bool,
 pub fn get_pools(
     deps: Deps,
     limit: Option<u32>,
-    offset: Option<u32>,
-) -> Result<Vec<PoolKey>, ContractError> {
-    state::get_all_pool_keys(deps.storage, limit, offset)
+    start_after: Option<PoolKey>,
+) -> Result<Vec<Pool>, ContractError> {
+    state::get_pools(deps.storage, limit, start_after)
 }
 
 /// Retrieves listed pools for provided token pair

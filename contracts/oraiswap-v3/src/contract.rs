@@ -140,7 +140,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             token_1,
             fee_tier,
         } => to_binary(&get_pool(deps, token_0, token_1, fee_tier)?),
-        QueryMsg::Pools { limit, offset } => to_binary(&get_pools(deps, limit, offset)?),
+        QueryMsg::Pools { limit, start_after } => to_binary(&get_pools(deps, limit, start_after)?),
         QueryMsg::Tick { key, index } => to_binary(&get_tick(deps, key, index)?),
         QueryMsg::IsTickInitialized { key, index } => {
             to_binary(&is_tick_initialized(deps, key, index)?)

@@ -106,7 +106,7 @@ pub enum QueryMsg {
     #[returns(Vec<PoolKey>)]
     Pools {
         limit: Option<u32>,
-        offset: Option<u32>,
+        start_after: Option<PoolKey>,
     },
 
     #[returns(Tick)]

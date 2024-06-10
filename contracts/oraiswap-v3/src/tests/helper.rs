@@ -620,11 +620,11 @@ impl MockApp {
         &self,
         clmm_addr: &str,
         limit: Option<u32>,
-        offset: Option<u32>,
+        start_after: Option<PoolKey>,
     ) -> StdResult<Vec<Pool>> {
         self.query(
             Addr::unchecked(clmm_addr),
-            &msg::QueryMsg::Pools { limit, offset },
+            &msg::QueryMsg::Pools { limit, start_after },
         )
     }
 
