@@ -8,7 +8,7 @@ use crate::state::{
     update_tick, CONFIG, POOLS,
 };
 use crate::token_amount::TokenAmount;
-use crate::{check_tick, FeeTier, Pool, PoolKey, Position};
+use crate::{calculate_min_amount_out, check_tick, FeeTier, Pool, PoolKey, Position};
 
 use super::{create_tick, route, swap_internal};
 use cosmwasm_std::{attr, to_binary, Addr, DepsMut, Env, MessageInfo, Response, WasmMsg};
@@ -279,6 +279,50 @@ pub fn swap(
         .add_messages(msgs)
         .add_attribute("action", "swap")
         .add_attribute("amount_in", amount_in.to_string())
+        .add_attribute("amount_out", amount_out.to_string()))
+}
+
+/// Performs atomic swap involving several pools based on the provided parameters.
+///
+/// # Parameters
+/// - `amount_in`: The amount of tokens that the user wants to swap.
+/// - `expected_amount_out`: The amount of tokens that the user wants to receive as a result of the swaps.
+/// - `slippage`: The max acceptable percentage difference between the expected and actual amount of output tokens in a trade, not considering square root of target price as in the case of a swap.
+/// - `swaps`: A vector containing all parameters needed to identify separate swap steps.
+///
+/// # Events
+/// - On every successful swap, emits a `Swap` event for the freshly made swap.
+/// - On every successful swap, emits a `Cross Tick` event for every single tick crossed.
+///
+/// # Errors
+/// - Fails if the user attempts to perform a swap with zero amounts.
+/// - Fails if the user would receive zero tokens.
+/// - Fails if the allowance is insufficient or the user balance transfer fails.
+/// - Fails if the minimum amount out after a single swap is insufficient to perform the next swap to achieve the expected amount out.
+/// - Fails if pool does not exist
+///
+/// # External contracts
+pub fn swap_route(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    amount_in: TokenAmount,
+    expected_amount_out: TokenAmount,
+    slippage: Percentage,
+    swaps: Vec<SwapHop>,
+) -> Result<Response, ContractError> {
+    let mut msgs = vec![];
+    let amount_out = route(deps, env, info, &mut msgs, true, amount_in, swaps)?;
+
+    let min_amount_out = calculate_min_amount_out(expected_amount_out, slippage);
+
+    if amount_out < min_amount_out {
+        return Err(ContractError::AmountUnderMinimumAmountOut);
+    }
+
+    Ok(Response::new()
+        .add_messages(msgs)
+        .add_attribute("action", "swap_route")
         .add_attribute("amount_out", amount_out.to_string()))
 }
 
@@ -561,12 +605,12 @@ pub fn quote_route(
 ) -> Result<Response, ContractError> {
     let mut msgs = vec![];
 
-    let token_amount = route(deps, env, info, &mut msgs, false, amount_in, swaps)?;
+    let amount_out = route(deps, env, info, &mut msgs, false, amount_in, swaps)?;
 
     Ok(Response::new()
         .add_messages(msgs)
         .add_attribute("action", "quote_route")
-        .add_attribute("token_amount", token_amount.to_string()))
+        .add_attribute("amount_out", amount_out.to_string()))
 }
 
 /// Allows admin to add a custom fee tier.

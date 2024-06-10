@@ -39,6 +39,12 @@ pub enum ExecuteMsg {
         by_amount_in: bool,
         sqrt_price_limit: SqrtPrice,
     },
+    SwapRoute {
+        amount_in: TokenAmount,
+        expected_amount_out: TokenAmount,
+        slippage: Percentage,
+        swaps: Vec<SwapHop>,
+    },
     QuoteRoute {
         amount_in: TokenAmount,
         swaps: Vec<SwapHop>,

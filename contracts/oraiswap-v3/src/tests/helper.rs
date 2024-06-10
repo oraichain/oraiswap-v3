@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use cw_multi_test::{next_block, App, AppResponse, Contract, Executor};
 
 use crate::{
+    interface::SwapHop,
     liquidity::Liquidity,
     msg::{self, QuoteResult},
     percentage::Percentage,
@@ -405,6 +406,28 @@ impl MockApp {
         )
     }
 
+    pub fn swap_route(
+        &mut self,
+        sender: &str,
+        clmm_addr: &str,
+        amount_in: TokenAmount,
+        expected_amount_out: TokenAmount,
+        slippage: Percentage,
+        swaps: Vec<SwapHop>,
+    ) -> Result<AppResponse, String> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(clmm_addr),
+            &msg::ExecuteMsg::SwapRoute {
+                amount_in,
+                expected_amount_out,
+                slippage,
+                swaps,
+            },
+            &[],
+        )
+    }
+
     pub fn swap(
         &mut self,
         sender: &str,
@@ -425,6 +448,35 @@ impl MockApp {
                 by_amount_in,
                 sqrt_price_limit,
             },
+            &[],
+        )
+    }
+
+    pub fn claim_fee(
+        &mut self,
+        sender: &str,
+        clmm_addr: &str,
+        index: u32,
+    ) -> Result<AppResponse, String> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(clmm_addr),
+            &msg::ExecuteMsg::ClaimFee { index },
+            &[],
+        )
+    }
+
+    pub fn quote_route(
+        &mut self,
+        sender: &str,
+        clmm_addr: &str,
+        amount_in: TokenAmount,
+        swaps: Vec<SwapHop>,
+    ) -> Result<AppResponse, String> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(clmm_addr),
+            &msg::ExecuteMsg::QuoteRoute { amount_in, swaps },
             &[],
         )
     }
@@ -499,6 +551,211 @@ impl MockApp {
             None => panic!("Must return generic error"),
         }
     }
+}
+
+pub mod macros {
+    macro_rules! extract_amount {
+        ($res:ident, $key: tt) => {{
+            $res.events
+                .into_iter()
+                .filter(|e| e.ty == "wasm")
+                .flat_map(|e| e.attributes)
+                .find(|a| a.key == $key)
+                .unwrap()
+                .value
+                .parse::<u128>()
+                .map(TokenAmount)
+        }};
+    }
+    pub(crate) use extract_amount;
+
+    macro_rules! create_tokens {
+        ($app:ident, $token_x_supply:expr, $token_y_supply:expr, $owner: tt) => {{
+            let token_x = $app.create_token($owner, "tokenx", $token_x_supply);
+            let token_y = $app.create_token($owner, "tokeny", $token_y_supply);
+            (token_x, token_y)
+        }};
+        ($app:ident, $token_x_supply:expr, $token_y_supply:expr) => {{
+            create_tokens!($app, $token_x_supply, $token_y_supply, "alice")
+        }};
+    }
+
+    pub(crate) use create_tokens;
+
+    macro_rules! create_3_tokens {
+        ($app:ident, $token_x_supply:expr, $token_y_supply:expr,$token_z_supply:expr, $owner: tt) => {{
+            let token_x = $app.create_token($owner, "tokenx", $token_x_supply);
+            let token_y = $app.create_token($owner, "tokeny", $token_y_supply);
+            let token_z = $app.create_token($owner, "tokenz", $token_y_supply);
+            (token_x, token_y, token_z)
+        }};
+        ($app:ident, $token_x_supply:expr, $token_y_supply:expr,$token_z_supply:expr) => {{
+            create_3_tokens!(
+                $app,
+                $token_x_supply,
+                $token_y_supply,
+                $token_z_supply,
+                "alice"
+            )
+        }};
+    }
+    pub(crate) use create_3_tokens;
+
+    macro_rules! create_pool {
+        ($app:ident, $dex_address:expr, $token_0:expr, $token_1:expr, $fee_tier:expr, $init_sqrt_price:expr, $init_tick:expr, $caller:tt) => {{
+            $app.create_pool(
+                $caller,
+                $dex_address.as_str(),
+                $token_0.as_str(),
+                $token_1.as_str(),
+                $fee_tier,
+                $init_sqrt_price,
+                $init_tick,
+            )
+        }};
+    }
+    pub(crate) use create_pool;
+
+    macro_rules! add_fee_tier {
+        ($app:ident, $dex_address:expr, $fee_tier:expr, $caller:tt) => {{
+            $app.add_fee_tier($caller, $dex_address.as_str(), $fee_tier)
+        }};
+    }
+    pub(crate) use add_fee_tier;
+
+    macro_rules! approve {
+        ($app:ident, $token_address:expr, $spender:expr, $value:expr, $caller:tt) => {{
+            $app.approve_token($token_address.as_str(), $caller, $spender.as_str(), $value)
+        }};
+    }
+    pub(crate) use approve;
+
+    macro_rules! create_position {
+        ($app:ident, $dex_address:expr, $pool_key:expr, $lower_tick:expr, $upper_tick:expr, $liquidity_delta:expr, $slippage_limit_lower:expr, $slippage_limit_upper:expr, $caller:tt) => {{
+            $app.create_position(
+                $caller,
+                $dex_address.as_str(),
+                &$pool_key,
+                $lower_tick,
+                $upper_tick,
+                $liquidity_delta,
+                $slippage_limit_lower,
+                $slippage_limit_upper,
+            )
+        }};
+    }
+    pub(crate) use create_position;
+
+    macro_rules! get_pool {
+        ($app:ident, $dex_address:expr, $token_0:expr, $token_1:expr, $fee_tier:expr) => {{
+            $app.get_pool(
+                $dex_address.as_str(),
+                $token_0.as_str(),
+                $token_1.as_str(),
+                $fee_tier,
+            )
+        }};
+    }
+    pub(crate) use get_pool;
+
+    macro_rules! get_tick {
+        ($app:ident, $dex_address:expr, $key:expr, $index:expr) => {{
+            $app.get_tick($dex_address.as_str(), &$key, $index)
+        }};
+    }
+    pub(crate) use get_tick;
+
+    macro_rules! is_tick_initialized {
+        ($app:ident, $dex_address:expr, $key:expr, $index:expr) => {{
+            $app.is_tick_initialized($dex_address.as_str(), &$key, $index)
+                .unwrap()
+        }};
+    }
+    pub(crate) use is_tick_initialized;
+
+    macro_rules! mint {
+        ($app:ident, $token_address:expr, $to:tt, $value:expr, $caller:tt) => {{
+            $app.mint_token($caller, $to, $token_address.as_str(), $value)
+        }};
+    }
+    pub(crate) use mint;
+
+    macro_rules! quote {
+        ($app:ident,  $dex_address:expr, $pool_key:expr, $x_to_y:expr, $amount:expr, $by_amount_in:expr, $sqrt_price_limit:expr) => {{
+            $app.quote(
+                $dex_address.as_str(),
+                &$pool_key,
+                $x_to_y,
+                $amount,
+                $by_amount_in,
+                $sqrt_price_limit,
+            )
+        }};
+    }
+    pub(crate) use quote;
+
+    macro_rules! balance_of {
+        ($app:ident, $token_address:expr, $owner:ident) => {{
+            $app.query_token_balance($token_address.as_str(), $owner.as_str())
+                .unwrap()
+                .u128()
+        }};
+        ($app:ident, $token_address:expr, $owner:tt) => {{
+            $app.query_token_balance($token_address.as_str(), $owner)
+                .unwrap()
+                .u128()
+        }};
+    }
+    pub(crate) use balance_of;
+
+    macro_rules! swap {
+        ($app:ident, $dex_address:expr, $pool_key:expr, $x_to_y:expr, $amount:expr, $by_amount_in:expr, $sqrt_price_limit:expr, $caller:tt) => {{
+            $app.swap(
+                $caller,
+                $dex_address.as_str(),
+                &$pool_key,
+                $x_to_y,
+                $amount,
+                $by_amount_in,
+                $sqrt_price_limit,
+            )
+        }};
+    }
+    pub(crate) use swap;
+
+    macro_rules! quote_route {
+        ($app:ident, $dex_address:expr, $amount_in:expr, $swaps:expr, $caller: tt) => {{
+            let res = $app
+                .quote_route($caller, $dex_address.as_str(), $amount_in, $swaps)
+                .unwrap();
+            extract_amount!(res, "amount_out")
+        }};
+        ($app:ident, $dex_address:expr, $amount_in:expr, $swaps:expr) => {{
+            quote_route!($app, $dex_address, $amount_in, $swaps, "alice")
+        }};
+    }
+    pub(crate) use quote_route;
+
+    macro_rules! swap_route {
+        ($app:ident, $dex_address:expr, $amount_in:expr, $expected_amount_out:expr, $slippage:expr, $swaps:expr, $caller:tt) => {{
+            $app.swap_route(
+                $caller,
+                $dex_address.as_str(),
+                $amount_in,
+                $expected_amount_out,
+                $slippage,
+                $swaps,
+            )
+        }};
+    }
+    pub(crate) use swap_route;
+
+    macro_rules! claim_fee {
+        ($app:ident, $dex_address:expr, $index:expr, $caller:tt) => {{
+            $app.claim_fee($caller, $dex_address.as_str(), $index)
+        }};
+    }
+    pub(crate) use claim_fee;
 }
 
 #[cfg(test)]
@@ -657,141 +914,4 @@ mod tests {
             Uint128::from(123u128)
         );
     }
-}
-
-pub mod macros {
-    macro_rules! create_tokens {
-        ($app:ident, $token_x_supply:expr, $token_y_supply:expr, $owner: tt) => {{
-            let token_x = $app.create_token($owner, "tokenx", $token_x_supply);
-            let token_y = $app.create_token($owner, "tokeny", $token_y_supply);
-            (token_x, token_y)
-        }};
-
-        ($app:ident, $token_x_supply:expr, $token_y_supply:expr) => {{
-            create_tokens!($app, $token_x_supply, $token_y_supply, "alice")
-        }};
-    }
-    pub(crate) use create_tokens;
-
-    macro_rules! create_pool {
-        ($app:ident, $dex_address:expr, $token_0:expr, $token_1:expr, $fee_tier:expr, $init_sqrt_price:expr, $init_tick:expr, $caller:tt) => {{
-            $app.create_pool(
-                $caller,
-                $dex_address.as_str(),
-                $token_0.as_str(),
-                $token_1.as_str(),
-                $fee_tier,
-                $init_sqrt_price,
-                $init_tick,
-            )
-        }};
-    }
-    pub(crate) use create_pool;
-
-    macro_rules! add_fee_tier {
-        ($app:ident, $dex_address:expr, $fee_tier:expr, $caller:tt) => {{
-            $app.add_fee_tier($caller, $dex_address.as_str(), $fee_tier)
-        }};
-    }
-    pub(crate) use add_fee_tier;
-
-    macro_rules! approve {
-        ($app:ident, $token_address:expr, $spender:expr, $value:expr, $caller:tt) => {{
-            $app.approve_token($token_address.as_str(), $caller, $spender.as_str(), $value)
-        }};
-    }
-    pub(crate) use approve;
-
-    macro_rules! create_position {
-        ($app:ident, $dex_address:expr, $pool_key:expr, $lower_tick:expr, $upper_tick:expr, $liquidity_delta:expr, $slippage_limit_lower:expr, $slippage_limit_upper:expr, $caller:tt) => {{
-            $app.create_position(
-                $caller,
-                $dex_address.as_str(),
-                &$pool_key,
-                $lower_tick,
-                $upper_tick,
-                $liquidity_delta,
-                $slippage_limit_lower,
-                $slippage_limit_upper,
-            )
-        }};
-    }
-    pub(crate) use create_position;
-
-    macro_rules! get_pool {
-        ($app:ident, $dex_address:expr, $token_0:expr, $token_1:expr, $fee_tier:expr) => {{
-            $app.get_pool(
-                $dex_address.as_str(),
-                $token_0.as_str(),
-                $token_1.as_str(),
-                $fee_tier,
-            )
-        }};
-    }
-    pub(crate) use get_pool;
-
-    macro_rules! get_tick {
-        ($app:ident, $dex_address:expr, $key:expr, $index:expr) => {{
-            $app.get_tick($dex_address.as_str(), &$key, $index)
-        }};
-    }
-    pub(crate) use get_tick;
-
-    macro_rules! is_tick_initialized {
-        ($app:ident, $dex_address:expr, $key:expr, $index:expr) => {{
-            $app.is_tick_initialized($dex_address.as_str(), &$key, $index)
-                .unwrap()
-        }};
-    }
-    pub(crate) use is_tick_initialized;
-
-    macro_rules! mint {
-        ($app:ident, $token_address:expr, $to:tt, $value:expr, $caller:tt) => {{
-            $app.mint_token($caller, $to, $token_address.as_str(), $value)
-        }};
-    }
-    pub(crate) use mint;
-
-    macro_rules! quote {
-        ($app:ident,  $dex_address:expr, $pool_key:expr, $x_to_y:expr, $amount:expr, $by_amount_in:expr, $sqrt_price_limit:expr) => {{
-            $app.quote(
-                $dex_address.as_str(),
-                &$pool_key,
-                $x_to_y,
-                $amount,
-                $by_amount_in,
-                $sqrt_price_limit,
-            )
-        }};
-    }
-    pub(crate) use quote;
-
-    macro_rules! balance_of {
-        ($app:ident, $token_address:expr, $owner:ident) => {{
-            $app.query_token_balance($token_address.as_str(), $owner.as_str())
-                .unwrap()
-                .u128()
-        }};
-        ($app:ident, $token_address:expr, $owner:tt) => {{
-            $app.query_token_balance($token_address.as_str(), $owner)
-                .unwrap()
-                .u128()
-        }};
-    }
-    pub(crate) use balance_of;
-
-    macro_rules! swap {
-        ($app:ident, $dex_address:expr, $pool_key:expr, $x_to_y:expr, $amount:expr, $by_amount_in:expr, $sqrt_price_limit:expr, $caller:tt) => {{
-            $app.swap(
-                $caller,
-                $dex_address.as_str(),
-                &$pool_key,
-                $x_to_y,
-                $amount,
-                $by_amount_in,
-                $sqrt_price_limit,
-            )
-        }};
-    }
-    pub(crate) use swap;
 }

@@ -84,6 +84,20 @@ pub fn execute(
             by_amount_in,
             sqrt_price_limit,
         ),
+        ExecuteMsg::SwapRoute {
+            amount_in,
+            expected_amount_out,
+            slippage,
+            swaps,
+        } => swap_route(
+            deps,
+            env,
+            info,
+            amount_in,
+            expected_amount_out,
+            slippage,
+            swaps,
+        ),
         ExecuteMsg::TransferPosition { index, receiver } => {
             transfer_position(deps, env, info, index, receiver)
         }
