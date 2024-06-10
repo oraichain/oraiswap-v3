@@ -2,7 +2,14 @@ use cosmwasm_std::coin;
 use decimal::{Decimal, Factories};
 
 use crate::{
-    create_entry_points_testing, fee_growth::FeeGrowth, liquidity::Liquidity, percentage::Percentage, sqrt_price::{calculate_sqrt_price, SqrtPrice}, tests::helper::MockApp, token_amount::TokenAmount, FeeTier, PoolKey, MAX_SQRT_PRICE, MIN_SQRT_PRICE
+    create_entry_points_testing,
+    fee_growth::FeeGrowth,
+    liquidity::Liquidity,
+    percentage::Percentage,
+    sqrt_price::{calculate_sqrt_price, SqrtPrice},
+    tests::helper::{macros::*, MockApp},
+    token_amount::TokenAmount,
+    FeeTier, PoolKey, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
 };
 
 #[test]
@@ -10,7 +17,7 @@ fn test_cross_both_side() {
     let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 10).unwrap();
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
-    let initial_mint = 10u128.pow(10); 
+    let initial_mint = 10u128.pow(10);
     let mint_token = 10u128.pow(5);
 
     let mut app = MockApp::new(&[("alice", &[coin(initial_mint, "orai")])]);
@@ -282,135 +289,134 @@ fn test_cross_both_side() {
     );
 }
 
-// #[test]
-// fn test_cross_both_side_not_cross_case() {
-//     let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 10).unwrap();
-//     let init_tick = 0;
-//     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
-//     let initial_mint = 10u128.pow(11);
+#[test]
+fn test_cross_both_side_not_cross_case() {
+    let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 10).unwrap();
+    let alice = "alice";
+    let init_tick = 0;
+    let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
+    let initial_mint = 10u128.pow(10);
 
-//     let mut app = MockApp::new(&[
-//         ("owner", &[coin(initial_mint, "orai")]),
-//         ("alice", &[coin(initial_mint, "orai")]),
-//     ]);
-//     app.set_token_contract(Box::new(create_entry_points_testing!(cw20_base)));
+    let mut app = MockApp::new(&[("alice", &[coin(initial_mint, "orai")])]);
+    app.set_token_contract(Box::new(create_entry_points_testing!(cw20_base)));
 
-//     let dex_addr = app
-//         .create_dex("owner", Percentage::from_scale(1, 2))
-//         .unwrap();
-//     let token_x = app.create_token("owner", "tokenx", initial_mint);
-//     let token_y = app.create_token("owner", "tokeny", initial_mint);
+    let dex = app
+        .create_dex("alice", Percentage::from_scale(1, 2))
+        .unwrap();
+    let (token_x, token_y) = create_tokens!(app, initial_mint, initial_mint);
 
-//     let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier.clone()).unwrap();
+    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
 
-//     app.add_fee_tier("owner", dex_addr.as_str(), fee_tier.clone())
-//         .unwrap();
+    add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 
-//     let create_pool_msg = ExecuteMsg::CreatePool {
-//         token_0: token_x.clone(),
-//         token_1: token_y.clone(),
-//         fee_tier: fee_tier.clone(),
-//         init_sqrt_price: init_sqrt_price.clone(),
-//         init_tick,
-//     };
-//     app.execute(
-//         Addr::unchecked("owner"),
-//         dex_addr.clone(),
-//         &create_pool_msg,
-//         &[],
-//     )
-//     .unwrap();
+    create_pool!(
+        app,
+        dex,
+        token_x,
+        token_y,
+        fee_tier,
+        init_sqrt_price,
+        init_tick,
+        alice
+    )
+    .unwrap();
 
-//     let lower_tick_index = -10;
-//     let upper_tick_index = 10;
-//     let liquidity_delta = Liquidity::from_integer(20006000);
+    let lower_tick_index = -10;
+    let upper_tick_index = 10;
 
-//     app.approve_token("tokenx", "alice", dex_addr.as_str(), initial_mint)
-//         .unwrap();
-//     app.approve_token("tokeny", "alice", dex_addr.as_str(), initial_mint)
-//         .unwrap();
+    let mint_amount = 10u128.pow(5);
+    mint!(app, token_x, alice, mint_amount, alice).unwrap();
+    mint!(app, token_y, alice, mint_amount, alice).unwrap();
 
-//     let create_position_msg = ExecuteMsg::CreatePosition {
-//         pool_key: pool_key.clone(),
-//         lower_tick: lower_tick_index,
-//         upper_tick: upper_tick_index,
-//         liquidity_delta,
-//         slippage_limit_lower: SqrtPrice::new(0),
-//         slippage_limit_upper: SqrtPrice::new(0),
-//     };
-//     app.execute(
-//         Addr::unchecked("alice"),
-//         dex_addr.clone(),
-//         &create_position_msg,
-//         &[],
-//     )
-//     .unwrap();
+    approve!(app, token_x, dex, mint_amount, alice).unwrap();
+    approve!(app, token_y, dex, mint_amount, alice).unwrap();
 
-//     let limit_without_cross_tick_amount = TokenAmount(10_068);
-//     let not_cross_amount = TokenAmount(1);
-//     let min_amount_to_cross_from_tick_price = TokenAmount(3);
-//     let crossing_amount_by_amount_out = TokenAmount(20136101434);
+    let liquidity_delta = Liquidity::new(20006000000000);
 
-//     let mint_amount = limit_without_cross_tick_amount.get()
-//         + not_cross_amount.get()
-//         + min_amount_to_cross_from_tick_price.get()
-//         + crossing_amount_by_amount_out.get();
+    let pool_state = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
 
-//     app.approve_token("tokenx", "alice", dex_addr.as_str(), mint_amount)
-//         .unwrap();
-//     app.approve_token("tokeny", "alice", dex_addr.as_str(), mint_amount)
-//         .unwrap();
+    create_position!(
+        app,
+        dex,
+        pool_key,
+        lower_tick_index,
+        upper_tick_index,
+        liquidity_delta,
+        pool_state.sqrt_price,
+        pool_state.sqrt_price,
+        alice
+    )
+    .unwrap();
 
-//     let pool_before: Pool = app
-//         .query(
-//             dex_addr.clone(),
-//             &QueryMsg::Pool {
-//                 token_0: token_x.clone(),
-//                 token_1: token_y.clone(),
-//                 fee_tier: fee_tier.clone(),
-//             },
-//         )
-//         .unwrap();
+    create_position!(
+        app,
+        dex,
+        pool_key,
+        -20,
+        lower_tick_index,
+        liquidity_delta,
+        pool_state.sqrt_price,
+        pool_state.sqrt_price,
+        alice
+    )
+    .unwrap();
 
-//     let limit_sqrt_price = SqrtPrice::new(0);
+    let pool = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
 
-//     let swap_msg = ExecuteMsg::Swap {
-//         pool_key: pool_key.clone(),
-//         x_to_y: true,
-//         amount: limit_without_cross_tick_amount,
-//         by_amount_in: true,
-//         sqrt_price_limit: limit_sqrt_price,
-//     };
-//     app.execute(Addr::unchecked("alice"), dex_addr.clone(), &swap_msg, &[])
-//         .unwrap();
+    assert_eq!(pool.liquidity, liquidity_delta);
 
-//     let pool: Pool = app
-//         .query(
-//             dex_addr.clone(),
-//             &QueryMsg::Pool {
-//                 token_0: token_x.clone(),
-//                 token_1: token_y.clone(),
-//                 fee_tier: fee_tier.clone(),
-//             },
-//         )
-//         .unwrap();
+    let limit_without_cross_tick_amount = TokenAmount(10_068);
+    let not_cross_amount = TokenAmount(1);
+    let min_amount_to_cross_from_tick_price = TokenAmount(3);
+    let crossing_amount_by_amount_out = TokenAmount(20136101434);
 
-//     let expected_tick = -10;
-//     let expected_price = calculate_sqrt_price(expected_tick).unwrap();
+    let mint_amount = limit_without_cross_tick_amount.get()
+        + not_cross_amount.get()
+        + min_amount_to_cross_from_tick_price.get()
+        + crossing_amount_by_amount_out.get();
 
-//     assert_eq!(pool.current_tick_index, expected_tick);
-//     assert_eq!(pool.liquidity, pool_before.liquidity);
-//     assert_eq!(pool.sqrt_price, expected_price);
+    mint!(app, token_x, alice, mint_amount, alice).unwrap();
+    mint!(app, token_y, alice, mint_amount, alice).unwrap();
 
-//     let slippage = SqrtPrice::new(0);
+    approve!(app, token_x, dex, mint_amount, alice).unwrap();
+    approve!(app, token_y, dex, mint_amount, alice).unwrap();
 
-//     let swap_msg = ExecuteMsg::Swap {
-//         pool_key: pool_key.clone(),
-//         x_to_y: true,
-//         amount: not_cross_amount,
-//         by_amount_in: true,
-//         sqrt_price_limit: slippage,
-//     };
-//     let result = app.execute(Addr::unchecked("alice"), dex_addr.clone(), &swap_msg, &[]);
-//     assert!(result.unwrap_err().contains("error executing WasmMsg"));
-// }
+    let pool_before = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
+
+    let limit_sqrt_price = SqrtPrice::new(MIN_SQRT_PRICE);
+
+    swap!(
+        app,
+        dex,
+        pool_key,
+        true,
+        limit_without_cross_tick_amount,
+        true,
+        limit_sqrt_price,
+        alice
+    )
+    .unwrap();
+
+    let pool = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
+    let expected_tick = -10;
+    let expected_price = calculate_sqrt_price(expected_tick).unwrap();
+
+    assert_eq!(pool.current_tick_index, expected_tick);
+    assert_eq!(pool.liquidity, pool_before.liquidity);
+    assert_eq!(pool.sqrt_price, expected_price);
+
+    let slippage = SqrtPrice::new(MIN_SQRT_PRICE);
+
+    let result = swap!(
+        app,
+        dex,
+        pool_key,
+        true,
+        not_cross_amount,
+        true,
+        slippage,
+        alice
+    );
+
+    assert!(result.is_err());
+}
