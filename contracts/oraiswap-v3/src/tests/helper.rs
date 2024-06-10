@@ -661,10 +661,14 @@ mod tests {
 
 pub mod macros {
     macro_rules! create_tokens {
-        ($app:ident, $token_x_supply:expr, $token_y_supply:expr) => {{
-            let token_x = $app.create_token("alice", "tokenx", $token_x_supply);
-            let token_y = $app.create_token("alice", "tokeny", $token_y_supply);
+        ($app:ident, $token_x_supply:expr, $token_y_supply:expr, $owner: tt) => {{
+            let token_x = $app.create_token($owner, "tokenx", $token_x_supply);
+            let token_y = $app.create_token($owner, "tokeny", $token_y_supply);
             (token_x, token_y)
+        }};
+
+        ($app:ident, $token_x_supply:expr, $token_y_supply:expr) => {{
+            create_tokens!($app, $token_x_supply, $token_y_supply, "alice")
         }};
     }
     pub(crate) use create_tokens;
