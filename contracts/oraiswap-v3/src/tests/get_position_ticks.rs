@@ -1,8 +1,16 @@
 use cosmwasm_std::coin;
-use decimal::{Decimal, Factories};
 use cosmwasm_std::Addr;
+use decimal::{Decimal, Factories};
 
-use crate::{create_entry_points_testing, liquidity::Liquidity, msg, percentage::Percentage, sqrt_price::{calculate_sqrt_price, SqrtPrice}, tests::helper::{macros::*, MockApp}, FeeTier, PoolKey, PositionTick, POSITION_TICK_LIMIT};
+use crate::{
+    create_entry_points_testing,
+    liquidity::Liquidity,
+    msg,
+    percentage::Percentage,
+    sqrt_price::{calculate_sqrt_price, SqrtPrice},
+    tests::helper::{macros::*, MockApp},
+    FeeTier, PoolKey, PositionTick,
+};
 
 #[test]
 fn test_get_position_ticks() {
@@ -52,7 +60,8 @@ fn test_get_position_ticks() {
     )
     .unwrap();
 
-    let result: Vec<PositionTick> = get_position_ticks!(app, dex, Addr::unchecked("alice"), 0).unwrap();
+    let result: Vec<PositionTick> =
+        get_position_ticks!(app, dex, Addr::unchecked("alice"), 0).unwrap();
     assert_eq!(result.len(), 2);
 
     let lower_tick = get_tick!(app, dex, pool_key, -10).unwrap();
@@ -202,10 +211,12 @@ fn test_get_position_ticks_with_offset() {
     )
     .unwrap();
 
-    let result_1: Vec<PositionTick> = get_position_ticks!(app, dex, Addr::unchecked("alice"), 0).unwrap();
+    let result_1: Vec<PositionTick> =
+        get_position_ticks!(app, dex, Addr::unchecked("alice"), 0).unwrap();
     assert_eq!(result_1.len(), 4);
 
-    let result_2: Vec<PositionTick> = get_position_ticks!(app, dex, Addr::unchecked("alice"), 1).unwrap();
+    let result_2: Vec<PositionTick> =
+        get_position_ticks!(app, dex, Addr::unchecked("alice"), 1).unwrap();
     assert_eq!(result_2.len(), 2);
 
     assert_eq!(result_1[2], result_2[0]);

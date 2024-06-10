@@ -80,7 +80,7 @@ fn test_position_same_upper_and_lower_tick() {
 
     let pool_key = PoolKey::new(token_x, token_y, fee_tier).unwrap();
 
-    create_position!( // 1
+    create_position!(
         app,
         dex,
         pool_key,
