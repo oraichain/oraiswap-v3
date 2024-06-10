@@ -356,6 +356,20 @@ impl MockApp {
         )
     }
 
+    pub fn remove_fee_tier(
+        &mut self,
+        sender: &str,
+        clmm_addr: &str,
+        fee_tier: FeeTier,
+    ) -> Result<AppResponse, String> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(clmm_addr),
+            &msg::ExecuteMsg::RemoveFeeTier { fee_tier },
+            &[],
+        )
+    }
+
     pub fn create_pool(
         &mut self,
         sender: &str,
@@ -519,6 +533,13 @@ impl MockApp {
         )
     }
 
+    pub fn fee_tier_exist(&self, clmm_addr: &str, fee_tier: FeeTier) -> StdResult<bool> {
+        self.query(
+            Addr::unchecked(clmm_addr),
+            &msg::QueryMsg::FeeTierExist { fee_tier },
+        )
+    }
+
     pub fn get_tick(&self, clmm_addr: &str, pool_key: &PoolKey, index: i32) -> StdResult<Tick> {
         self.query(
             Addr::unchecked(clmm_addr),
@@ -623,12 +644,27 @@ pub mod macros {
     }
     pub(crate) use add_fee_tier;
 
+    macro_rules! remove_fee_tier {
+        ($app:ident, $dex_address:expr, $fee_tier:expr, $caller:tt) => {{
+            $app.remove_fee_tier($caller, $dex_address.as_str(), $fee_tier)
+        }};
+    }
+    pub(crate) use remove_fee_tier;
+
     macro_rules! approve {
         ($app:ident, $token_address:expr, $spender:expr, $value:expr, $caller:tt) => {{
             $app.approve_token($token_address.as_str(), $caller, $spender.as_str(), $value)
         }};
     }
     pub(crate) use approve;
+
+    macro_rules! fee_tier_exist {
+        ($app:ident, $dex_address:expr, $fee_tier:expr) => {{
+            $app.fee_tier_exist($dex_address.as_str(), $fee_tier)
+                .unwrap()
+        }};
+    }
+    pub(crate) use fee_tier_exist;
 
     macro_rules! create_position {
         ($app:ident, $dex_address:expr, $pool_key:expr, $lower_tick:expr, $upper_tick:expr, $liquidity_delta:expr, $slippage_limit_lower:expr, $slippage_limit_upper:expr, $caller:tt) => {{
