@@ -1149,9 +1149,9 @@ pub mod macros {
     macro_rules! swap_exact_limit {
         ($app:ident, $dex_address:ident, $pool_key:expr, $x_to_y:expr, $amount:expr, $by_amount_in:expr, $caller:tt) => {{
             let sqrt_price_limit = if $x_to_y {
-                SqrtPrice::new(crate::MIN_SQRT_PRICE)
+                crate::sqrt_price::SqrtPrice::new(crate::MIN_SQRT_PRICE)
             } else {
-                SqrtPrice::new(crate::MAX_SQRT_PRICE)
+                crate::sqrt_price::SqrtPrice::new(crate::MAX_SQRT_PRICE)
             };
 
             let quote_result = quote!(
@@ -1186,7 +1186,12 @@ pub mod macros {
             (dex, token_x, token_y)
         }};
         ($app:ident) => {{
-            init_dex_and_tokens!($app, 10u128.pow(10), Percentage::from_scale(1, 2))
+            use decimal::*;
+            init_dex_and_tokens!(
+                $app,
+                10u128.pow(10),
+                crate::percentage::Percentage::from_scale(1, 2)
+            )
         }};
     }
     pub(crate) use init_dex_and_tokens;
@@ -1299,7 +1304,7 @@ pub mod macros {
             mint!($app, $token_x_address, "bob", amount, "alice").unwrap();
             let amount_x = balance_of!($app, $token_x_address, "bob");
             assert_eq!(amount_x, amount);
-            approve!($app, $token_x_address, $dex_address, amount, bob).unwrap();
+            approve!($app, $token_x_address, $dex_address, amount, "bob").unwrap();
 
             let amount_x = balance_of!($app, $token_x_address, $dex_address);
             let amount_y = balance_of!($app, $token_y_address, $dex_address);
@@ -1456,6 +1461,156 @@ pub mod macros {
         }};
     }
     pub(crate) use transfer_position;
+
+    macro_rules! multiple_swap {
+        ($app:ident, $x_to_y:expr) => {{
+            use decimal::*;
+            let (dex, token_x, token_y) = init_dex_and_tokens!($app);
+
+            let fee_tier = crate::FeeTier {
+                fee: crate::percentage::Percentage::from_scale(1, 3),
+                tick_spacing: 1,
+            };
+
+            add_fee_tier!($app, dex, fee_tier, "alice").unwrap();
+
+            let init_tick = 0;
+            let init_sqrt_price = crate::math::sqrt_price::calculate_sqrt_price(init_tick).unwrap();
+            create_pool!(
+                $app,
+                dex,
+                token_x,
+                token_y,
+                fee_tier,
+                init_sqrt_price,
+                init_tick,
+                "alice"
+            )
+            .unwrap();
+
+            let mint_amount = 10u128.pow(10);
+            approve!($app, token_x, dex, mint_amount, "alice").unwrap();
+            approve!($app, token_y, dex, mint_amount, "alice").unwrap();
+
+            let pool_key = crate::PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+            let upper_tick = 953;
+            let lower_tick = -upper_tick;
+
+            let amount = 100;
+            let pool_data = get_pool!($app, dex, token_x, token_y, fee_tier).unwrap();
+            let result = crate::logic::math::get_liquidity(
+                crate::token_amount::TokenAmount(amount),
+                crate::token_amount::TokenAmount(amount),
+                lower_tick,
+                upper_tick,
+                pool_data.sqrt_price,
+                true,
+            )
+            .unwrap();
+            let _amount_x = result.x;
+            let _amount_y = result.y;
+            let liquidity_delta = result.l;
+            let slippage_limit_lower = pool_data.sqrt_price;
+            let slippage_limit_upper = pool_data.sqrt_price;
+
+            create_position!(
+                $app,
+                dex,
+                pool_key,
+                lower_tick,
+                upper_tick,
+                liquidity_delta,
+                slippage_limit_lower,
+                slippage_limit_upper,
+                "alice"
+            )
+            .unwrap();
+
+            if $x_to_y {
+                mint!($app, token_x, "bob", amount, "alice").unwrap();
+                let amount_x = balance_of!($app, token_x, "bob");
+                assert_eq!(amount_x, amount);
+                approve!($app, token_x, dex, amount, "bob").unwrap();
+            } else {
+                mint!($app, token_y, "bob", amount, "alice").unwrap();
+                let amount_y = balance_of!($app, token_y, "bob");
+                assert_eq!(amount_y, amount);
+                approve!($app, token_y, dex, amount, "bob").unwrap();
+            }
+
+            let swap_amount = crate::token_amount::TokenAmount(10);
+            for _ in 1..=10 {
+                swap_exact_limit!($app, dex, pool_key, $x_to_y, swap_amount, true, "bob");
+            }
+
+            let pool = get_pool!($app, dex, token_x, token_y, fee_tier).unwrap();
+            if $x_to_y {
+                assert_eq!(pool.current_tick_index, -821);
+            } else {
+                assert_eq!(pool.current_tick_index, 820);
+            }
+            assert_eq!(
+                pool.fee_growth_global_x,
+                crate::fee_growth::FeeGrowth::new(0)
+            );
+            assert_eq!(
+                pool.fee_growth_global_y,
+                crate::fee_growth::FeeGrowth::new(0)
+            );
+            if $x_to_y {
+                assert_eq!(
+                    pool.fee_protocol_token_x,
+                    crate::token_amount::TokenAmount(10)
+                );
+                assert_eq!(
+                    pool.fee_protocol_token_y,
+                    crate::token_amount::TokenAmount(0)
+                );
+            } else {
+                assert_eq!(
+                    pool.fee_protocol_token_x,
+                    crate::token_amount::TokenAmount(0)
+                );
+                assert_eq!(
+                    pool.fee_protocol_token_y,
+                    crate::token_amount::TokenAmount(10)
+                );
+            }
+            assert_eq!(pool.liquidity, liquidity_delta);
+            if $x_to_y {
+                assert_eq!(
+                    pool.sqrt_price,
+                    crate::sqrt_price::SqrtPrice::new(959805958620596146276151)
+                );
+            } else {
+                assert_eq!(
+                    pool.sqrt_price,
+                    crate::sqrt_price::SqrtPrice::new(1041877257604411525269920)
+                );
+            }
+
+            let dex_amount_x = balance_of!($app, token_x, dex);
+            let dex_amount_y = balance_of!($app, token_y, dex);
+            if $x_to_y {
+                assert_eq!(dex_amount_x, 200);
+                assert_eq!(dex_amount_y, 20);
+            } else {
+                assert_eq!(dex_amount_x, 20);
+                assert_eq!(dex_amount_y, 200);
+            }
+
+            let user_amount_x = balance_of!($app, token_x, "bob");
+            let user_amount_y = balance_of!($app, token_y, "bob");
+            if $x_to_y {
+                assert_eq!(user_amount_x, 0);
+                assert_eq!(user_amount_y, 80);
+            } else {
+                assert_eq!(user_amount_x, 80);
+                assert_eq!(user_amount_y, 0);
+            }
+        }};
+    }
+    pub(crate) use multiple_swap;
 
     macro_rules! positions_equals {
         ($a:expr, $b:expr) => {{
