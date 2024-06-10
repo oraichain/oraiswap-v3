@@ -3,10 +3,7 @@ use crate::interface::{CalculateSwapResult, SwapHop};
 use crate::liquidity::Liquidity;
 use crate::percentage::Percentage;
 use crate::sqrt_price::SqrtPrice;
-use crate::state::{
-    add_position, get_position, get_tick, remove_position, update_position,
-    update_tick, CONFIG, POOLS,
-};
+use crate::state::{self, CONFIG, POOLS};
 use crate::token_amount::TokenAmount;
 use crate::{calculate_min_amount_out, check_tick, FeeTier, Pool, PoolKey, Position};
 
@@ -161,12 +158,12 @@ pub fn create_position(
         .load(deps.storage, &pool_key_db)
         .map_err(|_| ContractError::PoolNotFound {})?;
 
-    let mut lower_tick = match get_tick(deps.storage, &pool_key, lower_tick) {
+    let mut lower_tick = match state::get_tick(deps.storage, &pool_key, lower_tick) {
         Ok(tick) => tick,
         _ => create_tick(deps.storage, current_timestamp, &pool_key, lower_tick)?,
     };
 
-    let mut upper_tick = match get_tick(deps.storage, &pool_key, upper_tick) {
+    let mut upper_tick = match state::get_tick(deps.storage, &pool_key, upper_tick) {
         Ok(tick) => tick,
         _ => create_tick(deps.storage, current_timestamp, &pool_key, upper_tick)?,
     };
@@ -186,10 +183,10 @@ pub fn create_position(
 
     POOLS.save(deps.storage, &pool_key_db, &pool)?;
 
-    add_position(deps.storage, &info.sender, &position)?;
+    state::add_position(deps.storage, &info.sender, &position)?;
 
-    update_tick(deps.storage, &pool_key, lower_tick.index, &lower_tick)?;
-    update_tick(deps.storage, &pool_key, upper_tick.index, &upper_tick)?;
+    state::update_tick(deps.storage, &pool_key, lower_tick.index, &lower_tick)?;
+    state::update_tick(deps.storage, &pool_key, upper_tick.index, &upper_tick)?;
 
     let msgs = vec![
         WasmMsg::Execute {
@@ -341,12 +338,12 @@ pub fn transfer_position(
 ) -> Result<Response, ContractError> {
     let caller = info.sender;
 
-    let position = get_position(deps.storage, &caller, index)?;
+    let position = state::get_position(deps.storage, &caller, index)?;
 
-    remove_position(deps.storage, &caller, index)?;
+    state::remove_position(deps.storage, &caller, index)?;
 
     let receiver_addr = deps.api.addr_validate(&receiver)?;
-    add_position(deps.storage, &receiver_addr, &position)?;
+    state::add_position(deps.storage, &receiver_addr, &position)?;
 
     Ok(Response::new().add_attribute("action", "transfer_position"))
 }
@@ -367,10 +364,12 @@ pub fn claim_fee(
     let caller = info.sender;
     let current_timestamp = env.block.time.nanos();
 
-    let mut position = get_position(deps.storage, &caller, index)?;
+    let mut position = state::get_position(deps.storage, &caller, index)?;
 
-    let mut lower_tick = get_tick(deps.storage, &position.pool_key, position.lower_tick_index)?;
-    let mut upper_tick = get_tick(deps.storage, &position.pool_key, position.upper_tick_index)?;
+    let mut lower_tick =
+        state::get_tick(deps.storage, &position.pool_key, position.lower_tick_index)?;
+    let mut upper_tick =
+        state::get_tick(deps.storage, &position.pool_key, position.upper_tick_index)?;
     let pool_key_db = position.pool_key.key();
     let mut pool = POOLS.load(deps.storage, &pool_key_db)?;
 
@@ -381,15 +380,15 @@ pub fn claim_fee(
         current_timestamp,
     )?;
 
-    update_position(deps.storage, &caller, index, &position)?;
+    state::update_position(deps.storage, &caller, index, &position)?;
     POOLS.save(deps.storage, &pool_key_db, &pool)?;
-    update_tick(
+    state::update_tick(
         deps.storage,
         &position.pool_key,
         upper_tick.index,
         &upper_tick,
     )?;
-    update_tick(
+    state::update_tick(
         deps.storage,
         &position.pool_key,
         lower_tick.index,
@@ -398,7 +397,7 @@ pub fn claim_fee(
 
     let mut msgs = vec![];
 
-    if x > TokenAmount::new(0) {
+    if !x.is_zero() {
         msgs.push(WasmMsg::Execute {
             contract_addr: position.pool_key.token_x.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
@@ -409,7 +408,7 @@ pub fn claim_fee(
         });
     }
 
-    if y > TokenAmount::new(0) {
+    if !y.is_zero() {
         msgs.push(WasmMsg::Execute {
             contract_addr: position.pool_key.token_y.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
@@ -437,7 +436,7 @@ pub fn claim_fee(
 ///
 /// # Errors
 /// - Fails if Position cannot be found
-pub fn remove_pos(
+pub fn remove_position(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -445,11 +444,13 @@ pub fn remove_pos(
 ) -> Result<Response, ContractError> {
     let current_timestamp = env.block.time.nanos();
 
-    let mut position = get_position(deps.storage, &info.sender, index)?;
+    let mut position = state::get_position(deps.storage, &info.sender, index)?;
     let withdrawed_liquidity = position.liquidity;
 
-    let mut lower_tick = get_tick(deps.storage, &position.pool_key, position.lower_tick_index)?;
-    let mut upper_tick = get_tick(deps.storage, &position.pool_key, position.upper_tick_index)?;
+    let mut lower_tick =
+        state::get_tick(deps.storage, &position.pool_key, position.lower_tick_index)?;
+    let mut upper_tick =
+        state::get_tick(deps.storage, &position.pool_key, position.upper_tick_index)?;
 
     let pool_key_db = position.pool_key.key();
     let mut pool = POOLS.load(deps.storage, &pool_key_db)?;
@@ -467,7 +468,7 @@ pub fn remove_pos(
     if deinitialize_lower_tick {
         remove_tick_and_flip_bitmap(deps.storage, &position.pool_key, &lower_tick)?;
     } else {
-        update_tick(
+        state::update_tick(
             deps.storage,
             &position.pool_key,
             position.lower_tick_index,
@@ -478,19 +479,18 @@ pub fn remove_pos(
     if deinitialize_upper_tick {
         remove_tick_and_flip_bitmap(deps.storage, &position.pool_key, &upper_tick)?;
     } else {
-        update_tick(
+        state::update_tick(
             deps.storage,
             &position.pool_key,
             position.upper_tick_index,
             &upper_tick,
         )?;
     }
-    remove_position(deps.storage, &info.sender, index)?;
-    
+    let position = state::remove_position(deps.storage, &info.sender, index)?;
+
     let mut msgs = vec![];
-    
-    if amount_x > TokenAmount::new(0) {
-        println!("x {:?}", amount_x);
+
+    if !amount_x.is_zero() {
         msgs.push(WasmMsg::Execute {
             contract_addr: position.pool_key.token_x.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
@@ -500,9 +500,8 @@ pub fn remove_pos(
             funds: vec![],
         });
     }
-    
-    if amount_y > TokenAmount::new(0) {
-        println!("y {:?}", amount_y);
+
+    if !amount_y.is_zero() {
         msgs.push(WasmMsg::Execute {
             contract_addr: position.pool_key.token_y.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
@@ -512,7 +511,7 @@ pub fn remove_pos(
             funds: vec![],
         });
     }
-    
+
     let event_attributes = vec![
         attr("action", "remove_position"),
         attr("address", info.sender.as_str()),

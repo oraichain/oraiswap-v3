@@ -621,7 +621,7 @@ impl MockApp {
         clmm_addr: &str,
         limit: Option<u32>,
         offset: Option<u32>,
-    ) -> StdResult<Pool> {
+    ) -> StdResult<Vec<Pool>> {
         self.query(
             Addr::unchecked(clmm_addr),
             &msg::QueryMsg::Pools { limit, offset },
@@ -1441,6 +1441,7 @@ pub mod macros {
     macro_rules! get_pools {
         ($app:ident, $dex_address:expr, $size:expr, $offset:expr) => {{
             $app.get_pools($dex_address.as_str(), $size, $offset)
+                .unwrap()
         }};
     }
     pub(crate) use get_pools;
@@ -1455,6 +1456,14 @@ pub mod macros {
 
     macro_rules! transfer_position {
         ($app:ident, $dex_address:expr, $index:expr, $receiver:expr, $caller:tt) => {{
+            $app.transfer_position(
+                $caller,
+                $dex_address.as_str(),
+                $index,
+                &$receiver.to_string(),
+            )
+        }};
+        ($app:ident, $dex_address:expr, $index:expr, $receiver:tt, $caller:tt) => {{
             $app.transfer_position($caller, $dex_address.as_str(), $index, $receiver)
         }};
     }

@@ -102,7 +102,7 @@ pub fn execute(
             transfer_position(deps, env, info, index, receiver)
         }
         ExecuteMsg::ClaimFee { index } => claim_fee(deps, env, info, index),
-        ExecuteMsg::RemovePosition { index } => remove_pos(deps, env, info, index),
+        ExecuteMsg::RemovePosition { index } => remove_position(deps, env, info, index),
         ExecuteMsg::CreatePool {
             token_0,
             token_1,
