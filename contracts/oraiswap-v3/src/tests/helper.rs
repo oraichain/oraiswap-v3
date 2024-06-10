@@ -1443,15 +1443,15 @@ pub mod macros {
     pub(crate) use get_pools;
 
     macro_rules! get_all_positions {
-        ($app:ident, $dex_address:expr, $caller:expr) => {{
-            $app.get_all_positions($caller, $dex_address.as_str())
+        ($app:ident, $dex_address:expr, $caller:tt) => {{
+            $app.get_all_positions($dex_address.as_str(), $caller)
                 .unwrap()
         }};
     }
     pub(crate) use get_all_positions;
 
     macro_rules! transfer_position {
-        ($app:ident, $dex_address:expr, $index:expr, $receiver:expr, $caller:expr) => {{
+        ($app:ident, $dex_address:expr, $index:expr, $receiver:expr, $caller:tt) => {{
             $app.transfer_position($caller, $dex_address.as_str(), $index, $receiver)
         }};
     }
