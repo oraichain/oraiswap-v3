@@ -6,8 +6,7 @@ use crate::{
     percentage::Percentage,
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
     tests::helper::{macros::*, MockApp},
-    token_amount::TokenAmount,
-    FeeTier, PoolKey, MIN_SQRT_PRICE,
+    FeeTier, PoolKey,
 };
 
 #[test]
@@ -65,7 +64,7 @@ fn test_add_multiple_positions() {
     approve!(app, token_x, dex, initial_balance, "alice").unwrap();
     approve!(app, token_y, dex, initial_balance, "alice").unwrap();
 
-    let pool_key = PoolKey::new(token_x, token_y, fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
     let tick_indexes = [-9780, -42, 0, 9, 276, 32343, -50001];
     let liquidity_delta = Liquidity::from_integer(1_000_000);
     let pool_state = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
@@ -129,12 +128,12 @@ fn test_add_multiple_positions() {
     {
         let position_index_to_remove = 2;
         let positions_list_before = get_all_positions!(app, dex, "alice");
-        let last_position = positions_list_before[positions_list_before.len() - 1];
+        let last_position = &positions_list_before[positions_list_before.len() - 1];
 
         remove_position!(app, dex, position_index_to_remove, "alice").unwrap();
 
         let positions_list_after = get_all_positions!(app, dex, "alice");
-        let tested_position = positions_list_after[position_index_to_remove as usize];
+        let tested_position = &positions_list_after[position_index_to_remove as usize];
 
         // Last position should be at removed index
         assert_eq!(last_position.pool_key, tested_position.pool_key);
@@ -182,7 +181,7 @@ fn test_add_multiple_positions() {
     {
         let last_position_index_before = get_all_positions!(app, dex, "alice").len() - 1;
 
-        remove_position!(app, dex, last_position_index_before as u32, alice).unwrap();
+        remove_position!(app, dex, last_position_index_before as u32, "alice").unwrap();
 
         let last_position_index_after = get_all_positions!(app, dex, "alice").len() - 1;
 
@@ -249,7 +248,7 @@ fn test_only_owner_can_modify_position_list() {
     approve!(app, token_x, dex, initial_balance, "alice").unwrap();
     approve!(app, token_y, dex, initial_balance, "alice").unwrap();
 
-    let pool_key = PoolKey::new(token_x, token_y, fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
     let tick_indexes = [-9780, -42, 0, 9, 276, 32343, -50001];
     let liquidity_delta = Liquidity::from_integer(1_000_000);
     let pool_state = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
@@ -313,12 +312,12 @@ fn test_only_owner_can_modify_position_list() {
     {
         let position_index_to_remove = 2;
         let positions_list_before = get_all_positions!(app, dex, "alice");
-        let last_position = positions_list_before[positions_list_before.len() - 1];
+        let last_position = &positions_list_before[positions_list_before.len() - 1];
 
         remove_position!(app, dex, position_index_to_remove, "alice").unwrap();
 
         let positions_list_after = get_all_positions!(app, dex, "alice");
-        let tested_position = positions_list_after[position_index_to_remove as usize];
+        let tested_position = &positions_list_after[position_index_to_remove as usize];
 
         // Last position should be at removed index
         assert_eq!(last_position.pool_key, tested_position.pool_key);
@@ -406,7 +405,7 @@ fn test_transfer_position_ownership() {
     approve!(app, token_x, dex, initial_balance, "alice").unwrap();
     approve!(app, token_y, dex, initial_balance, "alice").unwrap();
 
-    let pool_key = PoolKey::new(token_x, token_y, fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
     let tick_indexes = [-9780, -42, 0, 9, 276, 32343, -50001];
     let liquidity_delta = Liquidity::from_integer(1_000_000);
     let pool_state = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
@@ -473,7 +472,7 @@ fn test_transfer_position_ownership() {
         let owner_list_before = get_all_positions!(app, dex, "alice");
         let recipient_list_before = get_all_positions!(app, dex, "bob");
         let removed_position = get_position!(app, dex, transferred_index, "alice").unwrap();
-        let last_position_before = owner_list_before[owner_list_before.len() - 1];
+        let last_position_before = &owner_list_before[owner_list_before.len() - 1];
 
         transfer_position!(app, dex, transferred_index, "bob", "alice").unwrap();
 
@@ -497,13 +496,13 @@ fn test_transfer_position_ownership() {
     {
         let transferred_index = 1;
         let owner_list_before = get_all_positions!(app, dex, "alice");
-        let recipient_list_before = get_all_positions!(app, dex, bob);
-        let last_position_before = owner_list_before[owner_list_before.len() - 1];
+        let recipient_list_before = get_all_positions!(app, dex, "bob");
+        let last_position_before = &owner_list_before[owner_list_before.len() - 1];
 
-        transfer_position!(app, dex, transferred_index, "bob", alice).unwrap();
+        transfer_position!(app, dex, transferred_index, "bob", "alice").unwrap();
 
         let owner_list_after = get_all_positions!(app, dex, "alice");
-        let recipient_list_after = get_all_positions!(app, dex, bob);
+        let recipient_list_after = get_all_positions!(app, dex, "bob");
         let owner_first_position_after =
             get_position!(app, dex, transferred_index, "alice").unwrap();
 
@@ -519,7 +518,7 @@ fn test_transfer_position_ownership() {
         let transferred_index = (owner_list_before.len() - 1) as u32;
         let removed_position = get_position!(app, dex, transferred_index, "alice").unwrap();
 
-        transfer_position!(app, dex, transferred_index, "bob", alice).unwrap();
+        transfer_position!(app, dex, transferred_index, "bob", "alice").unwrap();
 
         let recipient_list_after = get_all_positions!(app, dex, "bob");
         let recipient_position_index = (recipient_list_after.len() - 1) as u32;
@@ -531,14 +530,14 @@ fn test_transfer_position_ownership() {
     // Clear position
     {
         let transferred_index = 0;
-        let recipient_list_before = get_all_positions!(app, dex, bob);
+        let recipient_list_before = get_all_positions!(app, dex, "bob");
         let removed_position = get_position!(app, dex, transferred_index, "alice").unwrap();
 
-        transfer_position!(app, dex, transferred_index, "bob", alice).unwrap();
+        transfer_position!(app, dex, transferred_index, "bob", "alice").unwrap();
 
-        let recipient_list_after = get_all_positions!(app, dex, bob);
+        let recipient_list_after = get_all_positions!(app, dex, "bob");
         let recipient_position_index = (recipient_list_after.len() - 1) as u32;
-        let recipient_position = get_position!(app, dex, recipient_position_index, bob).unwrap();
+        let recipient_position = get_position!(app, dex, recipient_position_index, "bob").unwrap();
         let owner_list_after = get_all_positions!(app, dex, "alice");
 
         assert_eq!(recipient_list_after.len(), recipient_list_before.len() + 1);
@@ -552,16 +551,16 @@ fn test_transfer_position_ownership() {
     {
         let transferred_index = 0;
         let owner_list_before = get_all_positions!(app, dex, "alice");
-        let recipient_list_before = get_all_positions!(app, dex, bob);
-        let removed_position = get_position!(app, dex, transferred_index, bob).unwrap();
-        let last_position_before = recipient_list_before[recipient_list_before.len() - 1];
+        let recipient_list_before = get_all_positions!(app, dex, "bob");
+        let removed_position = get_position!(app, dex, transferred_index, "bob").unwrap();
+        let last_position_before = &recipient_list_before[recipient_list_before.len() - 1];
 
-        transfer_position!(app, dex, transferred_index, address_of!(Alice), bob).unwrap();
+        transfer_position!(app, dex, transferred_index, "alice", "bob").unwrap();
 
         let owner_list_after = get_all_positions!(app, dex, "alice");
-        let recipient_list_after = get_all_positions!(app, dex, bob);
+        let recipient_list_after = get_all_positions!(app, dex, "bob");
         let recipient_first_position_after =
-            get_position!(app, dex, transferred_index, bob).unwrap();
+            get_position!(app, dex, transferred_index, "bob").unwrap();
 
         let owner_new_position = get_position!(app, dex, transferred_index, "alice").unwrap();
 
@@ -605,7 +604,7 @@ fn test_only_owner_can_transfer_position() {
     approve!(app, token_x, dex, initial_balance, "alice").unwrap();
     approve!(app, token_y, dex, initial_balance, "alice").unwrap();
 
-    let pool_key = PoolKey::new(token_x, token_y, fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
     let tick_indexes = [-9780, -42, 0, 9, 276, 32343, -50001];
     let liquidity_delta = Liquidity::from_integer(1_000_000);
     let pool_state = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
@@ -702,7 +701,7 @@ fn test_multiple_positions_on_same_tick() {
     approve!(app, token_x, dex, initial_balance, "alice").unwrap();
     approve!(app, token_y, dex, initial_balance, "alice").unwrap();
 
-    let pool_key = PoolKey::new(token_x, token_y, fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
     // Three position on same lower and upper tick
     {
         let lower_tick_index = -10;

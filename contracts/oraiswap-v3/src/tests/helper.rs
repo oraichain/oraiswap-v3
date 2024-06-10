@@ -16,8 +16,9 @@ use crate::{
     msg::{self, QuoteResult},
     percentage::Percentage,
     sqrt_price::SqrtPrice,
+    state::MAX_LIMIT,
     token_amount::TokenAmount,
-    FeeTier, Pool, PoolKey, Position, Tick,
+    FeeTier, LiquidityTick, Pool, PoolKey, Position, Tick,
 };
 
 #[macro_export]
@@ -455,6 +456,24 @@ impl MockApp {
         )
     }
 
+    pub fn transfer_position(
+        &mut self,
+        sender: &str,
+        clmm_addr: &str,
+        index: u32,
+        receiver: &str,
+    ) -> Result<AppResponse, String> {
+        self.execute(
+            Addr::unchecked(sender),
+            Addr::unchecked(clmm_addr),
+            &msg::ExecuteMsg::TransferPosition {
+                index,
+                receiver: receiver.to_string(),
+            },
+            &[],
+        )
+    }
+
     pub fn remove_position(
         &mut self,
         sender: &str,
@@ -582,12 +601,50 @@ impl MockApp {
         )
     }
 
+    pub fn get_liquidity_ticks(
+        &self,
+        clmm_addr: &str,
+        pool_key: &PoolKey,
+        tick_indexes: Vec<i32>,
+    ) -> StdResult<Vec<LiquidityTick>> {
+        self.query(
+            Addr::unchecked(clmm_addr),
+            &msg::QueryMsg::LiquidityTicks {
+                pool_key: pool_key.clone(),
+                tick_indexes,
+            },
+        )
+    }
+
+    pub fn get_pools(
+        &self,
+        clmm_addr: &str,
+        limit: Option<u32>,
+        offset: Option<u32>,
+    ) -> StdResult<Pool> {
+        self.query(
+            Addr::unchecked(clmm_addr),
+            &msg::QueryMsg::Pools { limit, offset },
+        )
+    }
+
     pub fn get_position(&self, clmm_addr: &str, owner_id: &str, index: u32) -> StdResult<Position> {
         self.query(
             Addr::unchecked(clmm_addr),
             &msg::QueryMsg::Position {
                 owner_id: Addr::unchecked(owner_id),
                 index,
+            },
+        )
+    }
+
+    pub fn get_all_positions(&self, clmm_addr: &str, owner_id: &str) -> StdResult<Vec<Position>> {
+        self.query(
+            Addr::unchecked(clmm_addr),
+            &msg::QueryMsg::Positions {
+                owner_id: Addr::unchecked(owner_id),
+                limit: Some(MAX_LIMIT),
+                offset: Some(0),
             },
         )
     }
@@ -1340,14 +1397,8 @@ pub mod macros {
     pub(crate) use get_tickmap;
 
     macro_rules! get_liquidity_ticks {
-        ($app:ident, $dex_address:expr, $pool_key:expr, $offset:expr) => {{
-            $app.query(
-                Addr::unchecked($dex_address.as_str()),
-                &msg::QueryMsg::LiquidityTicks {
-                    pool_key: $pool_key.clone(),
-                    tick_indexes: $offset,
-                },
-            )
+        ($app:ident, $dex_address:expr, $pool_key:expr, $tick_indexes:expr) => {{
+            $app.get_liquidity_ticks($dex_address.as_str(), $pool_key, $tick_indexes)
         }};
     }
     pub(crate) use get_liquidity_ticks;
@@ -1386,42 +1437,22 @@ pub mod macros {
 
     macro_rules! get_pools {
         ($app:ident, $dex_address:expr, $size:expr, $offset:expr) => {{
-            $app.query(
-                Addr::unchecked($dex_address.as_str()),
-                &msg::QueryMsg::Pools {
-                    limit: $size,
-                    offset: $offset,
-                },
-            )
+            $app.get_pools($dex_address.as_str(), $size, $offset)
         }};
     }
     pub(crate) use get_pools;
 
     macro_rules! get_all_positions {
         ($app:ident, $dex_address:expr, $caller:expr) => {{
-            $app.query(
-                Addr::unchecked($dex_address.as_str()),
-                &msg::QueryMsg::Positions {
-                    owner_id: Addr::unchecked($caller),
-                    limit: Some(0),
-                    offset: Some(MAX_LIMIT),
-                },
-            )
+            $app.get_all_positions($caller, $dex_address.as_str())
+                .unwrap()
         }};
     }
     pub(crate) use get_all_positions;
 
     macro_rules! transfer_position {
         ($app:ident, $dex_address:expr, $index:expr, $receiver:expr, $caller:expr) => {{
-            $app.execute(
-                Addr::unchecked($caller),
-                Addr::unchecked($dex_address),
-                &msg::ExecuteMsg::TransferPosition {
-                    index: $index,
-                    receiver: $receiver,
-                },
-                &[],
-            )
+            $app.transfer_position($caller, $dex_address.as_str(), $index, $receiver)
         }};
     }
     pub(crate) use transfer_position;
