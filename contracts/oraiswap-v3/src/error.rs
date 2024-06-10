@@ -176,6 +176,9 @@ pub enum ContractError {
 
     #[error("FeeTierNotFound")]
     FeeTierNotFound,
+
+    #[error("NotEmptyTickDeinitialization")]
+    NotEmptyTickDeinitialization
 }
 
 impl From<ContractError> for StdError {

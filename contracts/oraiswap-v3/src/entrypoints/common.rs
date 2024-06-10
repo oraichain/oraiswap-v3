@@ -3,15 +3,9 @@ use cw20::Cw20ExecuteMsg;
 use decimal::{CheckedOps, Decimal};
 
 use crate::{
-    check_tick, compute_swap_step,
-    interface::{CalculateSwapResult, SwapHop},
-    sqrt_price::{get_max_tick, get_min_tick, SqrtPrice},
-    state::{
-        self, add_tick, flip_bitmap, get_closer_limit, get_tick, update_tick, CONFIG, MAX_LIMIT,
-        POOLS,
-    },
-    token_amount::TokenAmount,
-    ContractError, PoolKey, Tick, UpdatePoolTick, MAX_SQRT_PRICE, MIN_SQRT_PRICE,
+    check_tick, compute_swap_step, interface::{CalculateSwapResult, SwapHop}, liquidity::Liquidity, sqrt_price::{get_max_tick, get_min_tick, SqrtPrice}, state::{
+        self, add_tick, flip_bitmap, get_closer_limit, get_tick, remove_tick, update_tick, CONFIG, MAX_LIMIT, POOLS
+    }, token_amount::TokenAmount, ContractError, PoolKey, Tick, UpdatePoolTick, MAX_SQRT_PRICE, MIN_SQRT_PRICE
 };
 
 pub fn create_tick(
@@ -318,4 +312,20 @@ pub fn tickmap_slice(
     }
 
     tickmap_slice
+}
+
+pub fn remove_tick_and_flip_bitmap(
+    storage: &mut dyn Storage,
+    key: &PoolKey,
+    tick: &Tick,
+) -> Result<(), ContractError> {
+    if tick.liquidity_gross != Liquidity::new(0) {
+        return Err(ContractError::NotEmptyTickDeinitialization);
+    }
+
+    flip_bitmap(storage, false, tick.index, key.fee_tier.tick_spacing, key)?;
+
+    remove_tick(storage, key, tick.index)?;
+
+    Ok(())
 }

@@ -4,13 +4,13 @@ use crate::liquidity::Liquidity;
 use crate::percentage::Percentage;
 use crate::sqrt_price::SqrtPrice;
 use crate::state::{
-    add_position, get_position, get_tick, remove_position, remove_tick, update_position,
+    add_position, get_position, get_tick, remove_position, update_position,
     update_tick, CONFIG, POOLS,
 };
 use crate::token_amount::TokenAmount;
 use crate::{calculate_min_amount_out, check_tick, FeeTier, Pool, PoolKey, Position};
 
-use super::{create_tick, route, swap_internal};
+use super::{create_tick, remove_tick_and_flip_bitmap, route, swap_internal};
 use cosmwasm_std::{attr, to_binary, Addr, DepsMut, Env, MessageInfo, Response, WasmMsg};
 use cw20::Cw20ExecuteMsg;
 use decimal::Decimal;
@@ -464,7 +464,7 @@ pub fn remove_pos(
     POOLS.save(deps.storage, &pool_key_db, &pool)?;
 
     if deinitialize_lower_tick {
-        remove_tick(deps.storage, &position.pool_key, lower_tick.index)?;
+        remove_tick_and_flip_bitmap(deps.storage, &position.pool_key, &lower_tick)?;
     } else {
         update_tick(
             deps.storage,
@@ -475,7 +475,7 @@ pub fn remove_pos(
     }
 
     if deinitialize_upper_tick {
-        remove_tick(deps.storage, &position.pool_key, upper_tick.index)?;
+        remove_tick_and_flip_bitmap(deps.storage, &position.pool_key, &upper_tick)?;
     } else {
         update_tick(
             deps.storage,

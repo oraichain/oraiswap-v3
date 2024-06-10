@@ -11,7 +11,6 @@ use crate::{
 };
 
 #[test]
-
 fn test_create_position() {
     let (mut app, dex) = create_dex!(Percentage::new(0));
     let (token_x, token_y) = create_tokens!(app, 500, 500);
@@ -54,7 +53,6 @@ fn test_create_position() {
 }
 
 #[test]
-
 fn test_position_same_upper_and_lower_tick() {
     let (mut app, dex) = create_dex!(Percentage::new(0));
     let (token_x, token_y) = create_tokens!(app, 500, 500);
@@ -82,7 +80,7 @@ fn test_position_same_upper_and_lower_tick() {
 
     let pool_key = PoolKey::new(token_x, token_y, fee_tier).unwrap();
 
-    create_position!(
+    create_position!( // 1
         app,
         dex,
         pool_key,
@@ -97,7 +95,6 @@ fn test_position_same_upper_and_lower_tick() {
 }
 
 #[test]
-
 fn test_remove_position() {
     let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 10).unwrap();
 
@@ -251,7 +248,6 @@ fn test_remove_position() {
 }
 
 #[test]
-
 fn test_position_within_current_tick() {
     let max_tick_test = 177_450; // for tickSpacing 4
     let min_tick_test = -max_tick_test;
@@ -348,7 +344,6 @@ fn test_position_within_current_tick() {
 }
 
 #[test]
-
 fn test_position_below_current_tick() {
     let init_tick = -23028;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
@@ -442,7 +437,6 @@ fn test_position_below_current_tick() {
 }
 
 #[test]
-
 fn test_position_above_current_tick() {
     let init_tick = -23028;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
