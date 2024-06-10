@@ -756,6 +756,190 @@ pub mod macros {
         }};
     }
     pub(crate) use claim_fee;
+
+    macro_rules! init_slippage_pool_with_liquidity {
+        ($app:ident, $dex_address:ident, $token_x_address:ident, $token_y_address:ident) => {{
+            let fee_tier = FeeTier {
+                fee: Percentage::from_scale(6, 3),
+                tick_spacing: 10,
+            };
+            add_fee_tier!($app, $dex_address, fee_tier, "alice").unwrap();
+
+            let init_tick = 0;
+            let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
+            create_pool!(
+                $app,
+                $dex_address,
+                $token_x_address,
+                $token_y_address,
+                fee_tier,
+                init_sqrt_price,
+                init_tick,
+                "alice"
+            )
+            .unwrap();
+
+            let mint_amount = 10u128.pow(10);
+            approve!($app, $token_x_address, $dex_address, mint_amount, "alice").unwrap();
+            approve!($app, $token_y_address, $dex_address, mint_amount, "alice").unwrap();
+
+            let pool_key =
+                PoolKey::new($token_x_address.clone(), $token_y_address.clone(), fee_tier).unwrap();
+            let lower_tick = -1000;
+            let upper_tick = 1000;
+            let liquidity = Liquidity::from_integer(10_000_000_000u128);
+
+            let pool_before = get_pool!(
+                $app,
+                $dex_address,
+                $token_x_address,
+                $token_y_address,
+                fee_tier
+            )
+            .unwrap();
+            let slippage_limit_lower = pool_before.sqrt_price;
+            let slippage_limit_upper = pool_before.sqrt_price;
+            create_position!(
+                $app,
+                $dex_address,
+                pool_key,
+                lower_tick,
+                upper_tick,
+                liquidity,
+                slippage_limit_lower,
+                slippage_limit_upper,
+                "alice"
+            )
+            .unwrap();
+
+            let pool_after = get_pool!(
+                $app,
+                $dex_address,
+                $token_x_address,
+                $token_y_address,
+                fee_tier
+            )
+            .unwrap();
+
+            assert_eq!(pool_after.liquidity, liquidity);
+
+            pool_key
+        }};
+    }
+    pub(crate) use init_slippage_pool_with_liquidity;
+
+    macro_rules! init_basic_pool {
+        ($app:ident, $dex_address:ident, $token_x_address:ident, $token_y_address:ident) => {{
+            let fee_tier = FeeTier {
+                fee: Percentage::from_scale(6, 3),
+                tick_spacing: 10,
+            };
+
+            add_fee_tier!($app, $dex_address, fee_tier, "alice").unwrap();
+
+            let init_tick = 0;
+            let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
+            create_pool!(
+                $app,
+                $dex_address,
+                $token_x_address,
+                $token_y_address,
+                fee_tier,
+                init_sqrt_price,
+                init_tick,
+                "alice"
+            )
+            .unwrap();
+        }};
+    }
+    pub(crate) use init_basic_pool;
+
+    macro_rules! init_basic_position {
+        ($app:ident, $dex_address:ident, $token_x_address:ident, $token_y_address:ident) => {{
+            let fee_tier = FeeTier {
+                fee: Percentage::from_scale(6, 3),
+                tick_spacing: 10,
+            };
+
+            let mint_amount = 10u128.pow(10);
+            approve!($app, $token_x_address, $dex_address, mint_amount, "alice").unwrap();
+            approve!($app, $token_y_address, $dex_address, mint_amount, "alice").unwrap();
+
+            let pool_key =
+                PoolKey::new($token_x_address.clone(), $token_y_address.clone(), fee_tier).unwrap();
+            let lower_tick = -20;
+            let upper_tick = 10;
+            let liquidity = Liquidity::from_integer(1000000);
+
+            let pool_before = get_pool!(
+                $app,
+                $dex_address,
+                $token_x_address,
+                $token_y_address,
+                fee_tier
+            )
+            .unwrap();
+            let slippage_limit_lower = pool_before.sqrt_price;
+            let slippage_limit_upper = pool_before.sqrt_price;
+            create_position!(
+                $app,
+                $dex_address,
+                pool_key,
+                lower_tick,
+                upper_tick,
+                liquidity,
+                slippage_limit_lower,
+                slippage_limit_upper,
+                "alice"
+            )
+            .unwrap();
+
+            let pool_after = get_pool!(
+                $app,
+                $dex_address,
+                $token_x_address,
+                $token_y_address,
+                fee_tier
+            )
+            .unwrap();
+
+            assert_eq!(pool_after.liquidity, liquidity);
+        }};
+    }
+    pub(crate) use init_basic_position;
+
+    macro_rules! swap_exact_limit {
+        ($app:ident, $dex_address:ident, $pool_key:expr, $x_to_y:expr, $amount:expr, $by_amount_in:expr, $caller:tt) => {{
+            let sqrt_price_limit = if $x_to_y {
+                SqrtPrice::new(crate::MIN_SQRT_PRICE)
+            } else {
+                SqrtPrice::new(crate::MAX_SQRT_PRICE)
+            };
+
+            let quote_result = quote!(
+                $app,
+                $dex_address,
+                $pool_key,
+                $x_to_y,
+                $amount,
+                $by_amount_in,
+                sqrt_price_limit
+            )
+            .unwrap();
+            swap!(
+                $app,
+                $dex_address,
+                $pool_key,
+                $x_to_y,
+                $amount,
+                $by_amount_in,
+                quote_result.target_sqrt_price,
+                $caller
+            )
+            .unwrap();
+        }};
+    }
+    pub(crate) use swap_exact_limit;
 }
 
 #[cfg(test)]

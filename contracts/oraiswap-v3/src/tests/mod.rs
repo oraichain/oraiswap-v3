@@ -5,5 +5,6 @@ mod claim;
 mod create_pool;
 mod cross_both_size;
 mod helper;
+mod slippage;
 mod swap;
 mod swap_route;
