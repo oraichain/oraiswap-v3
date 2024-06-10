@@ -6,11 +6,10 @@ use decimal::Decimal;
 
 #[test]
 fn test_change_protocol_fee() {
-    let mut mock_app = MockApp::new(&[("admin", &[])]);
-    let admin = "admin";
+    let mut mock_app = MockApp::new(&[]);
 
     let protocol_fee = Percentage::new(0);
-    let dex_addr = mock_app.create_dex(admin, protocol_fee).unwrap();
+    let dex_addr = mock_app.create_dex("alice", protocol_fee).unwrap();
 
     let query_msg = QueryMsg::ProtocolFee {};
     let protocol_fee: Percentage = mock_app.query(dex_addr.clone(), &query_msg).unwrap();
@@ -20,7 +19,7 @@ fn test_change_protocol_fee() {
         protocol_fee: Percentage::new(1),
     };
     let result = mock_app.execute(
-        Addr::unchecked(admin),
+        Addr::unchecked("alice"),
         Addr::unchecked(dex_addr.clone()),
         &execute_msg,
         &[],
@@ -33,7 +32,7 @@ fn test_change_protocol_fee() {
 
 #[test]
 fn test_change_protocol_fee_not_admin() {
-    let mut mock_app = MockApp::new(&[("admin", &[]), ("user", &[])]);
+    let mut mock_app = MockApp::new(&[]);
     let admin = "admin";
     let user = "user";
 
@@ -43,12 +42,14 @@ fn test_change_protocol_fee_not_admin() {
     let execute_msg = ExecuteMsg::ChangeProtocolFee {
         protocol_fee: Percentage::new(1),
     };
-    let result = mock_app.execute(
-        Addr::unchecked(user),
-        Addr::unchecked(dex_addr.clone()),
-        &execute_msg,
-        &[],
-    ).unwrap_err();
-    
+    let result = mock_app
+        .execute(
+            Addr::unchecked(user),
+            Addr::unchecked(dex_addr.clone()),
+            &execute_msg,
+            &[],
+        )
+        .unwrap_err();
+
     assert!(result.contains("error executing WasmMsg"));
 }

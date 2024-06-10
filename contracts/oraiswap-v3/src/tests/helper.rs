@@ -1,8 +1,8 @@
 use cosmwasm_schema::serde::de::DeserializeOwned;
 use cosmwasm_schema::serde::Serialize;
 use cosmwasm_std::{
-    Addr, AllBalanceResponse, Attribute, BalanceResponse, BankQuery, Coin, Empty, QuerierWrapper,
-    QueryRequest, StdResult, Uint128,
+    Addr, AllBalanceResponse, Attribute, BalanceResponse, BankQuery, Coin, Empty, Event,
+    QuerierWrapper, QueryRequest, StdResult, Uint128,
 };
 use cw20::TokenInfoResponse;
 use decimal::num_traits::Zero;
@@ -347,12 +347,12 @@ impl MockApp {
     pub fn add_fee_tier(
         &mut self,
         sender: &str,
-        clmm_addr: &str,
+        dex: &str,
         fee_tier: FeeTier,
     ) -> Result<AppResponse, String> {
         self.execute(
             Addr::unchecked(sender),
-            Addr::unchecked(clmm_addr),
+            Addr::unchecked(dex),
             &msg::ExecuteMsg::AddFeeTier { fee_tier },
             &[],
         )
@@ -361,12 +361,12 @@ impl MockApp {
     pub fn remove_fee_tier(
         &mut self,
         sender: &str,
-        clmm_addr: &str,
+        dex: &str,
         fee_tier: FeeTier,
     ) -> Result<AppResponse, String> {
         self.execute(
             Addr::unchecked(sender),
-            Addr::unchecked(clmm_addr),
+            Addr::unchecked(dex),
             &msg::ExecuteMsg::RemoveFeeTier { fee_tier },
             &[],
         )
@@ -375,7 +375,7 @@ impl MockApp {
     pub fn create_pool(
         &mut self,
         sender: &str,
-        clmm_addr: &str,
+        dex: &str,
         token_x: &str,
         token_y: &str,
         fee_tier: FeeTier,
@@ -384,7 +384,7 @@ impl MockApp {
     ) -> Result<AppResponse, String> {
         self.execute(
             Addr::unchecked(sender),
-            Addr::unchecked(clmm_addr),
+            Addr::unchecked(dex),
             &msg::ExecuteMsg::CreatePool {
                 token_0: Addr::unchecked(token_x),
                 token_1: Addr::unchecked(token_y),
@@ -399,12 +399,12 @@ impl MockApp {
     pub fn withdraw_protocol_fee(
         &mut self,
         sender: &str,
-        clmm_addr: &str,
+        dex: &str,
         pool_key: &PoolKey,
     ) -> Result<AppResponse, String> {
         self.execute(
             Addr::unchecked(sender),
-            Addr::unchecked(clmm_addr),
+            Addr::unchecked(dex),
             &msg::ExecuteMsg::WithdrawProtocolFee {
                 pool_key: pool_key.clone(),
             },
@@ -415,13 +415,13 @@ impl MockApp {
     pub fn change_fee_receiver(
         &mut self,
         sender: &str,
-        clmm_addr: &str,
+        dex: &str,
         pool_key: &PoolKey,
         fee_recevier: &str,
     ) -> Result<AppResponse, String> {
         self.execute(
             Addr::unchecked(sender),
-            Addr::unchecked(clmm_addr),
+            Addr::unchecked(dex),
             &msg::ExecuteMsg::ChangeFeeReceiver {
                 pool_key: pool_key.clone(),
                 fee_receiver: Addr::unchecked(fee_recevier),
@@ -433,7 +433,7 @@ impl MockApp {
     pub fn create_position(
         &mut self,
         sender: &str,
-        clmm_addr: &str,
+        dex: &str,
         pool_key: &PoolKey,
         lower_tick: i32,
         upper_tick: i32,
@@ -443,7 +443,7 @@ impl MockApp {
     ) -> Result<AppResponse, String> {
         self.execute(
             Addr::unchecked(sender),
-            Addr::unchecked(clmm_addr),
+            Addr::unchecked(dex),
             &msg::ExecuteMsg::CreatePosition {
                 pool_key: pool_key.clone(),
                 lower_tick,
@@ -459,13 +459,13 @@ impl MockApp {
     pub fn transfer_position(
         &mut self,
         sender: &str,
-        clmm_addr: &str,
+        dex: &str,
         index: u32,
         receiver: &str,
     ) -> Result<AppResponse, String> {
         self.execute(
             Addr::unchecked(sender),
-            Addr::unchecked(clmm_addr),
+            Addr::unchecked(dex),
             &msg::ExecuteMsg::TransferPosition {
                 index,
                 receiver: receiver.to_string(),
@@ -477,12 +477,12 @@ impl MockApp {
     pub fn remove_position(
         &mut self,
         sender: &str,
-        clmm_addr: &str,
+        dex: &str,
         index: u32,
     ) -> Result<AppResponse, String> {
         self.execute(
             Addr::unchecked(sender),
-            Addr::unchecked(clmm_addr),
+            Addr::unchecked(dex),
             &msg::ExecuteMsg::RemovePosition { index },
             &[],
         )
@@ -491,7 +491,7 @@ impl MockApp {
     pub fn swap_route(
         &mut self,
         sender: &str,
-        clmm_addr: &str,
+        dex: &str,
         amount_in: TokenAmount,
         expected_amount_out: TokenAmount,
         slippage: Percentage,
@@ -499,7 +499,7 @@ impl MockApp {
     ) -> Result<AppResponse, String> {
         self.execute(
             Addr::unchecked(sender),
-            Addr::unchecked(clmm_addr),
+            Addr::unchecked(dex),
             &msg::ExecuteMsg::SwapRoute {
                 amount_in,
                 expected_amount_out,
@@ -513,7 +513,7 @@ impl MockApp {
     pub fn swap(
         &mut self,
         sender: &str,
-        clmm_addr: &str,
+        dex: &str,
         pool_key: &PoolKey,
         x_to_y: bool,
         amount: TokenAmount,
@@ -522,7 +522,7 @@ impl MockApp {
     ) -> Result<AppResponse, String> {
         self.execute(
             Addr::unchecked(sender),
-            Addr::unchecked(clmm_addr),
+            Addr::unchecked(dex),
             &msg::ExecuteMsg::Swap {
                 pool_key: pool_key.clone(),
                 x_to_y,
@@ -537,12 +537,12 @@ impl MockApp {
     pub fn claim_fee(
         &mut self,
         sender: &str,
-        clmm_addr: &str,
+        dex: &str,
         index: u32,
     ) -> Result<AppResponse, String> {
         self.execute(
             Addr::unchecked(sender),
-            Addr::unchecked(clmm_addr),
+            Addr::unchecked(dex),
             &msg::ExecuteMsg::ClaimFee { index },
             &[],
         )
@@ -551,13 +551,13 @@ impl MockApp {
     pub fn quote_route(
         &mut self,
         sender: &str,
-        clmm_addr: &str,
+        dex: &str,
         amount_in: TokenAmount,
         swaps: Vec<SwapHop>,
     ) -> Result<AppResponse, String> {
         self.execute(
             Addr::unchecked(sender),
-            Addr::unchecked(clmm_addr),
+            Addr::unchecked(dex),
             &msg::ExecuteMsg::QuoteRoute { amount_in, swaps },
             &[],
         )
@@ -565,7 +565,7 @@ impl MockApp {
 
     pub fn quote(
         &mut self,
-        clmm_addr: &str,
+        dex: &str,
         pool_key: &PoolKey,
         x_to_y: bool,
         amount: TokenAmount,
@@ -573,7 +573,7 @@ impl MockApp {
         sqrt_price_limit: SqrtPrice,
     ) -> StdResult<QuoteResult> {
         self.query(
-            Addr::unchecked(clmm_addr),
+            Addr::unchecked(dex),
             &msg::QueryMsg::Quote {
                 pool_key: pool_key.clone(),
                 x_to_y,
@@ -586,13 +586,13 @@ impl MockApp {
 
     pub fn get_pool(
         &self,
-        clmm_addr: &str,
+        dex: &str,
         token_x: &str,
         token_y: &str,
         fee_tier: FeeTier,
     ) -> StdResult<Pool> {
         self.query(
-            Addr::unchecked(clmm_addr),
+            Addr::unchecked(dex),
             &msg::QueryMsg::Pool {
                 token_0: Addr::unchecked(token_x),
                 token_1: Addr::unchecked(token_y),
@@ -603,12 +603,12 @@ impl MockApp {
 
     pub fn get_liquidity_ticks(
         &self,
-        clmm_addr: &str,
+        dex: &str,
         pool_key: &PoolKey,
         tick_indexes: Vec<i32>,
     ) -> StdResult<Vec<LiquidityTick>> {
         self.query(
-            Addr::unchecked(clmm_addr),
+            Addr::unchecked(dex),
             &msg::QueryMsg::LiquidityTicks {
                 pool_key: pool_key.clone(),
                 tick_indexes,
@@ -618,19 +618,19 @@ impl MockApp {
 
     pub fn get_pools(
         &self,
-        clmm_addr: &str,
+        dex: &str,
         limit: Option<u32>,
         start_after: Option<PoolKey>,
     ) -> StdResult<Vec<Pool>> {
         self.query(
-            Addr::unchecked(clmm_addr),
+            Addr::unchecked(dex),
             &msg::QueryMsg::Pools { limit, start_after },
         )
     }
 
-    pub fn get_position(&self, clmm_addr: &str, owner_id: &str, index: u32) -> StdResult<Position> {
+    pub fn get_position(&self, dex: &str, owner_id: &str, index: u32) -> StdResult<Position> {
         self.query(
-            Addr::unchecked(clmm_addr),
+            Addr::unchecked(dex),
             &msg::QueryMsg::Position {
                 owner_id: Addr::unchecked(owner_id),
                 index,
@@ -638,9 +638,9 @@ impl MockApp {
         )
     }
 
-    pub fn get_all_positions(&self, clmm_addr: &str, owner_id: &str) -> StdResult<Vec<Position>> {
+    pub fn get_all_positions(&self, dex: &str, owner_id: &str) -> StdResult<Vec<Position>> {
         self.query(
-            Addr::unchecked(clmm_addr),
+            Addr::unchecked(dex),
             &msg::QueryMsg::Positions {
                 owner_id: Addr::unchecked(owner_id),
                 limit: Some(MAX_LIMIT),
@@ -649,16 +649,16 @@ impl MockApp {
         )
     }
 
-    pub fn fee_tier_exist(&self, clmm_addr: &str, fee_tier: FeeTier) -> StdResult<bool> {
+    pub fn fee_tier_exist(&self, dex: &str, fee_tier: FeeTier) -> StdResult<bool> {
         self.query(
-            Addr::unchecked(clmm_addr),
+            Addr::unchecked(dex),
             &msg::QueryMsg::FeeTierExist { fee_tier },
         )
     }
 
-    pub fn get_tick(&self, clmm_addr: &str, pool_key: &PoolKey, index: i32) -> StdResult<Tick> {
+    pub fn get_tick(&self, dex: &str, pool_key: &PoolKey, index: i32) -> StdResult<Tick> {
         self.query(
-            Addr::unchecked(clmm_addr),
+            Addr::unchecked(dex),
             &msg::QueryMsg::Tick {
                 key: pool_key.clone(),
                 index,
@@ -668,12 +668,12 @@ impl MockApp {
 
     pub fn is_tick_initialized(
         &self,
-        clmm_addr: &str,
+        dex: &str,
         pool_key: &PoolKey,
         index: i32,
     ) -> StdResult<bool> {
         self.query(
-            Addr::unchecked(clmm_addr),
+            Addr::unchecked(dex),
             &msg::QueryMsg::IsTickInitialized {
                 key: pool_key.clone(),
                 index,
@@ -690,23 +690,20 @@ impl MockApp {
     }
 }
 
-pub mod macros {
-
-    macro_rules! extract_amount {
-        ($res:ident, $key: tt) => {{
-            $res.events
-                .into_iter()
-                .filter(|e| e.ty == "wasm")
-                .flat_map(|e| e.attributes)
-                .find(|a| a.key == $key)
-                .unwrap()
-                .value
-                .parse::<u128>()
-                .map(TokenAmount)
-        }};
+pub fn extract_amount(events: &[Event], key: &str) -> Option<TokenAmount> {
+    for event in events {
+        if event.ty == "wasm" {
+            for attr in &event.attributes {
+                if attr.key == key {
+                    return attr.value.parse::<u128>().map(TokenAmount).ok();
+                }
+            }
+        }
     }
-    pub(crate) use extract_amount;
+    None
+}
 
+pub mod macros {
     macro_rules! create_dex {
         ($app:ident, $protocol_fee:expr) => {{
             $app.create_dex("alice", $protocol_fee).unwrap()
@@ -907,10 +904,7 @@ pub mod macros {
 
     macro_rules! quote_route {
         ($app:ident, $dex_address:expr, $amount_in:expr, $swaps:expr, $caller: tt) => {{
-            let res = $app
-                .quote_route($caller, $dex_address.as_str(), $amount_in, $swaps)
-                .unwrap();
-            extract_amount!(res, "amount_out")
+            $app.quote_route($caller, $dex_address.as_str(), $amount_in, $swaps)
         }};
         ($app:ident, $dex_address:expr, $amount_in:expr, $swaps:expr) => {{
             quote_route!($app, $dex_address, $amount_in, $swaps, "alice")
@@ -1048,7 +1042,8 @@ pub mod macros {
             approve!($app, $token_y_address, $dex_address, mint_amount, "alice").unwrap();
 
             let pool_key =
-                PoolKey::new($token_x_address.clone(), $token_y_address.clone(), fee_tier).unwrap();
+                crate::PoolKey::new($token_x_address.clone(), $token_y_address.clone(), fee_tier)
+                    .unwrap();
             let lower_tick = -20;
             let upper_tick = 10;
             let liquidity = crate::math::types::liquidity::Liquidity::from_integer(1000000);
@@ -1200,7 +1195,8 @@ pub mod macros {
             let tick_spacing = 10;
             let fee_tier = FeeTier { fee, tick_spacing };
             let pool_key =
-                PoolKey::new($token_x_address.clone(), $token_y_address.clone(), fee_tier).unwrap();
+                crate::PoolKey::new($token_x_address.clone(), $token_y_address.clone(), fee_tier)
+                    .unwrap();
             let lower_tick = -20;
 
             let amount = 1000;

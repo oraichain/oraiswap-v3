@@ -17,26 +17,19 @@ fn test_cross_both_side() {
     let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 10).unwrap();
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
-    let initial_mint = 10u128.pow(10);
     let mint_token = 10u128.pow(5);
-
-    let mut app = MockApp::new(&[("alice", &[coin(initial_mint, "orai")])]);
-    app.set_token_contract(Box::new(create_entry_points_testing!(cw20_base)));
-
-    let dex_addr = app
-        .create_dex("alice", Percentage::from_scale(1, 2))
-        .unwrap();
-    let token_x = app.create_token("alice", "tokenx", mint_token);
-    let token_y = app.create_token("alice", "tokeny", mint_token);
+    let mut app = MockApp::new(&[]);
+    let (dex, token_x, token_y) =
+        init_dex_and_tokens!(app, mint_token, Percentage::from_scale(1, 2));
 
     let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier.clone()).unwrap();
 
-    app.add_fee_tier("alice", dex_addr.as_str(), fee_tier.clone())
+    app.add_fee_tier("alice", dex.as_str(), fee_tier.clone())
         .unwrap();
 
     app.create_pool(
         "alice",
-        dex_addr.as_str(),
+        dex.as_str(),
         token_x.as_str(),
         token_y.as_str(),
         fee_tier,
@@ -55,25 +48,20 @@ fn test_cross_both_side() {
     app.mint_token("alice", "alice", token_y.as_str(), mint_amount)
         .unwrap();
 
-    app.approve_token("tokenx", "alice", dex_addr.as_str(), mint_amount)
+    app.approve_token("tokenx", "alice", dex.as_str(), mint_amount)
         .unwrap();
-    app.approve_token("tokeny", "alice", dex_addr.as_str(), mint_amount)
+    app.approve_token("tokeny", "alice", dex.as_str(), mint_amount)
         .unwrap();
 
     let liquidity_delta = Liquidity::from_integer(20006000);
 
     let pool_state = app
-        .get_pool(
-            dex_addr.as_str(),
-            token_x.as_str(),
-            token_y.as_str(),
-            fee_tier,
-        )
+        .get_pool(dex.as_str(), token_x.as_str(), token_y.as_str(), fee_tier)
         .unwrap();
 
     app.create_position(
         "alice",
-        dex_addr.as_str(),
+        dex.as_str(),
         &pool_key,
         lower_tick_index,
         upper_tick_index,
@@ -85,7 +73,7 @@ fn test_cross_both_side() {
 
     app.create_position(
         "alice",
-        dex_addr.as_str(),
+        dex.as_str(),
         &pool_key,
         -20,
         lower_tick_index,
@@ -96,12 +84,7 @@ fn test_cross_both_side() {
     .unwrap();
 
     let pool = app
-        .get_pool(
-            dex_addr.as_str(),
-            token_x.as_str(),
-            token_y.as_str(),
-            fee_tier,
-        )
+        .get_pool(dex.as_str(), token_x.as_str(), token_y.as_str(), fee_tier)
         .unwrap();
 
     assert_eq!(pool.liquidity, liquidity_delta);
@@ -121,27 +104,20 @@ fn test_cross_both_side() {
     app.mint_token("alice", "alice", token_y.as_str(), mint_amount)
         .unwrap();
 
-    app.approve_token("tokenx", "alice", dex_addr.as_str(), mint_amount)
+    app.approve_token("tokenx", "alice", dex.as_str(), mint_amount)
         .unwrap();
-    app.approve_token("tokeny", "alice", dex_addr.as_str(), mint_amount)
+    app.approve_token("tokeny", "alice", dex.as_str(), mint_amount)
         .unwrap();
 
     let pool_before = app
-        .get_pool(
-            dex_addr.as_str(),
-            token_x.as_str(),
-            token_y.as_str(),
-            fee_tier,
-        )
+        .get_pool(dex.as_str(), token_x.as_str(), token_y.as_str(), fee_tier)
         .unwrap();
-
-    // println!("Pool before first swap: {:?}", pool_before);
 
     let limit_sqrt_price = SqrtPrice::new(MIN_SQRT_PRICE);
 
     app.swap(
         "alice",
-        dex_addr.as_str(),
+        dex.as_str(),
         &pool_key,
         true,
         limit_without_cross_tick_amount,
@@ -151,15 +127,8 @@ fn test_cross_both_side() {
     .unwrap();
 
     let pool = app
-        .get_pool(
-            dex_addr.as_str(),
-            token_x.as_str(),
-            token_y.as_str(),
-            fee_tier,
-        )
+        .get_pool(dex.as_str(), token_x.as_str(), token_y.as_str(), fee_tier)
         .unwrap();
-
-    // println!("Pool after first swap: {:?}", pool);
 
     let expected_tick = -10;
     let expected_price = calculate_sqrt_price(expected_tick).unwrap();
@@ -170,7 +139,7 @@ fn test_cross_both_side() {
 
     app.swap(
         "alice",
-        dex_addr.as_str(),
+        dex.as_str(),
         &pool_key,
         true,
         min_amount_to_cross_from_tick_price,
@@ -181,7 +150,7 @@ fn test_cross_both_side() {
 
     app.swap(
         "alice",
-        dex_addr.as_str(),
+        dex.as_str(),
         &pool_key,
         false,
         min_amount_to_cross_from_tick_price,
@@ -198,16 +167,16 @@ fn test_cross_both_side() {
     app.mint_token("alice", "alice", token_y.as_str(), massive_y)
         .unwrap();
 
-    app.approve_token("tokenx", "alice", dex_addr.as_str(), massive_x)
+    app.approve_token("tokenx", "alice", dex.as_str(), massive_x)
         .unwrap();
-    app.approve_token("tokeny", "alice", dex_addr.as_str(), massive_y)
+    app.approve_token("tokeny", "alice", dex.as_str(), massive_y)
         .unwrap();
 
     let massive_liquidity_delta = Liquidity::from_integer(19996000399699881985603u128);
 
     app.create_position(
         "alice",
-        dex_addr.as_str(),
+        dex.as_str(),
         &pool_key,
         -20,
         0,
@@ -219,7 +188,7 @@ fn test_cross_both_side() {
 
     app.swap(
         "alice",
-        dex_addr.as_str(),
+        dex.as_str(),
         &pool_key,
         true,
         TokenAmount(1),
@@ -230,7 +199,7 @@ fn test_cross_both_side() {
 
     app.swap(
         "alice",
-        dex_addr.as_str(),
+        dex.as_str(),
         &pool_key,
         false,
         TokenAmount(2),
@@ -240,12 +209,7 @@ fn test_cross_both_side() {
     .unwrap();
 
     let pool = app
-        .get_pool(
-            dex_addr.as_str(),
-            token_x.as_str(),
-            token_y.as_str(),
-            fee_tier,
-        )
+        .get_pool(dex.as_str(), token_x.as_str(), token_y.as_str(), fee_tier)
         .unwrap();
 
     let expected_liquidity = Liquidity::from_integer(19996000399699901991603u128);
@@ -264,7 +228,7 @@ fn test_cross_both_side() {
     assert_eq!(pool.liquidity, expected_liquidity);
     assert_eq!(pool.sqrt_price, SqrtPrice::new(999500149964999999999999));
 
-    let final_last_tick = app.get_tick(dex_addr.as_str(), &pool_key, -20).unwrap();
+    let final_last_tick = app.get_tick(dex.as_str(), &pool_key, -20).unwrap();
     assert_eq!(final_last_tick.fee_growth_outside_x, FeeGrowth::new(0));
     assert_eq!(final_last_tick.fee_growth_outside_y, FeeGrowth::new(0));
     assert_eq!(
@@ -272,7 +236,7 @@ fn test_cross_both_side() {
         expected_liquidity_change_on_last_tick
     );
 
-    let final_lower_tick = app.get_tick(dex_addr.as_str(), &pool_key, -10).unwrap();
+    let final_lower_tick = app.get_tick(dex.as_str(), &pool_key, -10).unwrap();
     assert_eq!(
         final_lower_tick.fee_growth_outside_x,
         FeeGrowth::new(29991002699190242927121)
@@ -280,7 +244,7 @@ fn test_cross_both_side() {
     assert_eq!(final_lower_tick.fee_growth_outside_y, FeeGrowth::new(0));
     assert_eq!(final_lower_tick.liquidity_change, Liquidity::new(0));
 
-    let final_upper_tick = app.get_tick(dex_addr.as_str(), &pool_key, 10).unwrap();
+    let final_upper_tick = app.get_tick(dex.as_str(), &pool_key, 10).unwrap();
     assert_eq!(final_upper_tick.fee_growth_outside_x, FeeGrowth::new(0));
     assert_eq!(final_upper_tick.fee_growth_outside_y, FeeGrowth::new(0));
     assert_eq!(

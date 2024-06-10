@@ -147,7 +147,7 @@ pub fn update_position(
         return Err(ContractError::PositionNotFound);
     }
 
-    let db_key = position_key(account_id, positions_length);
+    let db_key = position_key(account_id, index);
 
     POSITIONS.save(store, &db_key, position)?;
 

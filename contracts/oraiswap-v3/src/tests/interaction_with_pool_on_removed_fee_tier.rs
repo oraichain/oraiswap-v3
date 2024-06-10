@@ -1,3 +1,4 @@
+use crate::tests::helper::extract_amount;
 use crate::token_amount::TokenAmount;
 use crate::{
     percentage::Percentage,
@@ -41,14 +42,19 @@ fn test_interaction_with_pool_on_removed_fee_tier() {
     {
         init_basic_position!(app, dex, token_x, token_y);
     }
+
     // Init swap
     {
         init_basic_swap!(app, dex, token_x, token_y);
     }
+
     // Claim fee
     {
-        let result = claim_fee!(app, dex, 0, "alice");
-        assert!(result.is_ok());
+        let app_res = claim_fee!(app, dex, 0, "alice").unwrap();
+        let claimed_x = extract_amount(&app_res.events, "amount_x").unwrap();
+        let claimed_y = extract_amount(&app_res.events, "amount_y").unwrap();
+        assert_eq!(claimed_x, TokenAmount(5));
+        assert_eq!(claimed_y, TokenAmount(0));
     }
     // Change fee receiver
     {

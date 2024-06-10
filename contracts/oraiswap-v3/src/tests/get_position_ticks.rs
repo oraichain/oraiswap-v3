@@ -4,7 +4,6 @@ use decimal::{Decimal, Factories};
 
 use crate::POSITION_TICK_LIMIT;
 use crate::{
-    create_entry_points_testing,
     liquidity::Liquidity,
     msg,
     percentage::Percentage,
@@ -17,7 +16,6 @@ use crate::{
 fn test_get_position_ticks() {
     let initial_mint = 10u128.pow(10);
     let mut app = MockApp::new(&[("alice", &[coin(initial_mint, "orai")])]);
-    app.set_token_contract(Box::new(create_entry_points_testing!(cw20_base)));
 
     let dex = app
         .create_dex("alice", Percentage::from_scale(1, 2))
@@ -76,7 +74,6 @@ fn test_get_position_ticks() {
 fn test_get_position_ticks_limit() {
     let initial_mint = 10u128.pow(10);
     let mut app = MockApp::new(&[("alice", &[coin(initial_mint, "orai")])]);
-    app.set_token_contract(Box::new(create_entry_points_testing!(cw20_base)));
 
     let dex = app
         .create_dex("alice", Percentage::from_scale(1, 2))
@@ -122,7 +119,8 @@ fn test_get_position_ticks_limit() {
         .unwrap();
     }
 
-    let result: Vec<PositionTick> = get_position_ticks!(app, dex, Addr::unchecked("alice"), 0).unwrap();
+    let result: Vec<PositionTick> =
+        get_position_ticks!(app, dex, Addr::unchecked("alice"), 0).unwrap();
     assert_eq!(result.len(), POSITION_TICK_LIMIT);
 
     for i in 1..=POSITION_TICK_LIMIT / 2 {
@@ -138,7 +136,6 @@ fn test_get_position_ticks_limit() {
 fn test_get_position_ticks_with_offset() {
     let initial_mint = 10u128.pow(10);
     let mut app = MockApp::new(&[("alice", &[coin(initial_mint, "orai")])]);
-    app.set_token_contract(Box::new(create_entry_points_testing!(cw20_base)));
 
     let dex = app
         .create_dex("alice", Percentage::from_scale(1, 2))

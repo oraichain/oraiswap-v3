@@ -17,7 +17,6 @@ use crate::{
 fn test_get_liquidity_ticks() {
     let initial_mint = 10u128.pow(10);
     let mut app = MockApp::new(&[("alice", &[coin(initial_mint, "orai")])]);
-    app.set_token_contract(Box::new(create_entry_points_testing!(cw20_base)));
 
     let dex = app
         .create_dex("alice", Percentage::from_scale(1, 2))
@@ -96,7 +95,6 @@ fn test_get_liquidity_ticks() {
 fn test_get_liquidity_ticks_different_tick_spacings() {
     let initial_mint = 10u128.pow(10);
     let mut app = MockApp::new(&[("alice", &[coin(initial_mint, "orai")])]);
-    app.set_token_contract(Box::new(create_entry_points_testing!(cw20_base)));
 
     let dex = app
         .create_dex("alice", Percentage::from_scale(1, 2))
@@ -333,7 +331,6 @@ fn test_get_liquidity_ticks_limit_with_spread() {
 fn test_get_liquidity_ticks_with_offset() {
     let initial_mint = 10u128.pow(10);
     let mut app = MockApp::new(&[("alice", &[coin(initial_mint, "orai")])]);
-    app.set_token_contract(Box::new(create_entry_points_testing!(cw20_base)));
 
     let dex = app
         .create_dex("alice", Percentage::from_scale(1, 2))

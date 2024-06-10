@@ -360,10 +360,9 @@ pub fn claim_fee(
     info: MessageInfo,
     index: u32,
 ) -> Result<Response, ContractError> {
-    let caller = info.sender;
     let current_timestamp = env.block.time.nanos();
 
-    let mut position = state::get_position(deps.storage, &caller, index)?;
+    let mut position = state::get_position(deps.storage, &info.sender, index)?;
 
     let mut lower_tick =
         state::get_tick(deps.storage, &position.pool_key, position.lower_tick_index)?;
@@ -379,7 +378,7 @@ pub fn claim_fee(
         current_timestamp,
     )?;
 
-    state::update_position(deps.storage, &caller, index, &position)?;
+    state::update_position(deps.storage, &info.sender, index, &position)?;
     POOLS.save(deps.storage, &pool_key_db, &pool)?;
     state::update_tick(
         deps.storage,
@@ -400,7 +399,7 @@ pub fn claim_fee(
         msgs.push(WasmMsg::Execute {
             contract_addr: position.pool_key.token_x.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: caller.to_string(),
+                recipient: info.sender.to_string(),
                 amount: x.into(),
             })?,
             funds: vec![],
@@ -411,7 +410,7 @@ pub fn claim_fee(
         msgs.push(WasmMsg::Execute {
             contract_addr: position.pool_key.token_y.to_string(),
             msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: caller.to_string(),
+                recipient: info.sender.to_string(),
                 amount: y.into(),
             })?,
             funds: vec![],
@@ -489,16 +488,16 @@ pub fn remove_position(
 
     let mut msgs = vec![];
 
-    // if !amount_x.is_zero() {
-    //     msgs.push(WasmMsg::Execute {
-    //         contract_addr: position.pool_key.token_x.to_string(),
-    //         msg: to_binary(&Cw20ExecuteMsg::Transfer {
-    //             recipient: info.sender.to_string(),
-    //             amount: amount_x.into(),
-    //         })?,
-    //         funds: vec![],
-    //     });
-    // }
+    if !amount_x.is_zero() {
+        msgs.push(WasmMsg::Execute {
+            contract_addr: position.pool_key.token_x.to_string(),
+            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                recipient: info.sender.to_string(),
+                amount: amount_x.into(),
+            })?,
+            funds: vec![],
+        });
+    }
 
     if !amount_y.is_zero() {
         msgs.push(WasmMsg::Execute {
