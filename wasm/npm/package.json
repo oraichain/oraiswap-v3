@@ -11,10 +11,11 @@
   },
   "files": [
     "oraiswap_v3_wasm_bg.wasm",
-    "oraiswap_v3_wasm_bg_main.wasm",
     "oraiswap_v3_wasm.js",
+    "oraiswap_v3_wasm.d.ts",
+    "oraiswap_v3_wasm_bg_main.wasm",
     "oraiswap_v3_wasm_main.js",
-    "oraiswap_v3_wasm.d.ts"
+    "oraiswap_v3_wasm_main.d.ts"
   ],
   "module": "oraiswap_v3_wasm.js",
   "main": "oraiswap_v3_wasm_main.js",

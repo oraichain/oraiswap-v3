@@ -2,4 +2,4 @@
 
 ## build wasm sdk
 
-`./wasm/build.sh`
+`cd wasm && ./build.sh`
