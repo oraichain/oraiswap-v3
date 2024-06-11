@@ -1,7 +1,7 @@
 [workspace]
 resolver = '2'
 
-members = ["packages/*", "contracts/*"]
+members = ["packages/*", "contracts/*", "wasm"]
 
 
 [workspace.package]

@@ -32,8 +32,8 @@ pub fn get_liquidity(
         return Err(ContractError::InvalidTick);
     }
 
-    let lower_sqrt_price = (calculate_sqrt_price(lower_tick))?;
-    let upper_sqrt_price = (calculate_sqrt_price(upper_tick))?;
+    let lower_sqrt_price = calculate_sqrt_price(lower_tick)?;
+    let upper_sqrt_price = calculate_sqrt_price(upper_tick)?;
 
     if upper_sqrt_price < current_sqrt_price {
         // single token y
@@ -105,8 +105,8 @@ pub fn get_liquidity_by_x(
         return Err(ContractError::InvalidTick);
     }
 
-    let lower_sqrt_price = (calculate_sqrt_price(lower_tick))?;
-    let upper_sqrt_price = (calculate_sqrt_price(upper_tick))?;
+    let lower_sqrt_price = calculate_sqrt_price(lower_tick)?;
+    let upper_sqrt_price = calculate_sqrt_price(upper_tick)?;
 
     get_liquidity_by_x_sqrt_price(
         x,
@@ -178,8 +178,8 @@ pub fn get_liquidity_by_y(
         return Err(ContractError::InvalidTick);
     }
 
-    let lower_sqrt_price = (calculate_sqrt_price(lower_tick))?;
-    let upper_sqrt_price = (calculate_sqrt_price(upper_tick))?;
+    let lower_sqrt_price = calculate_sqrt_price(lower_tick)?;
+    let upper_sqrt_price = calculate_sqrt_price(upper_tick)?;
 
     get_liquidity_by_y_sqrt_price(
         y,
