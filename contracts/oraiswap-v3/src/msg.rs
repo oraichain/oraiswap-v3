@@ -103,7 +103,7 @@ pub enum QueryMsg {
         fee_tier: FeeTier,
     },
 
-    #[returns(Vec<PoolKey>)]
+    #[returns(Vec<Pool>)]
     Pools {
         limit: Option<u32>,
         start_after: Option<PoolKey>,
