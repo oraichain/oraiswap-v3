@@ -1,5 +1,5 @@
 use crate::alloc::string::ToString;
-use crate::errors::InvariantError;
+use crate::errors::SwapError;
 use crate::types::percentage::Percentage;
 use crate::{convert, resolve};
 use decimal::*;
@@ -17,16 +17,19 @@ pub struct FeeTier {
 }
 
 impl FeeTier {
-    pub fn new(fee: Percentage, tick_spacing: u16) -> Result<Self, InvariantError> {
+    pub fn new(fee: Percentage, tick_spacing: u16) -> Result<Self, SwapError> {
         if tick_spacing == 0 || tick_spacing > 100 {
-            return Err(InvariantError::InvalidTickSpacing);
+            return Err(SwapError::InvalidTickSpacing);
         }
 
         if fee > Percentage::from_integer(1) {
-            return Err(InvariantError::InvalidFee);
+            return Err(SwapError::InvalidFee);
         }
 
-        Ok(Self { fee, tick_spacing: tick_spacing as u64 })
+        Ok(Self {
+            fee,
+            tick_spacing: tick_spacing as u64,
+        })
     }
 }
 

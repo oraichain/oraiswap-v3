@@ -4,7 +4,7 @@ use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize, Tsify)]
-pub enum InvariantError {
+pub enum SwapError {
     NotAdmin,
     NotFeeReceiver,
     PoolAlreadyExist,
@@ -34,8 +34,8 @@ pub enum InvariantError {
     TickLimitReached,
 }
 
-impl core::fmt::Display for InvariantError {
+impl core::fmt::Display for SwapError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "An invariant error occurred")
+        write!(f, "An swap error occurred")
     }
 }

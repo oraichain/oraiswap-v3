@@ -6,7 +6,7 @@ use wasm_bindgen::prelude::*;
 #[derive(Debug, Clone, Tsify, Serialize, Deserialize)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 #[serde(rename_all = "camelCase")]
-pub struct InvariantConfig {
+pub struct Config {
     #[tsify(type = "string")]
     pub admin: String,
     pub protocol_fee: Percentage,

@@ -42,7 +42,7 @@ impl TrackableError {
         let stack_trace = self.stack.join("\n-> ");
 
         format!(
-            "ERROR CAUSED BY: {}\nINVARIANT STACK TRACE:\n-> {}",
+            "ERROR CAUSED BY: {}\nSWAP STACK TRACE:\n-> {}",
             self.cause, stack_trace
         )
     }

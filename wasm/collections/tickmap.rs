@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::consts::{CHUNK_SIZE, MAX_TICK, TICK_SEARCH_RANGE};
 use crate::types::sqrt_price::{calculate_sqrt_price, SqrtPrice};
-use crate::InvariantError;
+use crate::SwapError;
 use js_sys::*;
 use std::collections::HashMap;
 use traceable_result::*;
@@ -210,7 +210,7 @@ impl Tickmap {
         x_to_y: bool,
         current_tick: i32,
         tick_spacing: u16,
-    ) -> Result<(SqrtPrice, Option<(i32, bool)>), InvariantError> {
+    ) -> Result<(SqrtPrice, Option<(i32, bool)>), SwapError> {
         let closes_tick_index = if x_to_y {
             self.prev_initialized(current_tick, tick_spacing)
         } else {
@@ -234,7 +234,7 @@ impl Tickmap {
                 let sqrt_price = calculate_sqrt_price(index).unwrap();
 
                 if current_tick == index {
-                    return Err(InvariantError::TickLimitReached);
+                    return Err(SwapError::TickLimitReached);
                 }
 
                 if (x_to_y && sqrt_price > sqrt_price_limit)

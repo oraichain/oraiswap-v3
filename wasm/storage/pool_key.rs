@@ -1,5 +1,5 @@
 use crate::alloc::string::ToString;
-use crate::errors::InvariantError;
+use crate::errors::SwapError;
 use crate::is_token_x;
 use crate::FeeTier;
 use crate::{convert, resolve};
@@ -19,13 +19,9 @@ pub struct PoolKey {
 }
 
 impl PoolKey {
-    pub fn new(
-        token_0: String,
-        token_1: String,
-        fee_tier: FeeTier,
-    ) -> Result<Self, InvariantError> {
+    pub fn new(token_0: String, token_1: String, fee_tier: FeeTier) -> Result<Self, SwapError> {
         if token_0 == token_1 {
-            return Err(InvariantError::TokensAreSame);
+            return Err(SwapError::TokensAreSame);
         }
 
         Ok(if is_token_x(token_0.clone(), token_1.clone()).unwrap() {
