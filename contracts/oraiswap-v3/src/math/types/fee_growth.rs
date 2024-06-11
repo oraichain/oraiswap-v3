@@ -354,12 +354,8 @@ mod tests {
             let liquidity = Liquidity::max_instance();
             let fee_growth = FeeGrowth::max_instance();
 
-            fee_growth.to_fee(liquidity).unwrap_err();
-            // assert_eq!(
-            //     cause,
-            //     "conversion to invariant::math::types::token_amount::TokenAmount type failed"
-            // );
-            // assert_eq!(stack.len(), 1);
+            let err = fee_growth.to_fee(liquidity).unwrap_err();
+            assert!(matches!(err, ContractError::Cast));
         }
         // FeeGrowth = 0
         {

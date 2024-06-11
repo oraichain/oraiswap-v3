@@ -76,7 +76,6 @@ fn test_swap_x_to_y() {
     .unwrap();
 
     let pool = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
-
     assert_eq!(pool.liquidity, liquidity_delta);
 
     let amount = 1000;
@@ -216,7 +215,6 @@ fn test_swap_y_to_x() {
     .unwrap();
 
     let pool = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
-
     assert_eq!(pool.liquidity, liquidity_delta);
 
     let amount = 1000;
@@ -366,7 +364,6 @@ fn test_swap_not_enough_liquidity_token_x() {
     .unwrap();
 
     let pool = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
-
     assert_eq!(pool.liquidity, liquidity_delta);
 
     let amount = 1000;
@@ -453,7 +450,6 @@ fn test_swap_not_enough_liquidity_token_y() {
     .unwrap();
 
     let pool = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
-
     assert_eq!(pool.liquidity, liquidity_delta);
 
     let amount = 1000;
