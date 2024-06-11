@@ -159,14 +159,14 @@ pub fn remove_position(
     account_id: &Addr,
     index: u32,
 ) -> Result<Position, ContractError> {
-    let positions_length = get_position_length(store, account_id);
+    let positions_length = get_position_length(store, account_id) - 1;
     let db_key = position_key(account_id, index);
     let position = POSITIONS
         .load(store, &db_key)
         .map_err(|_| ContractError::PositionNotFound)?;
 
-    if index < positions_length - 1 {
-        let prev_db_key = position_key(account_id, positions_length - 1);
+    if index < positions_length {
+        let prev_db_key = position_key(account_id, positions_length);
         let last_position = POSITIONS.load(store, &prev_db_key)?;
         POSITIONS.remove(store, &prev_db_key);
         POSITIONS.save(store, &db_key, &last_position)?;
@@ -174,7 +174,7 @@ pub fn remove_position(
         POSITIONS.remove(store, &db_key);
     }
 
-    POSITIONS_LENGTH.save(store, account_id.as_bytes(), &(positions_length - 1))?;
+    POSITIONS_LENGTH.save(store, account_id.as_bytes(), &(positions_length))?;
 
     Ok(position)
 }
@@ -247,12 +247,12 @@ pub fn next_initialized(
 
             return if chunk < limiting_chunk || (chunk == limiting_chunk && bit <= limiting_bit) {
                 // no possibility of overflow
-                let index: i32 = (chunk as i32 * CHUNK_SIZE) + bit as i32;
+                let index = (chunk as i32 * CHUNK_SIZE) + bit as i32;
 
                 Some(
                     index
                         .checked_sub(MAX_TICK / tick_spacing as i32)?
-                        .checked_mul(tick_spacing.into())?,
+                        .checked_mul(tick_spacing as i32)?,
                 )
             } else {
                 None
