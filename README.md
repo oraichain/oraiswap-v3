@@ -2,4 +2,4 @@
 
 ## build wasm sdk
 
-`cd wasm && wasm-pack build --features tsify/js`
+`./wasm/build.sh`
