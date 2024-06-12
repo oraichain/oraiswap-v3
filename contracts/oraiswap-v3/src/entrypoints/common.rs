@@ -193,52 +193,35 @@ pub fn swap_internal(
         sqrt_price_limit,
     )?;
 
-    let mut crossed_tick_indexes: Vec<i32> = vec![];
-
     for tick in calculate_swap_result.ticks.iter() {
         state::update_tick(store, pool_key, tick.index, tick)?;
-        crossed_tick_indexes.push(tick.index);
     }
 
     POOLS.save(store, &pool_key.key(), &calculate_swap_result.pool)?;
 
-    if x_to_y {
-        msgs.push(WasmMsg::Execute {
-            contract_addr: pool_key.token_x.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                owner: sender.to_string(),
-                recipient: contract_address.to_string(),
-                amount: calculate_swap_result.amount_in.into(),
-            })?,
-            funds: vec![],
-        });
-        msgs.push(WasmMsg::Execute {
-            contract_addr: pool_key.token_y.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: sender.to_string(),
-                amount: calculate_swap_result.amount_out.into(),
-            })?,
-            funds: vec![],
-        });
+    let (token_0, token_1) = if x_to_y {
+        (&pool_key.token_x, &pool_key.token_y)
     } else {
-        msgs.push(WasmMsg::Execute {
-            contract_addr: pool_key.token_y.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                owner: sender.to_string(),
-                recipient: contract_address.to_string(),
-                amount: calculate_swap_result.amount_in.into(),
-            })?,
-            funds: vec![],
-        });
-        msgs.push(WasmMsg::Execute {
-            contract_addr: pool_key.token_x.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: sender.to_string(),
-                amount: calculate_swap_result.amount_out.into(),
-            })?,
-            funds: vec![],
-        });
-    }
+        (&pool_key.token_y, &pool_key.token_x)
+    };
+
+    msgs.push(WasmMsg::Execute {
+        contract_addr: token_0.to_string(),
+        msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+            owner: sender.to_string(),
+            recipient: contract_address.to_string(),
+            amount: calculate_swap_result.amount_in.into(),
+        })?,
+        funds: vec![],
+    });
+    msgs.push(WasmMsg::Execute {
+        contract_addr: token_1.to_string(),
+        msg: to_binary(&Cw20ExecuteMsg::Transfer {
+            recipient: sender.to_string(),
+            amount: calculate_swap_result.amount_out.into(),
+        })?,
+        funds: vec![],
+    });
 
     Ok(calculate_swap_result)
 }
@@ -255,10 +238,8 @@ pub fn swap_route_internal(
 
     let current_timestamp = env.block.time.nanos();
 
-    for swap_hop in swaps {
-        let SwapHop { pool_key, x_to_y } = swap_hop;
-
-        let sqrt_price_limit = if x_to_y {
+    for swap_hop in &swaps {
+        let sqrt_price_limit = if swap_hop.x_to_y {
             SqrtPrice::new(MIN_SQRT_PRICE)
         } else {
             SqrtPrice::new(MAX_SQRT_PRICE)
@@ -270,8 +251,8 @@ pub fn swap_route_internal(
             &info.sender,
             &env.contract.address,
             current_timestamp,
-            &pool_key,
-            x_to_y,
+            &swap_hop.pool_key,
+            swap_hop.x_to_y,
             next_swap_amount,
             true,
             sqrt_price_limit,
@@ -292,10 +273,8 @@ pub fn route(
 
     let current_timestamp = env.block.time.nanos();
 
-    for swap_hop in swaps {
-        let SwapHop { pool_key, x_to_y } = swap_hop;
-
-        let sqrt_price_limit = if x_to_y {
+    for swap_hop in &swaps {
+        let sqrt_price_limit = if swap_hop.x_to_y {
             SqrtPrice::new(MIN_SQRT_PRICE)
         } else {
             SqrtPrice::new(MAX_SQRT_PRICE)
@@ -304,8 +283,8 @@ pub fn route(
         next_swap_amount = calculate_swap(
             store,
             current_timestamp,
-            &pool_key,
-            x_to_y,
+            &swap_hop.pool_key,
+            swap_hop.x_to_y,
             next_swap_amount,
             true,
             sqrt_price_limit,
