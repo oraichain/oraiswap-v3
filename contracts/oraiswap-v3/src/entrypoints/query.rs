@@ -2,7 +2,7 @@ use cosmwasm_std::{Addr, Deps, Env};
 
 use crate::{
     get_max_chunk, get_min_chunk,
-    msg::QuoteResult,
+    msg::{PoolWithPoolKey, QuoteResult},
     percentage::Percentage,
     sqrt_price::{get_max_tick, get_min_tick, SqrtPrice},
     state::{self, CONFIG},
@@ -107,7 +107,7 @@ pub fn get_pools(
     deps: Deps,
     limit: Option<u32>,
     start_after: Option<PoolKey>,
-) -> Result<Vec<Pool>, ContractError> {
+) -> Result<Vec<PoolWithPoolKey>, ContractError> {
     state::get_pools(deps.storage, limit, start_after)
 }
 

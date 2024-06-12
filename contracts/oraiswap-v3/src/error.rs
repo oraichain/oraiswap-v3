@@ -96,8 +96,11 @@ pub enum ContractError {
     #[error("tick remove liquidity underflow")]
     TickRemoveLiquidityUnderflow,
 
-    #[error("Invalid tick liquidity")]
+    #[error("invalid tick liquidity")]
     InvalidTickLiquidity,
+
+    #[error("invalid size")]
+    InvalidSize,
 
     #[error("sqrt_price out of range")]
     SqrtPriceOutOfRange,
@@ -178,7 +181,7 @@ pub enum ContractError {
     FeeTierNotFound,
 
     #[error("NotEmptyTickDeinitialization")]
-    NotEmptyTickDeinitialization
+    NotEmptyTickDeinitialization,
 }
 
 impl From<ContractError> for StdError {

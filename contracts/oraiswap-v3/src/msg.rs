@@ -103,7 +103,7 @@ pub enum QueryMsg {
         fee_tier: FeeTier,
     },
 
-    #[returns(Vec<Pool>)]
+    #[returns(Vec<PoolWithPoolKey>)]
     Pools {
         limit: Option<u32>,
         start_after: Option<PoolKey>,
@@ -171,6 +171,12 @@ pub struct LiquidityTick {
     pub index: i32,
     pub liquidity_change: Liquidity,
     pub sign: bool,
+}
+
+#[cw_serde]
+pub struct PoolWithPoolKey {
+    pub pool: Pool,
+    pub pool_key: PoolKey,
 }
 
 #[cw_serde]

@@ -23,8 +23,25 @@ impl FeeTier {
     }
 
     pub fn key(&self) -> Vec<u8> {
-        let mut key = self.fee.0.to_be_bytes().to_vec();
-        key.extend_from_slice(&self.tick_spacing.to_be_bytes());
-        key
+        // first 8 bytes is fee, next 2 bytes is tick_spacing
+        let mut out = Vec::with_capacity(10);
+        out.extend_from_slice(&self.fee.0.to_be_bytes());
+        out.extend_from_slice(&self.tick_spacing.to_be_bytes());
+        out
+    }
+
+    pub fn from_bytes(raw_key: &[u8]) -> Result<Self, ContractError> {
+        // first 8 bytes is key, next 2 bytes is tick_spacing
+        if raw_key.len() != 10 {
+            return Err(ContractError::InvalidSize);
+        }
+
+        let fee = u64::from_be_bytes(raw_key[0..8].try_into().unwrap());
+        let tick_spacing = u16::from_be_bytes(raw_key[8..10].try_into().unwrap());
+
+        Ok(Self {
+            fee: Percentage::new(fee),
+            tick_spacing,
+        })
     }
 }

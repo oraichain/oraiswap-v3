@@ -3,6 +3,7 @@ use cw_storage_plus::{Bound, Item, Map};
 
 use crate::{
     flip_bit_at_position, get_bit_at_position, get_search_limit,
+    msg::PoolWithPoolKey,
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
     tick_to_position, Config, ContractError, Pool, PoolKey, Position, Tick, CHUNK_SIZE, MAX_TICK,
 };
@@ -32,7 +33,7 @@ pub fn get_pools(
     store: &dyn Storage,
     limit: Option<u32>,
     start_after: Option<PoolKey>,
-) -> Result<Vec<Pool>, ContractError> {
+) -> Result<Vec<PoolWithPoolKey>, ContractError> {
     let limit = limit.unwrap_or(MAX_LIMIT).min(MAX_LIMIT) as usize;
     let start = start_after
         .map(|pool_key| pool_key.key())
@@ -41,8 +42,14 @@ pub fn get_pools(
     let pools = POOLS
         .range(store, start, None, Order::Ascending)
         .take(limit)
-        .map(|item| item.map(|item| item.1))
-        .collect::<StdResult<Vec<Pool>>>()?;
+        .map(|item| {
+            let (raw_key, pool) = item?;
+            Ok(PoolWithPoolKey {
+                pool_key: PoolKey::from_bytes(&raw_key)?,
+                pool,
+            })
+        })
+        .collect::<StdResult<_>>()?;
 
     Ok(pools)
 }

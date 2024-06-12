@@ -13,7 +13,7 @@ use cw_multi_test::{next_block, App, AppResponse, Contract, Executor};
 use crate::{
     interface::SwapHop,
     liquidity::Liquidity,
-    msg::{self, QuoteResult},
+    msg::{self, PoolWithPoolKey, QuoteResult},
     percentage::Percentage,
     sqrt_price::SqrtPrice,
     state::MAX_LIMIT,
@@ -621,7 +621,7 @@ impl MockApp {
         dex: &str,
         limit: Option<u32>,
         start_after: Option<PoolKey>,
-    ) -> StdResult<Vec<Pool>> {
+    ) -> StdResult<Vec<PoolWithPoolKey>> {
         self.query(
             Addr::unchecked(dex),
             &msg::QueryMsg::Pools { limit, start_after },

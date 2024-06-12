@@ -76,6 +76,7 @@ fn test_interaction_with_pool_on_removed_fee_tier() {
     {
         let pools = get_pools!(app, dex, Some(1), None);
         assert_eq!(pools.len(), 1);
+        assert_eq!(pools[0].pool_key, pool_key);
     }
     // Transfer position
     {
