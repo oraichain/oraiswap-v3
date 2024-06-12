@@ -86,14 +86,14 @@ impl Position {
         }
 
         // calculate accumulated fee
-        let tokens_owed_x = (fee_growth_inside_x
+        let tokens_owed_x = fee_growth_inside_x
             .unchecked_sub(self.fee_growth_inside_x)
-            .to_fee(self.liquidity))?;
-        let tokens_owed_y = (fee_growth_inside_y
+            .to_fee(self.liquidity)?;
+        let tokens_owed_y = fee_growth_inside_y
             .unchecked_sub(self.fee_growth_inside_y)
-            .to_fee(self.liquidity))?;
+            .to_fee(self.liquidity)?;
 
-        self.liquidity = (self.calculate_new_liquidity(sign, liquidity_delta))?;
+        self.liquidity = self.calculate_new_liquidity(sign, liquidity_delta)?;
         self.fee_growth_inside_x = fee_growth_inside_x;
         self.fee_growth_inside_y = fee_growth_inside_y;
 

@@ -123,13 +123,13 @@ pub fn check_tick_to_sqrt_price_relationship(
 ) -> Result<bool, ContractError> {
     if tick_index + tick_spacing as i32 > MAX_TICK {
         let max_tick = get_max_tick(tick_spacing);
-        let max_sqrt_price = (SqrtPrice::from_tick(max_tick))?;
+        let max_sqrt_price = SqrtPrice::from_tick(max_tick)?;
         if sqrt_price != max_sqrt_price {
             return Ok(false);
         }
     } else {
-        let lower_bound = (SqrtPrice::from_tick(tick_index))?;
-        let upper_bound = (SqrtPrice::from_tick(tick_index + tick_spacing as i32))?;
+        let lower_bound = SqrtPrice::from_tick(tick_index)?;
+        let upper_bound = SqrtPrice::from_tick(tick_index + tick_spacing as i32)?;
         if sqrt_price >= upper_bound || sqrt_price < lower_bound {
             return Ok(false);
         }

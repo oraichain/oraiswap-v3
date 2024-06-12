@@ -83,7 +83,10 @@ fn log2_iterative_approximation_x32(mut sqrt_price_x32: u64) -> (bool, u64) {
     (sign, result)
 }
 
-pub fn get_tick_at_sqrt_price(sqrt_price: SqrtPrice, tick_spacing: u16) -> Result<i32, ContractError> {
+pub fn get_tick_at_sqrt_price(
+    sqrt_price: SqrtPrice,
+    tick_spacing: u16,
+) -> Result<i32, ContractError> {
     if sqrt_price.get() > MAX_SQRT_PRICE || sqrt_price.get() < MIN_SQRT_PRICE {
         return Err(ContractError::SqrtPriceOutOfRange);
     }
@@ -112,16 +115,14 @@ pub fn get_tick_at_sqrt_price(sqrt_price: SqrtPrice, tick_spacing: u16) -> Resul
 
     let accurate_tick = match log2_sign {
         true => {
-            let farther_tick_sqrt_price_decimal =
-                (SqrtPrice::from_tick(farther_tick))?;
+            let farther_tick_sqrt_price_decimal = SqrtPrice::from_tick(farther_tick)?;
             match sqrt_price >= farther_tick_sqrt_price_decimal {
                 true => farther_tick_with_spacing,
                 false => nearer_tick_with_spacing,
             }
         }
         false => {
-            let nearer_tick_sqrt_price_decimal =
-                (SqrtPrice::from_tick(nearer_tick))?;
+            let nearer_tick_sqrt_price_decimal = SqrtPrice::from_tick(nearer_tick)?;
             match nearer_tick_sqrt_price_decimal <= sqrt_price {
                 true => nearer_tick_with_spacing,
                 false => farther_tick_with_spacing,

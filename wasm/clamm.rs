@@ -373,7 +373,8 @@ pub fn check_ticks(tick_lower: i32, tick_upper: i32, tick_spacing: u16) -> Track
 
 #[wasm_wrapper]
 pub fn check_tick(tick_index: i32, tick_spacing: u16) -> TrackableResult<()> {
-    let (min_tick, max_tick) = (get_min_tick(tick_spacing), get_max_tick(tick_spacing));
+    let min_tick = get_min_tick(tick_spacing);
+    let max_tick = get_max_tick(tick_spacing);
     let tick_spacing = tick_spacing as i32;
     if tick_index % tick_spacing != 0 {
         return Err(err!("InvalidTickSpacing"));

@@ -37,13 +37,13 @@ pub fn get_liquidity(
 
     if upper_sqrt_price < current_sqrt_price {
         // single token y
-        let result_by_y = (get_liquidity_by_y_sqrt_price(
+        let result_by_y = get_liquidity_by_y_sqrt_price(
             y,
             lower_sqrt_price,
             upper_sqrt_price,
             current_sqrt_price,
             rounding_up,
-        ))?;
+        )?;
         return Ok(LiquidityResult {
             x: result_by_y.amount,
             y,
@@ -51,33 +51,33 @@ pub fn get_liquidity(
         });
     } else if current_sqrt_price < lower_sqrt_price {
         // single token x
-        let result_by_x = (get_liquidity_by_x_sqrt_price(
+        let result_by_x = get_liquidity_by_x_sqrt_price(
             x,
             lower_sqrt_price,
             upper_sqrt_price,
             current_sqrt_price,
             rounding_up,
-        ))?;
+        )?;
         return Ok(LiquidityResult {
             x,
             y: result_by_x.amount,
             l: result_by_x.l,
         });
     }
-    let result_by_y = (get_liquidity_by_y_sqrt_price(
+    let result_by_y = get_liquidity_by_y_sqrt_price(
         y,
         lower_sqrt_price,
         upper_sqrt_price,
         current_sqrt_price,
         rounding_up,
-    ))?;
-    let result_by_x = (get_liquidity_by_x_sqrt_price(
+    )?;
+    let result_by_x = get_liquidity_by_x_sqrt_price(
         x,
         lower_sqrt_price,
         upper_sqrt_price,
         current_sqrt_price,
         rounding_up,
-    ))?;
+    )?;
     Ok(if result_by_y.l < result_by_x.l {
         LiquidityResult {
             x: result_by_y.amount,

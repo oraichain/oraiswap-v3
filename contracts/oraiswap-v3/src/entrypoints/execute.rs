@@ -560,7 +560,7 @@ pub fn create_pool(
         return Err(ContractError::FeeTierNotFound);
     }
 
-    check_tick(init_tick, fee_tier.tick_spacing).map_err(|_| ContractError::InvalidInitTick)?;
+    check_tick(init_tick, fee_tier.tick_spacing)?;
 
     let pool_key =
         PoolKey::new(token_0, token_1, fee_tier).map_err(|_| ContractError::InvalidPoolKey)?;

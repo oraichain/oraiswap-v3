@@ -47,8 +47,7 @@ impl Pool {
         fee_receiver: Addr,
     ) -> Result<Self, ContractError> {
         let is_in_relationship =
-            check_tick_to_sqrt_price_relationship(init_tick, tick_spacing, init_sqrt_price)
-                .map_err(|_| ContractError::InvalidInitTick)?;
+            check_tick_to_sqrt_price_relationship(init_tick, tick_spacing, init_sqrt_price)?;
 
         if !is_in_relationship {
             return Err(ContractError::InvalidInitSqrtPrice);
@@ -78,7 +77,7 @@ impl Pool {
             return Ok(());
         }
 
-        let fee_growth = (FeeGrowth::from_fee(self.liquidity, pool_fee))?;
+        let fee_growth = FeeGrowth::from_fee(self.liquidity, pool_fee)?;
 
         if in_x {
             self.fee_growth_global_x = self.fee_growth_global_x.unchecked_add(fee_growth);

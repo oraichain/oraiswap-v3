@@ -46,12 +46,12 @@ pub fn compute_swap_step(
         if amount_after_fee >= amount_in {
             next_sqrt_price = target_sqrt_price
         } else {
-            next_sqrt_price = (get_next_sqrt_price_from_input(
+            next_sqrt_price = get_next_sqrt_price_from_input(
                 current_sqrt_price,
                 liquidity,
                 amount_after_fee,
                 x_to_y,
-            ))?;
+            )?;
         };
     } else {
         amount_out = (if x_to_y {
@@ -64,7 +64,7 @@ pub fn compute_swap_step(
             next_sqrt_price = target_sqrt_price
         } else {
             next_sqrt_price =
-                (get_next_sqrt_price_from_output(current_sqrt_price, liquidity, amount, x_to_y))?;
+                get_next_sqrt_price_from_output(current_sqrt_price, liquidity, amount, x_to_y)?;
         }
     }
 
@@ -72,17 +72,17 @@ pub fn compute_swap_step(
 
     if x_to_y {
         if not_max || !by_amount_in {
-            amount_in = (get_delta_x(next_sqrt_price, current_sqrt_price, liquidity, true))?
+            amount_in = get_delta_x(next_sqrt_price, current_sqrt_price, liquidity, true)?
         };
         if not_max || by_amount_in {
-            amount_out = (get_delta_y(next_sqrt_price, current_sqrt_price, liquidity, false))?
+            amount_out = get_delta_y(next_sqrt_price, current_sqrt_price, liquidity, false)?
         }
     } else {
         if not_max || !by_amount_in {
-            amount_in = (get_delta_y(current_sqrt_price, next_sqrt_price, liquidity, true))?
+            amount_in = get_delta_y(current_sqrt_price, next_sqrt_price, liquidity, true)?
         };
         if not_max || by_amount_in {
-            amount_out = (get_delta_x(current_sqrt_price, next_sqrt_price, liquidity, false))?
+            amount_out = get_delta_x(current_sqrt_price, next_sqrt_price, liquidity, false)?
         };
     }
 
@@ -199,14 +199,14 @@ pub fn get_next_sqrt_price_x_up(
     if x.is_zero() {
         return Ok(starting_sqrt_price);
     };
-    let price_delta = (SqrtPrice::checked_from_decimal_to_value(liquidity)
-        .map_err(|_| ContractError::ExtendLiquidityOverflow))?;
+    let price_delta = SqrtPrice::checked_from_decimal_to_value(liquidity)
+        .map_err(|_| ContractError::ExtendLiquidityOverflow)?;
 
-    let denominator = (match add_x {
+    let denominator = match add_x {
         true => price_delta.checked_add(starting_sqrt_price.big_mul_to_value(x)),
         false => price_delta.checked_sub(starting_sqrt_price.big_mul_to_value(x)),
     }
-    .ok_or(ContractError::BigLiquidityOverflow))?; // never should be triggered
+    .ok_or(ContractError::BigLiquidityOverflow)?; // never should be triggered
 
     SqrtPrice::checked_big_div_values_up(
         starting_sqrt_price.big_mul_to_value_up(liquidity),
@@ -226,12 +226,12 @@ fn get_next_sqrt_price_y_down(
         .map_err(|_| ContractError::ExtendLiquidityOverflow)?;
 
     if add_y {
-        let quotient = (SqrtPrice::checked_big_div_values(numerator, denominator))?;
+        let quotient = SqrtPrice::checked_big_div_values(numerator, denominator)?;
         starting_sqrt_price
             .checked_add(quotient)
             .map_err(|_| ContractError::Add)
     } else {
-        let quotient = (SqrtPrice::checked_big_div_values_up(numerator, denominator))?;
+        let quotient = SqrtPrice::checked_big_div_values_up(numerator, denominator)?;
         starting_sqrt_price
             .checked_sub(quotient)
             .map_err(|_| ContractError::Sub)
@@ -254,33 +254,33 @@ pub fn calculate_amount_delta(
     let mut update_liquidity = false;
 
     if current_tick_index < lower_tick {
-        amount_x = (get_delta_x(
-            (SqrtPrice::from_tick(lower_tick))?,
-            (SqrtPrice::from_tick(upper_tick))?,
+        amount_x = get_delta_x(
+            SqrtPrice::from_tick(lower_tick)?,
+            SqrtPrice::from_tick(upper_tick)?,
             liquidity_delta,
             liquidity_sign,
-        ))?;
+        )?;
     } else if current_tick_index < upper_tick {
-        amount_x = (get_delta_x(
+        amount_x = get_delta_x(
             current_sqrt_price,
-            (SqrtPrice::from_tick(upper_tick))?,
+            SqrtPrice::from_tick(upper_tick)?,
             liquidity_delta,
             liquidity_sign,
-        ))?;
-        amount_y = (get_delta_y(
-            (SqrtPrice::from_tick(lower_tick))?,
+        )?;
+        amount_y = get_delta_y(
+            SqrtPrice::from_tick(lower_tick)?,
             current_sqrt_price,
             liquidity_delta,
             liquidity_sign,
-        ))?;
+        )?;
         update_liquidity = true;
     } else {
-        amount_y = (get_delta_y(
-            (SqrtPrice::from_tick(lower_tick))?,
-            (SqrtPrice::from_tick(upper_tick))?,
+        amount_y = get_delta_y(
+            SqrtPrice::from_tick(lower_tick)?,
+            SqrtPrice::from_tick(upper_tick)?,
             liquidity_delta,
             liquidity_sign,
-        ))?;
+        )?;
     }
 
     Ok((amount_x, amount_y, update_liquidity))
@@ -322,14 +322,15 @@ pub fn check_ticks(
     if tick_lower > tick_upper {
         return Err(ContractError::TickLowerGreater);
     }
-    (check_tick(tick_lower, tick_spacing))?;
-    (check_tick(tick_upper, tick_spacing))?;
+    check_tick(tick_lower, tick_spacing)?;
+    check_tick(tick_upper, tick_spacing)?;
 
     Ok(())
 }
 
 pub fn check_tick(tick_index: i32, tick_spacing: u16) -> Result<(), ContractError> {
-    let (min_tick, max_tick) = (get_min_tick(tick_spacing), get_max_tick(tick_spacing));
+    let min_tick = get_min_tick(tick_spacing);
+    let max_tick = get_max_tick(tick_spacing);
     let tick_spacing = tick_spacing as i32;
     if tick_index % tick_spacing != 0 {
         return Err(ContractError::InvalidTickSpacing);
