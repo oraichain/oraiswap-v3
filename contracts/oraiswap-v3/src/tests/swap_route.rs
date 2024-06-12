@@ -5,7 +5,7 @@ use crate::{
     liquidity::Liquidity,
     percentage::Percentage,
     sqrt_price::calculate_sqrt_price,
-    tests::helper::{extract_amount, macros::*, MockApp},
+    tests::helper::{macros::*, MockApp},
     token_amount::TokenAmount,
     FeeTier, PoolKey,
 };
@@ -111,8 +111,7 @@ fn swap_route() {
         },
     ];
 
-    let res = quote_route!(app, dex, amount_in, swaps.clone()).unwrap();
-    let expected_token_amount = extract_amount(&res.events, "amount_out").unwrap();
+    let expected_token_amount = quote_route!(app, dex, amount_in, swaps.clone()).unwrap();
 
     swap_route!(
         app,

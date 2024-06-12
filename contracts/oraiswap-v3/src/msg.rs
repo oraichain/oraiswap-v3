@@ -45,10 +45,6 @@ pub enum ExecuteMsg {
         slippage: Percentage,
         swaps: Vec<SwapHop>,
     },
-    QuoteRoute {
-        amount_in: TokenAmount,
-        swaps: Vec<SwapHop>,
-    },
     TransferPosition {
         index: u32,
         receiver: String,
@@ -145,7 +141,7 @@ pub enum QueryMsg {
         upper_tick: i32,
     },
 
-    #[returns(Vec<Pool>)]
+    #[returns(Vec<PoolWithPoolKey>)]
     PoolsForPair { token0: Addr, token1: Addr },
 
     #[returns(QuoteResult)]
@@ -155,6 +151,12 @@ pub enum QueryMsg {
         amount: TokenAmount,
         by_amount_in: bool,
         sqrt_price_limit: SqrtPrice,
+    },
+
+    #[returns(TokenAmount)]
+    QuoteRoute {
+        amount_in: TokenAmount,
+        swaps: Vec<SwapHop>,
     },
 }
 

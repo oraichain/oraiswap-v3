@@ -2,6 +2,7 @@ use cosmwasm_std::{Addr, Deps, Env};
 
 use crate::{
     get_max_chunk, get_min_chunk,
+    interface::SwapHop,
     msg::{PoolWithPoolKey, QuoteResult},
     percentage::Percentage,
     sqrt_price::{get_max_tick, get_min_tick, SqrtPrice},
@@ -12,7 +13,7 @@ use crate::{
     LIQUIDITY_TICK_LIMIT, POSITION_TICK_LIMIT,
 };
 
-use super::{calculate_swap, tickmap_slice};
+use super::{calculate_swap, route, tickmap_slice};
 
 /// Retrieves the protocol fee represented as a percentage.
 pub fn get_protocol_fee(deps: Deps) -> Result<Percentage, ContractError> {
@@ -118,14 +119,17 @@ pub fn get_all_pools_for_pair(
     deps: Deps,
     token0: Addr,
     token1: Addr,
-) -> Result<Vec<Pool>, ContractError> {
+) -> Result<Vec<PoolWithPoolKey>, ContractError> {
     let fee_tiers = get_fee_tiers(deps)?;
     let mut pool_key = PoolKey::new(token0, token1, FeeTier::default())?;
-    let mut pools: Vec<Pool> = vec![];
+    let mut pools = vec![];
     for fee_tier in fee_tiers {
         pool_key.fee_tier = fee_tier;
         if let Ok(pool) = state::get_pool(deps.storage, &pool_key) {
-            pools.push(pool);
+            pools.push(PoolWithPoolKey {
+                pool,
+                pool_key: pool_key.clone(),
+            });
         }
     }
     Ok(pools)
@@ -361,4 +365,24 @@ pub fn quote(
         target_sqrt_price: calculate_swap_result.pool.sqrt_price,
         ticks: calculate_swap_result.ticks,
     })
+}
+
+/// Simulates multiple swaps without its execution.
+///
+/// # Parameters
+/// - `amount_in`: The amount of tokens that the user wants to swap.
+/// - `swaps`: A vector containing all parameters needed to identify separate swap steps.
+///
+/// # Errors
+/// - Fails if the user attempts to perform a swap with zero amounts.
+/// - Fails if the user would receive zero tokens.
+/// - Fails if pool does not exist
+pub fn quote_route(
+    deps: Deps,
+    env: Env,
+    amount_in: TokenAmount,
+    swaps: Vec<SwapHop>,
+) -> Result<TokenAmount, ContractError> {
+    let amount_out = route(deps.storage, env, amount_in, swaps)?;
+    Ok(amount_out)
 }

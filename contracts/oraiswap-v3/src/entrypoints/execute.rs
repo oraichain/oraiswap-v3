@@ -7,7 +7,7 @@ use crate::state::{self, CONFIG, POOLS};
 use crate::token_amount::TokenAmount;
 use crate::{calculate_min_amount_out, check_tick, FeeTier, Pool, PoolKey, Position};
 
-use super::{create_tick, remove_tick_and_flip_bitmap, route, swap_internal};
+use super::{create_tick, remove_tick_and_flip_bitmap, swap_internal, swap_route_internal};
 use cosmwasm_std::{attr, to_binary, Addr, DepsMut, Env, MessageInfo, Response, WasmMsg};
 use cw20::Cw20ExecuteMsg;
 use decimal::Decimal;
@@ -309,7 +309,7 @@ pub fn swap_route(
     swaps: Vec<SwapHop>,
 ) -> Result<Response, ContractError> {
     let mut msgs = vec![];
-    let amount_out = route(deps, env, info, &mut msgs, true, amount_in, swaps)?;
+    let amount_out = swap_route_internal(deps.storage, env, info, &mut msgs, amount_in, swaps)?;
 
     let min_amount_out = calculate_min_amount_out(expected_amount_out, slippage);
 
@@ -583,33 +583,6 @@ pub fn create_pool(
     POOLS.save(deps.storage, &pool_key.key(), &pool)?;
 
     Ok(Response::new().add_attribute("action", "create_pool"))
-}
-
-/// Simulates multiple swaps without its execution.
-///
-/// # Parameters
-/// - `amount_in`: The amount of tokens that the user wants to swap.
-/// - `swaps`: A vector containing all parameters needed to identify separate swap steps.
-///
-/// # Errors
-/// - Fails if the user attempts to perform a swap with zero amounts.
-/// - Fails if the user would receive zero tokens.
-/// - Fails if pool does not exist
-pub fn quote_route(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    amount_in: TokenAmount,
-    swaps: Vec<SwapHop>,
-) -> Result<Response, ContractError> {
-    let mut msgs = vec![];
-
-    let amount_out = route(deps, env, info, &mut msgs, false, amount_in, swaps)?;
-
-    Ok(Response::new()
-        .add_messages(msgs)
-        .add_attribute("action", "quote_route")
-        .add_attribute("amount_out", amount_out.to_string()))
 }
 
 /// Allows admin to add a custom fee tier.

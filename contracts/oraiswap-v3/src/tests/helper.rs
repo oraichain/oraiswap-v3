@@ -550,16 +550,13 @@ impl MockApp {
 
     pub fn quote_route(
         &mut self,
-        sender: &str,
         dex: &str,
         amount_in: TokenAmount,
         swaps: Vec<SwapHop>,
-    ) -> Result<AppResponse, String> {
-        self.execute(
-            Addr::unchecked(sender),
+    ) -> StdResult<TokenAmount> {
+        self.query(
             Addr::unchecked(dex),
-            &msg::ExecuteMsg::QuoteRoute { amount_in, swaps },
-            &[],
+            &msg::QueryMsg::QuoteRoute { amount_in, swaps },
         )
     }
 
@@ -903,11 +900,8 @@ pub mod macros {
     pub(crate) use swap;
 
     macro_rules! quote_route {
-        ($app:ident, $dex_address:expr, $amount_in:expr, $swaps:expr, $caller: tt) => {{
-            $app.quote_route($caller, $dex_address.as_str(), $amount_in, $swaps)
-        }};
         ($app:ident, $dex_address:expr, $amount_in:expr, $swaps:expr) => {{
-            quote_route!($app, $dex_address, $amount_in, $swaps, "alice")
+            $app.quote_route($dex_address.as_str(), $amount_in, $swaps)
         }};
     }
     pub(crate) use quote_route;

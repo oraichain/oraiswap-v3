@@ -65,9 +65,6 @@ pub fn execute(
             slippage_limit_lower,
             slippage_limit_upper,
         ),
-        ExecuteMsg::QuoteRoute { amount_in, swaps } => {
-            quote_route(deps, env, info, amount_in, swaps)
-        }
         ExecuteMsg::Swap {
             pool_key,
             x_to_y,
@@ -193,5 +190,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             by_amount_in,
             sqrt_price_limit,
         )?),
+        QueryMsg::QuoteRoute { amount_in, swaps } => {
+            to_binary(&quote_route(deps, env, amount_in, swaps)?)
+        }
     }
 }

@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, Addr, DepsMut, Env, MessageInfo, Storage, WasmMsg};
+use cosmwasm_std::{to_binary, Addr, Env, MessageInfo, Storage, WasmMsg};
 use cw20::Cw20ExecuteMsg;
 use decimal::{CheckedOps, Decimal};
 
@@ -243,12 +243,11 @@ pub fn swap_internal(
     Ok(calculate_swap_result)
 }
 
-pub fn route(
-    deps: DepsMut,
+pub fn swap_route_internal(
+    store: &mut dyn Storage,
     env: Env,
     info: MessageInfo,
     msgs: &mut Vec<WasmMsg>,
-    is_swap: bool,
     amount_in: TokenAmount,
     swaps: Vec<SwapHop>,
 ) -> Result<TokenAmount, ContractError> {
@@ -265,32 +264,53 @@ pub fn route(
             SqrtPrice::new(MAX_SQRT_PRICE)
         };
 
-        let res = if is_swap {
-            swap_internal(
-                deps.storage,
-                msgs,
-                &info.sender,
-                &env.contract.address,
-                current_timestamp,
-                &pool_key,
-                x_to_y,
-                next_swap_amount,
-                true,
-                sqrt_price_limit,
-            )
-        } else {
-            calculate_swap(
-                deps.storage,
-                current_timestamp,
-                &pool_key,
-                x_to_y,
-                next_swap_amount,
-                true,
-                sqrt_price_limit,
-            )
-        }?;
+        next_swap_amount = swap_internal(
+            store,
+            msgs,
+            &info.sender,
+            &env.contract.address,
+            current_timestamp,
+            &pool_key,
+            x_to_y,
+            next_swap_amount,
+            true,
+            sqrt_price_limit,
+        )?
+        .amount_out;
+    }
 
-        next_swap_amount = res.amount_out;
+    Ok(next_swap_amount)
+}
+
+pub fn route(
+    store: &dyn Storage,
+    env: Env,
+    amount_in: TokenAmount,
+    swaps: Vec<SwapHop>,
+) -> Result<TokenAmount, ContractError> {
+    let mut next_swap_amount = amount_in;
+
+    let current_timestamp = env.block.time.nanos();
+
+    for swap_hop in swaps {
+        let SwapHop { pool_key, x_to_y } = swap_hop;
+
+        let sqrt_price_limit = if x_to_y {
+            SqrtPrice::new(MIN_SQRT_PRICE)
+        } else {
+            SqrtPrice::new(MAX_SQRT_PRICE)
+        };
+
+        next_swap_amount = calculate_swap(
+            store,
+            current_timestamp,
+            &pool_key,
+            x_to_y,
+            next_swap_amount,
+            true,
+            sqrt_price_limit,
+        )?
+        .amount_out;
     }
 
     Ok(next_swap_amount)
