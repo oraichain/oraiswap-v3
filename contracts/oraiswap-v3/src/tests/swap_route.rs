@@ -47,8 +47,6 @@ fn swap_route() {
     )
     .unwrap();
 
-    let init_tick = 0;
-    let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
     create_pool!(
         app,
         dex,
