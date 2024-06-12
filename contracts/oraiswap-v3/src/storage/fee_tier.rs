@@ -3,19 +3,10 @@ use cosmwasm_schema::cw_serde;
 use decimal::*;
 
 #[cw_serde]
-#[derive(Eq, Copy)]
+#[derive(Eq, Copy, Default)]
 pub struct FeeTier {
     pub fee: Percentage,
     pub tick_spacing: u16,
-}
-
-impl Default for FeeTier {
-    fn default() -> Self {
-        Self {
-            fee: Percentage::new(0),
-            tick_spacing: 1,
-        }
-    }
 }
 
 impl FeeTier {

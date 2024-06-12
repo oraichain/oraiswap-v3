@@ -11,7 +11,7 @@ use cosmwasm_schema::cw_serde;
 use decimal::*;
 
 #[cw_serde]
-#[derive(Eq, Copy)]
+#[derive(Eq, Copy, Default)]
 pub struct Tick {
     pub index: i32,
     pub sign: bool,
@@ -52,21 +52,6 @@ impl From<Tick> for LiquidityTick {
             index: tick.index,
             liquidity_change: tick.liquidity_change,
             sign: tick.sign,
-        }
-    }
-}
-
-impl Default for Tick {
-    fn default() -> Self {
-        Tick {
-            index: 0i32,
-            sign: false,
-            liquidity_change: Liquidity::new(0),
-            liquidity_gross: Liquidity::new(0),
-            sqrt_price: SqrtPrice::from_integer(1),
-            fee_growth_outside_x: FeeGrowth::new(0),
-            fee_growth_outside_y: FeeGrowth::new(0),
-            seconds_outside: 0u64,
         }
     }
 }

@@ -9,13 +9,3 @@ pub struct Config {
     pub fee_tiers: Vec<FeeTier>,
     pub protocol_fee: Percentage,
 }
-
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            fee_tiers: vec![],
-            admin: Addr::unchecked(""),
-            protocol_fee: Default::default(),
-        }
-    }
-}

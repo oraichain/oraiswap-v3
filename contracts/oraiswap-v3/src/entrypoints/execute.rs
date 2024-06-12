@@ -104,7 +104,7 @@ pub fn change_fee_receiver(
 
     let pool_key_db = pool_key.key();
     let mut pool = POOLS.load(deps.storage, &pool_key_db)?;
-    pool.fee_receiver = fee_receiver;
+    pool.fee_receiver = fee_receiver.to_string();
     POOLS.save(deps.storage, &pool_key_db, &pool)?;
 
     Ok(Response::new().add_attribute("action", "change_fee_receiver"))
