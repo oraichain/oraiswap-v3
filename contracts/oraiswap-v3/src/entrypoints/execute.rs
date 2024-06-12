@@ -564,10 +564,11 @@ pub fn create_pool(
 
     let pool_key =
         PoolKey::new(token_0, token_1, fee_tier).map_err(|_| ContractError::InvalidPoolKey)?;
+    let db_key = pool_key.key();
 
-    if POOLS.may_load(deps.storage, &pool_key.key())?.is_some() {
+    if POOLS.has(deps.storage, &db_key) {
         return Err(ContractError::PoolAlreadyExist);
-    };
+    }
 
     let config = CONFIG.load(deps.storage)?;
 
@@ -580,7 +581,7 @@ pub fn create_pool(
     )
     .map_err(|_| ContractError::CreatePoolError)?;
 
-    POOLS.save(deps.storage, &pool_key.key(), &pool)?;
+    POOLS.save(deps.storage, &db_key, &pool)?;
 
     Ok(Response::new().add_attribute("action", "create_pool"))
 }
