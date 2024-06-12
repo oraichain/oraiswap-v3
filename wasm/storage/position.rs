@@ -9,7 +9,6 @@ use wasm_bindgen::prelude::*;
 
 #[derive(PartialEq, Default, Debug, Clone, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-#[serde(rename_all = "camelCase")]
 pub struct Position {
     pub pool_key: PoolKey,
     pub liquidity: Liquidity,

@@ -9,7 +9,6 @@ use wasm_bindgen::prelude::*;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, Eq, Hash, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-#[serde(rename_all = "camelCase")]
 pub struct PoolKey {
     #[tsify(type = "string")]
     pub token_x: String,

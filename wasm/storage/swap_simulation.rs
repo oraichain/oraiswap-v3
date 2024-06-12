@@ -4,7 +4,6 @@ use crate::{sqrt_price::SqrtPrice, token_amount::TokenAmount, LiquidityTick};
 
 #[derive(Serialize, Deserialize, Debug, tsify::Tsify)]
 #[tsify(from_wasm_abi, into_wasm_abi)]
-#[serde(rename_all = "camelCase")]
 #[derive(Clone, Default)]
 pub struct CalculateSwapResult {
     pub amount_in: TokenAmount,

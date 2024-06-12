@@ -9,7 +9,7 @@ use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
 #[derive(Default, Debug, PartialEq, Serialize, Deserialize, Tsify)]
-#[serde(rename_all = "camelCase")]
+
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct CreatePositionEvent {
     #[tsify(type = "bigint")]
@@ -25,7 +25,7 @@ pub struct CreatePositionEvent {
 }
 
 #[derive(Default, Debug, PartialEq, Serialize, Deserialize, Tsify)]
-#[serde(rename_all = "camelCase")]
+
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct CrossTickEvent {
     #[tsify(type = "bigint")]
@@ -37,7 +37,7 @@ pub struct CrossTickEvent {
 }
 
 #[derive(Default, Debug, PartialEq, Serialize, Deserialize, Tsify)]
-#[serde(rename_all = "camelCase")]
+
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct RemovePositionEvent {
     #[tsify(type = "bigint")]
@@ -53,7 +53,7 @@ pub struct RemovePositionEvent {
 }
 
 #[derive(Default, Debug, PartialEq, Serialize, Deserialize, Tsify)]
-#[serde(rename_all = "camelCase")]
+
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct SwapEvent {
     #[tsify(type = "bigint")]

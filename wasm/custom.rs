@@ -17,7 +17,6 @@ use wasm_wrapper::wasm_wrapper;
 
 #[derive(PartialEq, Debug, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-#[serde(rename_all = "camelCase")]
 pub struct SwapHop {
     pub pool_key: PoolKey,
     pub x_to_y: bool,
@@ -25,7 +24,6 @@ pub struct SwapHop {
 
 #[derive(Debug, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-#[serde(rename_all = "camelCase")]
 pub struct QuoteResult {
     pub amount_in: TokenAmount,
     pub amount_out: TokenAmount,
@@ -35,7 +33,6 @@ pub struct QuoteResult {
 
 #[derive(Debug, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-#[serde(rename_all = "camelCase")]
 pub struct TokenAmounts {
     pub x: TokenAmount,
     pub y: TokenAmount,

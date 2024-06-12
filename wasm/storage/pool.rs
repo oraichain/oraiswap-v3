@@ -11,7 +11,6 @@ use wasm_bindgen::prelude::*;
 
 #[derive(Default, PartialEq, Debug, Clone, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-#[serde(rename_all = "camelCase")]
 pub struct Pool {
     pub liquidity: Liquidity,
     pub sqrt_price: SqrtPrice,

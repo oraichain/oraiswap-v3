@@ -18,7 +18,6 @@ pub struct AmountDeltaResult {
 }
 #[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-#[serde(rename_all = "camelCase")]
 pub struct SwapResult {
     pub next_sqrt_price: SqrtPrice,
     pub amount_in: TokenAmount,

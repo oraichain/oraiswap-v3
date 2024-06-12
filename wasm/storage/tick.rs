@@ -12,7 +12,6 @@ use wasm_bindgen::prelude::*;
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Tsify, Eq, PartialEq)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-#[serde(rename_all = "camelCase")]
 pub struct Tick {
     #[tsify(type = "bigint")]
     pub index: i64,
@@ -28,7 +27,6 @@ pub struct Tick {
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-#[serde(rename_all = "camelCase")]
 pub struct PositionTick {
     #[tsify(type = "bigint")]
     pub index: i32,
@@ -40,7 +38,6 @@ pub struct PositionTick {
 
 #[derive(Eq, PartialEq, Debug, Copy, Clone, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
-#[serde(rename_all = "camelCase")]
 pub struct LiquidityTick {
     #[tsify(type = "bigint")]
     pub index: i64,
