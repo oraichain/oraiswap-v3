@@ -45,10 +45,8 @@ impl AttributeUtil for AppResponse {
 pub struct MockApp {
     app: App,
     token_map: HashMap<String, Addr>, // map token name to address
-    pub token_id: u64,
-    pub oracle_addr: Addr,
-    pub factory_addr: Addr,
-    pub router_addr: Addr,
+    token_id: u64,
+    dex_id: u64,
 }
 
 #[allow(dead_code)]
@@ -69,13 +67,12 @@ impl MockApp {
 
         // default token is cw20_base
         let token_id = app.store_code(Box::new(crate::create_entry_points_testing!(cw20_base)));
+        let dex_id = app.store_code(Box::new(create_entry_points_testing!(crate)));
 
         MockApp {
             app,
             token_id,
-            oracle_addr: Addr::unchecked(""),
-            factory_addr: Addr::unchecked(""),
-            router_addr: Addr::unchecked(""),
+            dex_id,
             token_map: HashMap::new(),
         }
     }
@@ -132,7 +129,6 @@ impl MockApp {
     }
 
     pub fn query_balance(&self, account_addr: Addr, denom: String) -> StdResult<Uint128> {
-        // load price form the oracle
         let balance: BalanceResponse =
             self.app
                 .wrap()
@@ -144,7 +140,6 @@ impl MockApp {
     }
 
     pub fn query_all_balances(&self, account_addr: Addr) -> StdResult<Vec<Coin>> {
-        // load price form the oracle
         let all_balances: AllBalanceResponse =
             self.app
                 .wrap()
@@ -334,9 +329,8 @@ impl MockApp {
     /// external method
 
     pub fn create_dex(&mut self, owner: &str, protocol_fee: Percentage) -> Result<Addr, String> {
-        let dex_code_id = self.upload(Box::new(create_entry_points_testing!(crate)));
         self.instantiate(
-            dex_code_id,
+            self.dex_id,
             Addr::unchecked(owner),
             &msg::InstantiateMsg { protocol_fee },
             &[],
