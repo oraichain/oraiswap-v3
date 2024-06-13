@@ -1,11 +1,12 @@
 use cosmwasm_schema::serde::de::DeserializeOwned;
 use cosmwasm_schema::serde::Serialize;
 use cosmwasm_std::{
-    Addr, AllBalanceResponse, Attribute, BalanceResponse, BankQuery, Coin, Empty, Event,
-    QuerierWrapper, QueryRequest, StdResult, Uint128,
+    Addr, AllBalanceResponse, BalanceResponse, BankQuery, Coin, Empty, Event, QuerierWrapper,
+    QueryRequest, StdResult, Uint128,
 };
 use cw20::TokenInfoResponse;
 use decimal::num_traits::Zero;
+use oraiswap::create_entry_points_testing;
 use std::collections::HashMap;
 
 use cw_multi_test::{next_block, App, AppResponse, Contract, Executor};
@@ -20,27 +21,6 @@ use crate::{
     token_amount::TokenAmount,
     FeeTier, LiquidityTick, Pool, PoolKey, Position, Tick,
 };
-
-#[macro_export]
-macro_rules! create_entry_points_testing {
-    ($contract:ident) => {
-        cw_multi_test::ContractWrapper::new(
-            $contract::contract::execute,
-            $contract::contract::instantiate,
-            $contract::contract::query,
-        )
-    };
-}
-
-pub trait AttributeUtil {
-    fn get_attributes(&self, index: usize) -> Vec<Attribute>;
-}
-
-impl AttributeUtil for AppResponse {
-    fn get_attributes(&self, index: usize) -> Vec<Attribute> {
-        self.events[index].attributes[1..].to_vec()
-    }
-}
 
 pub struct MockApp {
     app: App,
@@ -66,7 +46,7 @@ impl MockApp {
         });
 
         // default token is cw20_base
-        let token_id = app.store_code(Box::new(crate::create_entry_points_testing!(cw20_base)));
+        let token_id = app.store_code(Box::new(create_entry_points_testing!(cw20_base)));
         let dex_id = app.store_code(Box::new(create_entry_points_testing!(crate)));
 
         MockApp {
