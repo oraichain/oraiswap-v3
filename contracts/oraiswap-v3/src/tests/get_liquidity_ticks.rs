@@ -1,9 +1,7 @@
-use cosmwasm_std::coin;
 use cosmwasm_std::Addr;
 use decimal::{Decimal, Factories};
 
 use crate::{
-    create_entry_points_testing,
     liquidity::Liquidity,
     msg,
     percentage::Percentage,
@@ -15,12 +13,9 @@ use crate::{
 
 #[test]
 fn test_get_liquidity_ticks() {
-    let initial_mint = 10u128.pow(10);
-    let mut app = MockApp::new(&[("alice", &[coin(initial_mint, "orai")])]);
+    let mut app = MockApp::new(&[]);
 
-    let dex = app
-        .create_dex("alice", Percentage::from_scale(1, 2))
-        .unwrap();
+    let dex = create_dex!(app, Percentage::from_scale(1, 2));
 
     let initial_amount = 10u128.pow(10);
     let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
@@ -93,12 +88,9 @@ fn test_get_liquidity_ticks() {
 
 #[test]
 fn test_get_liquidity_ticks_different_tick_spacings() {
-    let initial_mint = 10u128.pow(10);
-    let mut app = MockApp::new(&[("alice", &[coin(initial_mint, "orai")])]);
+    let mut app = MockApp::new(&[]);
 
-    let dex = app
-        .create_dex("alice", Percentage::from_scale(1, 2))
-        .unwrap();
+    let dex = create_dex!(app, Percentage::from_scale(1, 2));
 
     let initial_amount = 10u128.pow(10);
     let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
@@ -190,13 +182,9 @@ fn test_get_liquidity_ticks_different_tick_spacings() {
 
 #[test]
 fn test_get_liquidity_ticks_limit() {
-    let initial_mint = 10u128.pow(10);
-    let mut app = MockApp::new(&[("alice", &[coin(initial_mint, "orai")])]);
-    app.set_token_contract(Box::new(create_entry_points_testing!(cw20_base)));
+    let mut app = MockApp::new(&[]);
 
-    let dex = app
-        .create_dex("alice", Percentage::from_scale(1, 2))
-        .unwrap();
+    let dex = create_dex!(app, Percentage::from_scale(1, 2));
 
     let initial_amount = 10u128.pow(10);
     let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
@@ -259,13 +247,9 @@ fn test_get_liquidity_ticks_limit() {
 
 #[test]
 fn test_get_liquidity_ticks_limit_with_spread() {
-    let initial_mint = 10u128.pow(10);
-    let mut app = MockApp::new(&[("alice", &[coin(initial_mint, "orai")])]);
-    app.set_token_contract(Box::new(create_entry_points_testing!(cw20_base)));
+    let mut app = MockApp::new(&[]);
 
-    let dex = app
-        .create_dex("alice", Percentage::from_scale(1, 2))
-        .unwrap();
+    let dex = create_dex!(app, Percentage::from_scale(1, 2));
 
     let initial_amount = 10u128.pow(10);
     let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);
@@ -329,12 +313,9 @@ fn test_get_liquidity_ticks_limit_with_spread() {
 
 #[test]
 fn test_get_liquidity_ticks_with_offset() {
-    let initial_mint = 10u128.pow(10);
-    let mut app = MockApp::new(&[("alice", &[coin(initial_mint, "orai")])]);
+    let mut app = MockApp::new(&[]);
 
-    let dex = app
-        .create_dex("alice", Percentage::from_scale(1, 2))
-        .unwrap();
+    let dex = create_dex!(app, Percentage::from_scale(1, 2));
 
     let initial_amount = 10u128.pow(10);
     let (token_x, token_y) = create_tokens!(app, initial_amount, initial_amount);

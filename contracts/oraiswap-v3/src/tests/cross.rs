@@ -1,8 +1,6 @@
-use cosmwasm_std::coin;
 use decimal::{Decimal, Factories};
 
 use crate::{
-    create_entry_points_testing,
     fee_growth::FeeGrowth,
     liquidity::Liquidity,
     percentage::Percentage,
@@ -15,12 +13,9 @@ use crate::{
 #[test]
 fn test_cross() {
     let initial_mint = 10u128.pow(10);
-    let mut app = MockApp::new(&[("alice", &[coin(initial_mint, "orai")])]);
-    app.set_token_contract(Box::new(create_entry_points_testing!(cw20_base)));
+    let mut app = MockApp::new(&[]);
 
-    let dex = app
-        .create_dex("alice", Percentage::from_scale(1, 2))
-        .unwrap();
+    let dex = create_dex!(app, Percentage::from_scale(1, 2));
     let (token_x, token_y) = create_tokens!(app, initial_mint, initial_mint);
 
     init_basic_pool!(app, dex, token_x, token_y);
