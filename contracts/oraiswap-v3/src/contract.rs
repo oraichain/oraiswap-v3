@@ -28,7 +28,7 @@ pub fn instantiate(
     };
     CONFIG.save(deps.storage, &config)?;
 
-    Ok(Response::new())
+    Ok(Response::default())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
