@@ -18,17 +18,17 @@ impl From<TokenAmount> for Uint128 {
 }
 
 impl TokenAmount {
-    pub fn from_big_sqrt_price(value: U256) -> Result<TokenAmount, ContractError> {
+    pub fn from_big_sqrt_price(value: U256) -> Result<Self, ContractError> {
         let result: u128 = value
             .checked_div(SqrtPrice::one())
             .ok_or(ContractError::Div)?
             .try_into()
             .map_err(|_| ContractError::Cast)?;
 
-        Ok(TokenAmount(result))
+        Ok(Self(result))
     }
 
-    pub fn from_big_sqrt_price_up(value: U256) -> Result<TokenAmount, ContractError> {
+    pub fn from_big_sqrt_price_up(value: U256) -> Result<Self, ContractError> {
         let result: u128 = value
             .checked_add(SqrtPrice::almost_one())
             .ok_or(ContractError::Add)?
@@ -36,6 +36,6 @@ impl TokenAmount {
             .ok_or(ContractError::Div)?
             .try_into()
             .map_err(|_| ContractError::Cast)?;
-        Ok(TokenAmount(result))
+        Ok(Self(result))
     }
 }

@@ -63,8 +63,8 @@ impl SqrtPrice {
         Ok(TokenAmount::new(result))
     }
 
-    pub fn big_div_values_up(nominator: U256, denominator: U256) -> SqrtPrice {
-        SqrtPrice::new({
+    pub fn big_div_values_up(nominator: U256, denominator: U256) -> Self {
+        Self::new({
             nominator
                 .checked_mul(Self::one::<U256>())
                 .unwrap()
@@ -80,8 +80,8 @@ impl SqrtPrice {
     pub fn checked_big_div_values(
         nominator: U256,
         denominator: U256,
-    ) -> Result<SqrtPrice, ContractError> {
-        Ok(SqrtPrice::new(
+    ) -> Result<Self, ContractError> {
+        Ok(Self::new(
             nominator
                 .checked_mul(Self::one::<U256>())
                 .ok_or(ContractError::Mul)?
@@ -95,10 +95,10 @@ impl SqrtPrice {
     pub fn checked_big_div_values_up(
         nominator: U256,
         denominator: U256,
-    ) -> Result<SqrtPrice, ContractError> {
+    ) -> Result<Self, ContractError> {
         let denominator = u256_to_u320(denominator);
 
-        Ok(SqrtPrice::new(
+        Ok(Self::new(
             u256_to_u320(nominator)
                 .checked_mul(Self::one::<U320>())
                 .ok_or(ContractError::Mul)?

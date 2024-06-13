@@ -49,7 +49,7 @@ impl MockApp {
         let token_id = app.store_code(Box::new(create_entry_points_testing!(cw20_base)));
         let dex_id = app.store_code(Box::new(create_entry_points_testing!(crate)));
 
-        MockApp {
+        Self {
             app,
             token_id,
             dex_id,

@@ -9,12 +9,12 @@ use crate::{math::types::liquidity::Liquidity, ContractError};
 pub struct SecondsPerLiquidity(pub u128);
 
 impl SecondsPerLiquidity {
-    pub fn unchecked_add(self, other: SecondsPerLiquidity) -> SecondsPerLiquidity {
-        SecondsPerLiquidity::new(self.get().wrapping_add(other.get()))
+    pub fn unchecked_add(self, other: Self) -> Self {
+        Self::new(self.get().wrapping_add(other.get()))
     }
 
-    pub fn unchecked_sub(self, other: SecondsPerLiquidity) -> SecondsPerLiquidity {
-        SecondsPerLiquidity::new(self.get().wrapping_sub(other.get()))
+    pub fn unchecked_sub(self, other: Self) -> Self {
+        Self::new(self.get().wrapping_sub(other.get()))
     }
 
     pub fn calculate_seconds_per_liquidity_global(
@@ -29,7 +29,7 @@ impl SecondsPerLiquidity {
 
         Ok(Self::new(
             U256::from(delta_time)
-                .checked_mul(SecondsPerLiquidity::one())
+                .checked_mul(Self::one())
                 .ok_or(ContractError::Mul)?
                 .checked_mul(Liquidity::one())
                 .ok_or(ContractError::Mul)?

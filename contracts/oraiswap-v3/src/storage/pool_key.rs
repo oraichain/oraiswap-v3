@@ -51,13 +51,13 @@ impl PoolKey {
         }
 
         if token_0 < token_1 {
-            Ok(PoolKey {
+            Ok(Self {
                 token_x: token_0.to_string(),
                 token_y: token_1.to_string(),
                 fee_tier,
             })
         } else {
-            Ok(PoolKey {
+            Ok(Self {
                 token_x: token_1.to_string(),
                 token_y: token_0.to_string(),
                 fee_tier,

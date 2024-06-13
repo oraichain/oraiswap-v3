@@ -167,7 +167,7 @@ impl Position {
         }
 
         // init position
-        let mut position = Position {
+        let mut position = Self {
             pool_key,
             liquidity: Liquidity::new(0),
             lower_tick_index: lower_tick.index,

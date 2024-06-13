@@ -11,18 +11,18 @@ use decimal::*;
 pub struct FeeGrowth(pub u128);
 
 impl FeeGrowth {
-    pub fn unchecked_add(self, other: FeeGrowth) -> FeeGrowth {
-        FeeGrowth::new(self.get().wrapping_add(other.get()))
+    pub fn unchecked_add(self, other: Self) -> Self {
+        Self::new(self.get().wrapping_add(other.get()))
     }
 
-    pub fn unchecked_sub(self, other: FeeGrowth) -> FeeGrowth {
-        FeeGrowth::new(self.get().wrapping_sub(other.get()))
+    pub fn unchecked_sub(self, other: Self) -> Self {
+        Self::new(self.get().wrapping_sub(other.get()))
     }
 
     pub fn from_fee(liquidity: Liquidity, fee: TokenAmount) -> Result<Self, ContractError> {
         Ok(Self::new(
             U256::from(fee.get())
-                .checked_mul(FeeGrowth::one())
+                .checked_mul(Self::one())
                 .ok_or(ContractError::Mul)?
                 .checked_mul(Liquidity::one())
                 .ok_or(ContractError::Mul)?
@@ -38,9 +38,7 @@ impl FeeGrowth {
             U256::from(self.get())
                 .checked_mul(liquidity.here())
                 .ok_or(ContractError::Mul)?
-                .checked_div(
-                    U256::from(10).pow(U256::from(FeeGrowth::scale() + Liquidity::scale())),
-                )
+                .checked_div(U256::from(10).pow(U256::from(Self::scale() + Liquidity::scale())))
                 .ok_or(ContractError::Mul)?
                 .try_into()
                 .map_err(|_| (ContractError::Cast))?,
