@@ -8,7 +8,7 @@ use decimal::*;
 #[decimal(28)]
 #[cw_serde]
 #[derive(Default, Eq, Copy)]
-pub struct FeeGrowth(pub u128);
+pub struct FeeGrowth(#[schemars(with = "String")] pub u128);
 
 impl FeeGrowth {
     pub fn unchecked_add(self, other: Self) -> Self {

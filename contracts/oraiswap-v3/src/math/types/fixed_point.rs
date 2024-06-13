@@ -4,4 +4,4 @@ use decimal::*;
 #[decimal(12)]
 #[cw_serde]
 #[derive(Default, Eq, Copy)]
-pub struct FixedPoint(pub u128);
+pub struct FixedPoint(#[schemars(with = "String")] pub u128);

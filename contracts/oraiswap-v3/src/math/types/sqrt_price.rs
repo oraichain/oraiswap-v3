@@ -8,7 +8,7 @@ use crate::ContractError;
 #[decimal(24)]
 #[cw_serde]
 #[derive(Default, Eq, PartialOrd, Copy)]
-pub struct SqrtPrice(pub u128);
+pub struct SqrtPrice(#[schemars(with = "String")] u128);
 
 impl SqrtPrice {
     pub fn from_tick(i: i32) -> Result<Self, ContractError> {

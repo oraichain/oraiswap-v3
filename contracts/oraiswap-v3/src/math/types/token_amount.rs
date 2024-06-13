@@ -9,7 +9,7 @@ use super::sqrt_price::SqrtPrice;
 #[decimal(0)]
 #[cw_serde]
 #[derive(Default, Eq, Copy, PartialOrd)]
-pub struct TokenAmount(pub u128);
+pub struct TokenAmount(#[schemars(with = "String")] pub u128);
 
 impl From<TokenAmount> for Uint128 {
     fn from(value: TokenAmount) -> Self {

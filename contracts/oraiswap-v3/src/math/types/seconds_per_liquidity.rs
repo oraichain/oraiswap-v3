@@ -6,7 +6,7 @@ use crate::{math::types::liquidity::Liquidity, ContractError};
 #[decimal(24)]
 #[cw_serde]
 #[derive(Default, Eq, PartialOrd, Copy)]
-pub struct SecondsPerLiquidity(pub u128);
+pub struct SecondsPerLiquidity(#[schemars(with = "String")] pub u128);
 
 impl SecondsPerLiquidity {
     pub fn unchecked_add(self, other: Self) -> Self {
