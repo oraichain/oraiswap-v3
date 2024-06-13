@@ -349,34 +349,22 @@ pub fn get_closer_limit(
         next_initialized(store, current_tick, tick_spacing, pool_key)
     };
 
-    match closes_tick_index {
-        Some(index) => {
-            let sqrt_price = calculate_sqrt_price(index)?;
-
-            if (x_to_y && sqrt_price > sqrt_price_limit)
-                || (!x_to_y && sqrt_price < sqrt_price_limit)
-            {
-                Ok((sqrt_price, Some((index, true))))
-            } else {
-                Ok((sqrt_price_limit, None))
-            }
-        }
+    let (index, is_initialized) = match closes_tick_index {
+        Some(index) => (index, true),
         None => {
             let index = get_search_limit(current_tick, tick_spacing, !x_to_y);
-            let sqrt_price = calculate_sqrt_price(index)?;
-
             if current_tick == index {
                 return Err(ContractError::TickLimitReached {});
             }
-
-            if (x_to_y && sqrt_price > sqrt_price_limit)
-                || (!x_to_y && sqrt_price < sqrt_price_limit)
-            {
-                Ok((sqrt_price, Some((index, false))))
-            } else {
-                Ok((sqrt_price_limit, None))
-            }
+            (index, false)
         }
+    };
+
+    let sqrt_price = calculate_sqrt_price(index)?;
+    if (x_to_y && sqrt_price > sqrt_price_limit) || (!x_to_y && sqrt_price < sqrt_price_limit) {
+        Ok((sqrt_price, Some((index, is_initialized))))
+    } else {
+        Ok((sqrt_price_limit, None))
     }
 }
 
