@@ -9,54 +9,50 @@ use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
 #[derive(Default, Debug, PartialEq, Serialize, Deserialize, Tsify)]
-
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct CreatePositionEvent {
-    #[tsify(type = "bigint")]
+    #[tsify(type = "string")]
     timestamp: u64,
     address: String,
     pool: PoolKey,
     liquidity: Liquidity,
-    #[tsify(type = "bigint")]
+    #[tsify(type = "number")]
     lower_tick: i32,
-    #[tsify(type = "bigint")]
+    #[tsify(type = "number")]
     upper_tick: i32,
     current_sqrt_price: SqrtPrice,
 }
 
 #[derive(Default, Debug, PartialEq, Serialize, Deserialize, Tsify)]
-
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct CrossTickEvent {
-    #[tsify(type = "bigint")]
+    #[tsify(type = "string")]
     timestamp: u64,
     address: String,
     pool: PoolKey,
-    #[tsify(type = "bigint[]")]
+    #[tsify(type = "number[]")]
     indexes: Vec<i32>,
 }
 
 #[derive(Default, Debug, PartialEq, Serialize, Deserialize, Tsify)]
-
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct RemovePositionEvent {
-    #[tsify(type = "bigint")]
+    #[tsify(type = "string")]
     timestamp: u64,
     address: String,
     pool: PoolKey,
     liquidity: Liquidity,
-    #[tsify(type = "bigint")]
+    #[tsify(type = "number")]
     lower_tick: i32,
-    #[tsify(type = "bigint")]
+    #[tsify(type = "number")]
     upper_tick: i32,
     current_sqrt_price: SqrtPrice,
 }
 
 #[derive(Default, Debug, PartialEq, Serialize, Deserialize, Tsify)]
-
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct SwapEvent {
-    #[tsify(type = "bigint")]
+    #[tsify(type = "string")]
     timestamp: u64,
     address: String,
     pool: PoolKey,

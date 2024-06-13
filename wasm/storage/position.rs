@@ -12,13 +12,13 @@ use wasm_bindgen::prelude::*;
 pub struct Position {
     pub pool_key: PoolKey,
     pub liquidity: Liquidity,
-    #[tsify(type = "bigint")]
+    #[tsify(type = "number")]
     pub lower_tick_index: i32,
-    #[tsify(type = "bigint")]
+    #[tsify(type = "number")]
     pub upper_tick_index: i32,
     pub fee_growth_inside_x: FeeGrowth,
     pub fee_growth_inside_y: FeeGrowth,
-    #[tsify(type = "bigint")]
+    #[tsify(type = "string")]
     pub last_block_number: u64,
     pub tokens_owed_x: TokenAmount,
     pub tokens_owed_y: TokenAmount,

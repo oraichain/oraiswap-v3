@@ -13,34 +13,34 @@ use wasm_bindgen::prelude::*;
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Tsify, Eq, PartialEq)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct Tick {
-    #[tsify(type = "bigint")]
-    pub index: i64,
+    #[tsify(type = "number")]
+    pub index: i32,
     pub sign: bool,
     pub liquidity_change: Liquidity,
     pub liquidity_gross: Liquidity,
     pub sqrt_price: SqrtPrice,
     pub fee_growth_outside_x: FeeGrowth,
     pub fee_growth_outside_y: FeeGrowth,
-    #[tsify(type = "bigint")]
+    #[tsify(type = "string")]
     pub seconds_outside: u64,
 }
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct PositionTick {
-    #[tsify(type = "bigint")]
+    #[tsify(type = "number")]
     pub index: i32,
     pub fee_growth_outside_x: FeeGrowth,
     pub fee_growth_outside_y: FeeGrowth,
-    #[tsify(type = "bigint")]
+    #[tsify(type = "string")]
     pub seconds_outside: u64,
 }
 
 #[derive(Eq, PartialEq, Debug, Copy, Clone, Serialize, Deserialize, Tsify)]
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct LiquidityTick {
-    #[tsify(type = "bigint")]
-    pub index: i64,
+    #[tsify(type = "number")]
+    pub index: i32,
     pub liquidity_change: Liquidity,
     pub sign: bool,
 }
@@ -48,7 +48,7 @@ pub struct LiquidityTick {
 impl Default for Tick {
     fn default() -> Self {
         Tick {
-            index: 0i64,
+            index: 0,
             sign: false,
             liquidity_change: Liquidity::new(0),
             liquidity_gross: Liquidity::new(0),

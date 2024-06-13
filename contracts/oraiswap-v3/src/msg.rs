@@ -1,6 +1,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Addr;
 
+use crate::LiquidityTick;
 #[allow(unused_imports)]
 use crate::{
     fee_growth::FeeGrowth, interface::SwapHop, liquidity::Liquidity, percentage::Percentage,
@@ -166,13 +167,6 @@ pub struct PositionTick {
     pub fee_growth_outside_x: FeeGrowth,
     pub fee_growth_outside_y: FeeGrowth,
     pub seconds_outside: u64,
-}
-
-#[cw_serde]
-pub struct LiquidityTick {
-    pub index: i32,
-    pub liquidity_change: Liquidity,
-    pub sign: bool,
 }
 
 #[cw_serde]

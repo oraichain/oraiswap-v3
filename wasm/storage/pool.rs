@@ -14,15 +14,15 @@ use wasm_bindgen::prelude::*;
 pub struct Pool {
     pub liquidity: Liquidity,
     pub sqrt_price: SqrtPrice,
-    #[tsify(type = "bigint")]
-    pub current_tick_index: i64,
+    #[tsify(type = "number")]
+    pub current_tick_index: i32,
     pub fee_growth_global_x: FeeGrowth,
     pub fee_growth_global_y: FeeGrowth,
     pub fee_protocol_token_x: TokenAmount,
     pub fee_protocol_token_y: TokenAmount,
-    #[tsify(type = "bigint")]
+    #[tsify(type = "string")]
     pub start_timestamp: u64,
-    #[tsify(type = "bigint")]
+    #[tsify(type = "string")]
     pub last_timestamp: u64,
     #[tsify(type = "string")]
     pub fee_receiver: String,
@@ -83,7 +83,7 @@ impl Pool {
             self.current_tick_index = unwrap!(get_tick_at_sqrt_price(
                 result.next_sqrt_price,
                 fee_tier.tick_spacing as u16
-            )) as i64;
+            ));
 
             return Ok((total_amount, remaining_amount, has_crossed));
         };
@@ -116,7 +116,7 @@ impl Pool {
             _ => unreachable!(),
         };
         self.current_tick_index = if x_to_y && is_enough_amount_to_cross {
-            tick_index - fee_tier.tick_spacing as i64
+            tick_index - fee_tier.tick_spacing as i32
         } else {
             tick_index
         };
@@ -129,5 +129,5 @@ impl Pool {
 pub enum UpdatePoolTick {
     NoTick,
     TickInitialized(LiquidityTick),
-    TickUninitialized(i64),
+    TickUninitialized(i32),
 }

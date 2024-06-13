@@ -11,8 +11,8 @@ use wasm_bindgen::prelude::*;
 #[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct FeeTier {
     pub fee: Percentage,
-    #[tsify(type = "bigint")]
-    pub tick_spacing: u64,
+    #[tsify(type = "number")]
+    pub tick_spacing: u16,
 }
 
 impl FeeTier {
@@ -25,10 +25,7 @@ impl FeeTier {
             return Err(SwapError::InvalidFee);
         }
 
-        Ok(Self {
-            fee,
-            tick_spacing: tick_spacing as u64,
-        })
+        Ok(Self { fee, tick_spacing })
     }
 }
 

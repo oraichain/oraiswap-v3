@@ -115,7 +115,7 @@ pub fn simulate_swap(
                         }
                     }
                 } else {
-                    UpdatePoolTick::TickUninitialized(tick_index as i64)
+                    UpdatePoolTick::TickUninitialized(tick_index)
                 }
             } else {
                 UpdatePoolTick::NoTick
@@ -154,8 +154,8 @@ pub fn simulate_swap(
         }
 
         let reached_tick_limit = match x_to_y {
-            true => pool.current_tick_index <= tick_limit as i64,
-            false => pool.current_tick_index >= tick_limit as i64,
+            true => pool.current_tick_index <= tick_limit,
+            false => pool.current_tick_index >= tick_limit,
         };
 
         if reached_tick_limit {
