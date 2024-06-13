@@ -252,22 +252,17 @@ fn test_create_pool_init_sqrt_price_has_closer_init_tick() {
 
 #[test]
 fn test_create_pool_init_sqrt_price_has_closer_init_tick_spacing_over_one() {
-    let protocol_fee = Percentage::from_scale(6, 3);
+    let mut app = MockApp::new(&[]);
+    let dex = create_dex!(app, Percentage::from_scale(6, 3));
     let initial_amount = 10u128.pow(10);
-    let mut app = MockApp::new(&[
-        ("alice", &[coin(initial_amount, "orai")]),
-        ("alice", &[coin(initial_amount, "orai")]),
-    ]);
 
     let fee_tier = FeeTier::new(Percentage::from_scale(5, 1), 3).unwrap();
-    let dex = app.create_dex("alice", protocol_fee).unwrap();
 
-    let _res = app.add_fee_tier("alice", dex.as_str(), fee_tier).unwrap();
+    add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
 
     let init_tick = 0;
     let init_sqrt_price = SqrtPrice::new(1000225003749000000000000);
-    let token_x = app.create_token("alice", "tokenx", initial_amount);
-    let token_y = app.create_token("alice", "tokeny", initial_amount);
+    let (token_x, token_y) = create_tokens!(app, initial_amount);
 
     let create_pool_msg = ExecuteMsg::CreatePool {
         token_0: token_x.clone(),
