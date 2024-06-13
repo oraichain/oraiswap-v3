@@ -159,31 +159,29 @@ pub fn get_position_ticks(
     }
 
     for i in offset..positions_length {
-        state::get_position(deps.storage, &owner, i)
-            .map(|position| {
+        if let Ok(position) = state::get_position(deps.storage, &owner, i) {
+            if let Ok(tick) =
                 state::get_tick(deps.storage, &position.pool_key, position.lower_tick_index)
-                    .map(|tick| {
-                        ticks.push(PositionTick {
-                            index: tick.index,
-                            fee_growth_outside_x: tick.fee_growth_outside_x,
-                            fee_growth_outside_y: tick.fee_growth_outside_y,
-                            seconds_outside: tick.seconds_outside,
-                        })
-                    })
-                    .ok();
+            {
+                ticks.push(PositionTick {
+                    index: tick.index,
+                    fee_growth_outside_x: tick.fee_growth_outside_x,
+                    fee_growth_outside_y: tick.fee_growth_outside_y,
+                    seconds_outside: tick.seconds_outside,
+                });
+            }
 
+            if let Ok(tick) =
                 state::get_tick(deps.storage, &position.pool_key, position.upper_tick_index)
-                    .map(|tick| {
-                        ticks.push(PositionTick {
-                            index: tick.index,
-                            fee_growth_outside_x: tick.fee_growth_outside_x,
-                            fee_growth_outside_y: tick.fee_growth_outside_y,
-                            seconds_outside: tick.seconds_outside,
-                        })
-                    })
-                    .ok();
-            })
-            .ok();
+            {
+                ticks.push(PositionTick {
+                    index: tick.index,
+                    fee_growth_outside_x: tick.fee_growth_outside_x,
+                    fee_growth_outside_y: tick.fee_growth_outside_y,
+                    seconds_outside: tick.seconds_outside,
+                });
+            }
+        }
 
         if ticks.len() >= POSITION_TICK_LIMIT {
             break;

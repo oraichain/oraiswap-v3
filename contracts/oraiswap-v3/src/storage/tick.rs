@@ -215,7 +215,7 @@ mod tests {
                 liquidity_change: Liquidity::from_integer(1),
                 ..Default::default()
             };
-            tick.cross(&mut pool, 315360015).ok();
+            tick.cross(&mut pool, 315360015).unwrap();
             assert_eq!(tick, result_tick);
             assert_eq!(pool, result_pool);
         }
@@ -258,7 +258,7 @@ mod tests {
                 ..Default::default()
             };
 
-            tick.cross(&mut pool, 315360000).ok();
+            tick.cross(&mut pool, 315360000).unwrap();
             assert_eq!(tick, result_tick);
             assert_eq!(pool, result_pool);
         }
@@ -299,7 +299,7 @@ mod tests {
                 ..Default::default()
             };
 
-            tick.cross(&mut pool, 31536000).ok();
+            tick.cross(&mut pool, 31536000).unwrap();
             assert_eq!(tick, result_tick);
             assert_eq!(pool, result_pool);
         }
@@ -340,7 +340,7 @@ mod tests {
                 ..Default::default()
             };
 
-            tick.cross(&mut pool, 315360000).ok();
+            tick.cross(&mut pool, 315360000).unwrap();
             assert_eq!(tick, result_tick);
             assert_eq!(pool, result_pool);
         }
