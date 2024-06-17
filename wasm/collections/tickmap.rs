@@ -73,22 +73,6 @@ pub fn position_to_tick(chunk: u16, bit: u8, tick_spacing: u16) -> i32 {
         - tick_range_limit
 }
 
-#[wasm_wrapper]
-pub fn tickmap_to_tick_indexes(
-    tickmap: Vec<(u16, u64)>,
-    tick_spacing: u16,
-) -> TrackableResult<Vec<i32>> {
-    let mut ticks = vec![];
-    tickmap.iter().for_each(|(chunk_index, chunk)| {
-        for i in 0..(CHUNK_SIZE as u8) {
-            if chunk & (1 << i) != 0 {
-                ticks.push(position_to_tick(*chunk_index, i, tick_spacing));
-            }
-        }
-    });
-    Ok(ticks)
-}
-
 pub fn get_bit_at_position(value: u64, position: u8) -> u64 {
     (value >> position) & 1
 }
