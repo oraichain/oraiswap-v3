@@ -32,6 +32,9 @@ pub enum SwapError {
     InvalidInitTick,
     InvalidInitSqrtPrice,
     TickLimitReached,
+    NoRouteFound,
+    MaxTicksCrossed,
+    StateOutdated,
 }
 
 impl core::fmt::Display for SwapError {
