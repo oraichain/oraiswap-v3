@@ -72,8 +72,7 @@ fn test_get_tickmap() {
         pool_key,
         get_min_tick(fee_tier.tick_spacing),
         get_max_tick(fee_tier.tick_spacing),
-        false,
-        "alice"
+        false
     )
     .unwrap();
 
@@ -152,8 +151,7 @@ fn test_get_tickmap_tick_spacing_over_one() {
         pool_key,
         get_min_tick(fee_tier.tick_spacing),
         get_max_tick(fee_tier.tick_spacing),
-        false,
-        "alice"
+        false
     )
     .unwrap();
 
@@ -234,8 +232,7 @@ fn test_get_tickmap_edge_ticks_intialized() {
         pool_key,
         get_min_tick(fee_tier.tick_spacing),
         get_max_tick(fee_tier.tick_spacing),
-        false,
-        "alice"
+        false
     )
     .unwrap();
 
@@ -255,8 +252,7 @@ fn test_get_tickmap_edge_ticks_intialized() {
             pool_key,
             get_min_tick(fee_tier.tick_spacing),
             get_max_tick(fee_tier.tick_spacing),
-            false,
-            "alice"
+            false
         )
         .unwrap();
         assert_eq!(tickmap[0], (0, 0b11));
@@ -275,8 +271,7 @@ fn test_get_tickmap_edge_ticks_intialized() {
             pool_key,
             get_min_tick(fee_tier.tick_spacing),
             get_max_tick(fee_tier.tick_spacing),
-            false,
-            "alice"
+            false
         )
         .unwrap();
         assert_eq!(tickmap[0], (0, 0b11));
@@ -295,8 +290,7 @@ fn test_get_tickmap_edge_ticks_intialized() {
             pool_key,
             get_min_tick(fee_tier.tick_spacing),
             get_max_tick(fee_tier.tick_spacing),
-            true,
-            "alice"
+            true
         )
         .unwrap();
         assert_eq!(tickmap[1], (0, 0b11));
@@ -365,8 +359,7 @@ fn test_get_tickmap_more_chunks_above() {
         pool_key,
         get_min_tick(fee_tier.tick_spacing),
         get_max_tick(fee_tier.tick_spacing),
-        false,
-        "alice"
+        false
     )
     .unwrap();
 
@@ -430,8 +423,7 @@ fn test_get_tickmap_more_chunks_below() {
         pool_key,
         get_min_tick(fee_tier.tick_spacing),
         get_max_tick(fee_tier.tick_spacing),
-        false,
-        "alice"
+        false
     )
     .unwrap();
     for (i, _) in (0..tickmap.len()).enumerate() {
@@ -500,8 +492,7 @@ fn test_get_tickmap_max_chunks_returned() {
         pool_key,
         get_min_tick(fee_tier.tick_spacing),
         get_max_tick(fee_tier.tick_spacing),
-        false,
-        "alice"
+        false
     )
     .unwrap();
 
