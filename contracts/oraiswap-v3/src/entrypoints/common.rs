@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, Addr, Env, MessageInfo, Storage, WasmMsg};
+use cosmwasm_std::{to_binary, Addr, Env, MessageInfo, Storage, Timestamp, WasmMsg};
 use cw20::Cw20ExecuteMsg;
 use decimal::{CheckedOps, Decimal};
 
@@ -11,6 +11,16 @@ use crate::{
     ContractError, PoolKey, Tick, UpdatePoolTick, MAX_SQRT_PRICE, MAX_TICKMAP_QUERY_SIZE,
     MIN_SQRT_PRICE,
 };
+
+pub trait TimeStampExt {
+    fn millis(&self) -> u64;
+}
+
+impl TimeStampExt for Timestamp {
+    fn millis(&self) -> u64 {
+        self.nanos() / 1_000_000
+    }
+}
 
 pub fn create_tick(
     store: &mut dyn Storage,
@@ -236,7 +246,7 @@ pub fn swap_route_internal(
 ) -> Result<TokenAmount, ContractError> {
     let mut next_swap_amount = amount_in;
 
-    let current_timestamp = env.block.time.nanos();
+    let current_timestamp = env.block.time.millis();
 
     for swap_hop in &swaps {
         let sqrt_price_limit = if swap_hop.x_to_y {
@@ -271,7 +281,7 @@ pub fn route(
 ) -> Result<TokenAmount, ContractError> {
     let mut next_swap_amount = amount_in;
 
-    let current_timestamp = env.block.time.nanos();
+    let current_timestamp = env.block.time.millis();
 
     for swap_hop in &swaps {
         let sqrt_price_limit = if swap_hop.x_to_y {

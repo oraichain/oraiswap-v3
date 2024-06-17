@@ -7,7 +7,9 @@ use crate::state::{self, CONFIG, POOLS};
 use crate::token_amount::TokenAmount;
 use crate::{calculate_min_amount_out, check_tick, FeeTier, Pool, PoolKey, Position};
 
-use super::{create_tick, remove_tick_and_flip_bitmap, swap_internal, swap_route_internal};
+use super::{
+    create_tick, remove_tick_and_flip_bitmap, swap_internal, swap_route_internal, TimeStampExt,
+};
 use cosmwasm_std::{attr, to_binary, Addr, DepsMut, Env, MessageInfo, Response, WasmMsg};
 use cw20::Cw20ExecuteMsg;
 use decimal::Decimal;
@@ -141,7 +143,7 @@ pub fn create_position(
     slippage_limit_lower: SqrtPrice,
     slippage_limit_upper: SqrtPrice,
 ) -> Result<Response, ContractError> {
-    let current_timestamp = env.block.time.nanos();
+    let current_timestamp = env.block.time.millis();
     let current_block_number = env.block.height;
 
     // liquidity delta = 0 => return
@@ -264,7 +266,7 @@ pub fn swap(
         &mut msgs,
         &info.sender,
         &env.contract.address,
-        env.block.time.nanos(),
+        env.block.time.millis(),
         &pool_key,
         x_to_y,
         amount,
@@ -360,7 +362,7 @@ pub fn claim_fee(
     info: MessageInfo,
     index: u32,
 ) -> Result<Response, ContractError> {
-    let current_timestamp = env.block.time.nanos();
+    let current_timestamp = env.block.time.millis();
 
     let mut position = state::get_position(deps.storage, &info.sender, index)?;
 
@@ -440,7 +442,7 @@ pub fn remove_position(
     info: MessageInfo,
     index: u32,
 ) -> Result<Response, ContractError> {
-    let current_timestamp = env.block.time.nanos();
+    let current_timestamp = env.block.time.millis();
 
     let mut position = state::get_position(deps.storage, &info.sender, index)?;
     let withdrawed_liquidity = position.liquidity;
@@ -552,7 +554,7 @@ pub fn create_pool(
     init_sqrt_price: SqrtPrice,
     init_tick: i32,
 ) -> Result<Response, ContractError> {
-    let current_timestamp = env.block.time.nanos();
+    let current_timestamp = env.block.time.millis();
 
     let config = CONFIG.load(deps.storage)?;
 

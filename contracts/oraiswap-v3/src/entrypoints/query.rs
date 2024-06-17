@@ -13,7 +13,7 @@ use crate::{
     LIQUIDITY_TICK_LIMIT, POSITION_TICK_LIMIT,
 };
 
-use super::{calculate_swap, route, tickmap_slice};
+use super::{calculate_swap, route, tickmap_slice, TimeStampExt};
 
 /// Retrieves the protocol fee represented as a percentage.
 pub fn get_protocol_fee(deps: Deps) -> Result<Percentage, ContractError> {
@@ -349,7 +349,7 @@ pub fn quote(
 ) -> Result<QuoteResult, ContractError> {
     let calculate_swap_result = calculate_swap(
         deps.storage,
-        env.block.time.nanos(),
+        env.block.time.millis(),
         &pool_key,
         x_to_y,
         amount,
