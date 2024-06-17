@@ -20,9 +20,9 @@ pub struct Pool {
     pub fee_growth_global_y: FeeGrowth,
     pub fee_protocol_token_x: TokenAmount,
     pub fee_protocol_token_y: TokenAmount,
-    #[tsify(type = "string")]
+    #[tsify(type = "number")]
     pub start_timestamp: u64,
-    #[tsify(type = "string")]
+    #[tsify(type = "number")]
     pub last_timestamp: u64,
     #[tsify(type = "string")]
     pub fee_receiver: String,

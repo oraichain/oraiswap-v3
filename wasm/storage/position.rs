@@ -18,7 +18,7 @@ pub struct Position {
     pub upper_tick_index: i32,
     pub fee_growth_inside_x: FeeGrowth,
     pub fee_growth_inside_y: FeeGrowth,
-    #[tsify(type = "string")]
+    #[tsify(type = "number")]
     pub last_block_number: u64,
     pub tokens_owed_x: TokenAmount,
     pub tokens_owed_y: TokenAmount,

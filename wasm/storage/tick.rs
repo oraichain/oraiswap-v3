@@ -21,7 +21,7 @@ pub struct Tick {
     pub sqrt_price: SqrtPrice,
     pub fee_growth_outside_x: FeeGrowth,
     pub fee_growth_outside_y: FeeGrowth,
-    #[tsify(type = "string")]
+    #[tsify(type = "number")]
     pub seconds_outside: u64,
 }
 
@@ -32,7 +32,7 @@ pub struct PositionTick {
     pub index: i32,
     pub fee_growth_outside_x: FeeGrowth,
     pub fee_growth_outside_y: FeeGrowth,
-    #[tsify(type = "string")]
+    #[tsify(type = "number")]
     pub seconds_outside: u64,
 }
 
