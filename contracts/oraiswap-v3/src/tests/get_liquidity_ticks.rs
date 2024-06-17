@@ -8,7 +8,7 @@ use crate::{
     position_to_tick,
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
     tests::helper::{macros::*, MockApp},
-    FeeTier, LiquidityTick, PoolKey, LIQUIDITY_TICK_LIMIT,
+    FeeTier, LiquidityTick, PoolKey, CHUNK_SIZE, LIQUIDITY_TICK_LIMIT,
 };
 
 #[test]
@@ -58,12 +58,11 @@ fn test_get_liquidity_ticks() {
     let ticks_amount: u32 = get_liquidity_ticks_amount!(app, dex, &pool_key, -10, 10).unwrap();
     assert_eq!(ticks_amount, 2);
 
-    let tickmap: Vec<(u16, u64)> =
-        get_tickmap!(app, dex, &pool_key, -10, 10, false, alice).unwrap();
+    let tickmap: Vec<(u16, u64)> = get_tickmap!(app, dex, &pool_key, -10, 10, false).unwrap();
     assert_eq!(tickmap.len(), 2);
     let mut ticks = vec![];
     tickmap.iter().for_each(|(chunk_index, chunk)| {
-        for i in 0..64 {
+        for i in 0..(CHUNK_SIZE as u8) {
             if chunk & (1 << i) != 0 {
                 ticks.push(position_to_tick(
                     *chunk_index,
@@ -276,7 +275,7 @@ fn test_get_liquidity_ticks_limit_with_spread() {
     approve!(app, token_y, dex, initial_amount, "alice").unwrap();
 
     let pool_key = PoolKey::new(token_x, token_y, fee_tier).unwrap();
-    let spread = 64;
+    let spread = CHUNK_SIZE as usize;
     let mut ticks = vec![];
     for i in 1..=LIQUIDITY_TICK_LIMIT / 2 {
         let index = (i * spread) as i32;

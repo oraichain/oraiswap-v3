@@ -35,6 +35,7 @@ pub enum SwapError {
     NoRouteFound,
     MaxTicksCrossed,
     StateOutdated,
+    InsufficientLiquidity,
 }
 
 impl core::fmt::Display for SwapError {

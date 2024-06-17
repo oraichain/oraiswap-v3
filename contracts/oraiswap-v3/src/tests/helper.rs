@@ -1349,7 +1349,7 @@ pub mod macros {
     pub(crate) use get_liquidity_ticks_amount;
 
     macro_rules! get_tickmap {
-        ($app:ident, $dex_address:expr, $pool_key:expr, $lower_tick_index:expr, $upper_tick_index:expr , $x_to_y:expr, $caller:expr) => {{
+        ($app:ident, $dex_address:expr, $pool_key:expr, $lower_tick_index:expr, $upper_tick_index:expr , $x_to_y:expr) => {{
             $app.query(
                 Addr::unchecked($dex_address.as_str()),
                 &msg::QueryMsg::TickMap {
