@@ -22,4 +22,3 @@ js-sys = "0.3.66"
 
 decimal = { workspace = true }
 traceable_result = { path = "./traceable_result" }
-wasm_wrapper = { path = "./wasm_wrapper" }

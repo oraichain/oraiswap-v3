@@ -1,5 +1,7 @@
 use crate::alloc::string::ToString;
-use crate::clamm::{calculate_amount_delta, is_enough_amount_to_change_price, SwapResult};
+use crate::clamm::{
+    calculate_amount_delta, is_enough_amount_to_change_price, AmountDeltaResult, SwapResult,
+};
 use crate::fee_growth::FeeGrowth;
 use crate::types::{liquidity::Liquidity, sqrt_price::SqrtPrice, token_amount::TokenAmount};
 use crate::{get_tick_at_sqrt_price, FeeTier, LiquidityTick};
@@ -36,7 +38,11 @@ impl Pool {
         upper_tick: i32,
         lower_tick: i32,
     ) -> TrackableResult<(TokenAmount, TokenAmount)> {
-        let (x, y, update_liquidity) = ok_or_mark_trace!(calculate_amount_delta(
+        let AmountDeltaResult {
+            x,
+            y,
+            update_liquidity,
+        } = ok_or_mark_trace!(calculate_amount_delta(
             self.current_tick_index as i32,
             self.sqrt_price,
             liquidity_delta,

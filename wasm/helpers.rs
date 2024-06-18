@@ -24,23 +24,18 @@ macro_rules! decimal_ops {
     ($decimal:ident) => {
         ::paste::paste! {
             #[wasm_bindgen]
-            #[allow(non_snake_case)]
-            pub fn [<get $decimal Scale >] () -> BigInt {
+            pub fn [<get_ $decimal:snake _scale >] () -> BigInt {
                 BigInt::from($decimal::scale())
             }
 
             #[wasm_bindgen]
-            #[allow(non_snake_case)]
-            pub fn [<get $decimal Denominator >] () -> BigInt {
+            pub fn [<get_ $decimal:snake _denominator >] () -> BigInt {
                 BigInt::from($decimal::from_integer(1).get())
             }
 
             #[wasm_bindgen]
-            #[allow(non_snake_case)]
-            pub fn [<to $decimal >] (js_val: JsValue, js_scale: JsValue) -> Result<BigInt,JsValue> {
-                let js_val: u64 = serde_wasm_bindgen::from_value(js_val)?;
-                let scale: u64 = serde_wasm_bindgen::from_value(js_scale)?;
-                Ok(BigInt::from($decimal::from_scale(js_val, scale as u8).get()))
+            pub fn [<to_ $decimal:snake >] (js_val: u32, scale: u8) -> Result<BigInt,JsValue> {
+                Ok(BigInt::from($decimal::from_scale(js_val, scale).get()))
             }
         }
     };

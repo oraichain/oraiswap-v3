@@ -7,6 +7,7 @@ use alloc::string::{String, ToString};
 use alloc::vec;
 use alloc::vec::Vec;
 use core::any;
+use js_sys::wasm_bindgen::JsValue;
 
 pub type TrackableResult<T> = Result<T, TrackableError>;
 
@@ -14,6 +15,12 @@ pub type TrackableResult<T> = Result<T, TrackableError>;
 pub struct TrackableError {
     pub cause: String,
     pub stack: Vec<String>,
+}
+
+impl From<TrackableError> for JsValue {
+    fn from(value: TrackableError) -> Self {
+        JsValue::from_str(&value.to_string())
+    }
 }
 
 impl TrackableError {
@@ -24,9 +31,7 @@ impl TrackableError {
     pub fn cast<T: ?Sized>() -> String {
         format!("conversion to {} type failed", any::type_name::<T>())
     }
-}
 
-impl TrackableError {
     pub fn new(cause: &str, location: &str) -> Self {
         Self {
             cause: cause.to_string(),

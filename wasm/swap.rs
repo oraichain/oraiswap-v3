@@ -7,25 +7,25 @@ use crate::{
 };
 use crate::{LiquidityTick, Pool};
 use decimal::Decimal;
+use serde_wasm_bindgen::from_value;
 use traceable_result::TrackableResult;
 use traceable_result::*;
 use wasm_bindgen::prelude::*;
-use wasm_bindgen::JsValue;
-use wasm_wrapper::wasm_wrapper;
 
 type LiquidityTicks = Vec<LiquidityTick>;
 
-#[wasm_wrapper]
+#[wasm_bindgen]
 pub fn simulate_swap(
     tickmap: Tickmap,
     fee_tier: FeeTier,
     mut pool: Pool,
-    ticks: LiquidityTicks,
+    ticks: JsValue,
     x_to_y: bool,
     amount: TokenAmount,
     by_amount_in: bool,
     sqrt_price_limit: SqrtPrice,
 ) -> TrackableResult<CalculateSwapResult> {
+    let ticks: LiquidityTicks = from_value(ticks).unwrap();
     if amount.is_zero() {
         return Err(err!("Amount is zero"));
     }
