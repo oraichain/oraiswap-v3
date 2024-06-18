@@ -37,7 +37,8 @@ pub struct TokenAmounts {
     pub y: TokenAmount,
 }
 
-#[wasm_bindgen]
+#[wasm_bindgen(js_name = calculateFee)]
+#[allow(non_snake_case)]
 pub fn calculate_fee(
     lower_tick_index: i32,
     lower_tick_fee_growth_outside_x: FeeGrowth,
@@ -77,12 +78,14 @@ pub fn calculate_fee(
     })
 }
 
-#[wasm_bindgen]
+#[wasm_bindgen(js_name = isTokenX)]
+#[allow(non_snake_case)]
 pub fn is_token_x(token_candidate: String, token_to_compare: String) -> TrackableResult<bool> {
     Ok(token_candidate < token_to_compare)
 }
 
-#[wasm_bindgen]
+#[wasm_bindgen(js_name = checkTickToSqrtPriceRelationship)]
+#[allow(non_snake_case)]
 pub fn check_tick_to_sqrt_price_relationship(
     tick_index: i32,
     tick_spacing: u16,

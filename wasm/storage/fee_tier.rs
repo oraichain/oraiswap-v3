@@ -28,7 +28,8 @@ impl FeeTier {
     }
 }
 
-#[wasm_bindgen]
+#[wasm_bindgen(js_name = newFeeTier)]
+#[allow(non_snake_case)]
 pub fn new_fee_tier(fee: Percentage, tick_spacing: u16) -> Result<FeeTier, SwapError> {
     FeeTier::new(fee, tick_spacing)
 }

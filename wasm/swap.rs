@@ -14,7 +14,8 @@ use wasm_bindgen::prelude::*;
 
 type LiquidityTicks = Vec<LiquidityTick>;
 
-#[wasm_bindgen]
+#[wasm_bindgen(js_name = simulateSwap)]
+#[allow(non_snake_case)]
 pub fn simulate_swap(
     tickmap: Tickmap,
     fee_tier: FeeTier,
