@@ -1,7 +1,7 @@
 use crate::liquidity::*;
 
+use crate::decimal_ops;
 use crate::token_amount::TokenAmount;
-use crate::{convert, decimal_ops};
 use core::convert::{TryFrom, TryInto};
 use decimal::*;
 use js_sys::BigInt;

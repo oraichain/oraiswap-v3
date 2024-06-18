@@ -1,6 +1,6 @@
 use super::sqrt_price::SqrtPrice;
 use crate::alloc::string::ToString;
-use crate::{convert, decimal_ops};
+use crate::decimal_ops;
 use core::convert::{TryFrom, TryInto};
 use decimal::*;
 use js_sys::BigInt;

@@ -37,28 +37,11 @@ macro_rules! decimal_ops {
 
             #[wasm_bindgen]
             #[allow(non_snake_case)]
-            pub fn [<to $decimal >] (js_val: JsValue, js_scale: JsValue) -> BigInt {
-                let js_val: u64 = convert!(js_val).unwrap();
-                let scale: u64 = convert!(js_scale).unwrap();
-                BigInt::from($decimal::from_scale(js_val, scale as u8).get())
+            pub fn [<to $decimal >] (js_val: JsValue, js_scale: JsValue) -> Result<BigInt,JsValue> {
+                let js_val: u64 = serde_wasm_bindgen::from_value(js_val)?;
+                let scale: u64 = serde_wasm_bindgen::from_value(js_scale)?;
+                Ok(BigInt::from($decimal::from_scale(js_val, scale as u8).get()))
             }
         }
     };
-}
-
-#[macro_export]
-macro_rules! convert {
-    ($value:expr) => {{
-        serde_wasm_bindgen::from_value($value)
-    }};
-}
-
-#[macro_export]
-macro_rules! resolve {
-    ($result:expr) => {{
-        match $result {
-            Ok(value) => Ok(serde_wasm_bindgen::to_value(&value)?),
-            Err(error) => Err(JsValue::from_str(&error.to_string())),
-        }
-    }};
 }
