@@ -2,7 +2,7 @@
 
 ## build wasm sdk
 
-`cd wasm && ./build.sh`
+`cd wasm && wasm-pack build --features tsify/js`
 
 ## convert all wasm_bingen to camel case
 
