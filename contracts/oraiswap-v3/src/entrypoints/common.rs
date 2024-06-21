@@ -1,6 +1,5 @@
 use cosmwasm_std::{
-    to_binary, Addr, Api, BankMsg, Coin, CosmosMsg, Env, MessageInfo, StdResult, Storage,
-    Timestamp, WasmMsg,
+    to_binary, Addr, Api, BankMsg, Coin, CosmosMsg, Env, MessageInfo, Storage, Timestamp, WasmMsg,
 };
 use cw20::Cw20ExecuteMsg;
 use decimal::{CheckedOps, Decimal};
@@ -27,17 +26,17 @@ impl TimeStampExt for Timestamp {
 }
 
 pub trait TokenTransfer {
-    fn transfer(&self, msgs: &mut Vec<CosmosMsg>, info: &MessageInfo) -> StdResult<()>;
+    fn transfer(&self, msgs: &mut Vec<CosmosMsg>, info: &MessageInfo) -> Result<(), ContractError>;
     fn transfer_from(
         &self,
         msgs: &mut Vec<CosmosMsg>,
         info: &MessageInfo,
         recipient: String,
-    ) -> StdResult<()>;
+    ) -> Result<(), ContractError>;
 }
 
 impl TokenTransfer for Asset {
-    fn transfer(&self, msgs: &mut Vec<CosmosMsg>, info: &MessageInfo) -> StdResult<()> {
+    fn transfer(&self, msgs: &mut Vec<CosmosMsg>, info: &MessageInfo) -> Result<(), ContractError> {
         if !self.amount.is_zero() {
             match &self.info {
                 AssetInfo::Token { contract_addr } => {
@@ -73,7 +72,7 @@ impl TokenTransfer for Asset {
         msgs: &mut Vec<CosmosMsg>,
         info: &MessageInfo,
         recipient: String,
-    ) -> StdResult<()> {
+    ) -> Result<(), ContractError> {
         if !self.amount.is_zero() {
             match &self.info {
                 AssetInfo::Token { contract_addr } => {
@@ -90,7 +89,37 @@ impl TokenTransfer for Asset {
                         .into(),
                     );
                 }
-                _ => self.assert_sent_native_token_balance(info)?,
+                AssetInfo::NativeToken { denom } => {
+                    match info.funds.iter().find(|x| x.denom.eq(denom)) {
+                        Some(coin) => {
+                            if coin.amount >= self.amount {
+                                let refund_amount = coin.amount - self.amount;
+                                // refund for user
+                                if !refund_amount.is_zero() {
+                                    msgs.push(
+                                        BankMsg::Send {
+                                            to_address: info.sender.to_string(),
+                                            amount: vec![Coin {
+                                                amount: refund_amount,
+                                                denom: denom.to_string(),
+                                            }],
+                                        }
+                                        .into(),
+                                    )
+                                }
+                            } else {
+                                return Err(ContractError::InvalidFunds {
+                                    transfer_amount: self.amount,
+                                });
+                            }
+                        }
+                        None => {
+                            return Err(ContractError::InvalidFunds {
+                                transfer_amount: self.amount,
+                            });
+                        }
+                    }
+                }
             }
         }
 

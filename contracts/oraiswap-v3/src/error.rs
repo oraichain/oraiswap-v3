@@ -1,4 +1,4 @@
-use cosmwasm_std::StdError;
+use cosmwasm_std::{StdError, Uint128};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -29,6 +29,9 @@ pub enum ContractError {
 
     #[error("invalid offset")]
     InvalidOffset,
+
+    #[error("Assertion failed; require minimum amount: {transfer_amount}")]
+    InvalidFunds { transfer_amount: Uint128 },
 
     #[error("multiplication overflow")]
     Mul,
