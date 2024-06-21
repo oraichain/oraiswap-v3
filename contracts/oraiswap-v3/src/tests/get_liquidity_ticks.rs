@@ -41,7 +41,7 @@ fn test_get_liquidity_ticks() {
     approve!(app, token_x, dex, 500, "alice").unwrap();
     approve!(app, token_y, dex, 500, "alice").unwrap();
 
-    let pool_key = PoolKey::new(token_x, token_y, fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     create_position!(
         app,
         dex,
@@ -131,7 +131,7 @@ fn test_get_liquidity_ticks_different_tick_spacings() {
     approve!(app, token_x, dex, initial_amount, "alice").unwrap();
     approve!(app, token_y, dex, initial_amount, "alice").unwrap();
 
-    let pool_key_1 = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier_1).unwrap();
+    let pool_key_1 = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier_1).unwrap();
     create_position!(
         app,
         dex,
@@ -145,7 +145,7 @@ fn test_get_liquidity_ticks_different_tick_spacings() {
     )
     .unwrap();
 
-    let pool_key_2 = PoolKey::new(token_x, token_y, fee_tier_2).unwrap();
+    let pool_key_2 = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier_2).unwrap();
     create_position!(
         app,
         dex,
@@ -209,7 +209,7 @@ fn test_get_liquidity_ticks_limit() {
     approve!(app, token_x, dex, initial_amount, "alice").unwrap();
     approve!(app, token_y, dex, initial_amount, "alice").unwrap();
 
-    let pool_key = PoolKey::new(token_x, token_y, fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
     let mut ticks = vec![];
     for i in 1..=LIQUIDITY_TICK_LIMIT / 2 {
@@ -274,7 +274,7 @@ fn test_get_liquidity_ticks_limit_with_spread() {
     approve!(app, token_x, dex, initial_amount, "alice").unwrap();
     approve!(app, token_y, dex, initial_amount, "alice").unwrap();
 
-    let pool_key = PoolKey::new(token_x, token_y, fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let spread = CHUNK_SIZE as usize;
     let mut ticks = vec![];
     for i in 1..=LIQUIDITY_TICK_LIMIT / 2 {
@@ -340,7 +340,7 @@ fn test_get_liquidity_ticks_with_offset() {
     approve!(app, token_x, dex, 500, "alice").unwrap();
     approve!(app, token_y, dex, 500, "alice").unwrap();
 
-    let pool_key = PoolKey::new(token_x, token_y, fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     create_position!(
         app,
         dex,

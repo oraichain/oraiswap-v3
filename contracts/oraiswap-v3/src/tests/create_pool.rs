@@ -37,8 +37,8 @@ fn test_create_pool() {
     assert!(result.is_ok());
 
     let query_pool_msg = QueryMsg::Pool {
-        token_0: token_x.clone(),
-        token_1: token_y.clone(),
+        token_0: token_x.to_string(),
+        token_1: token_y.to_string(),
         fee_tier: fee_tier.clone(),
     };
     let pool: Pool = app.query(dex.clone(), &query_pool_msg).unwrap();
@@ -193,8 +193,8 @@ fn test_create_pool_init_sqrt_price_minimal_difference_from_tick() {
     .unwrap();
 
     let query_pool_msg = QueryMsg::Pool {
-        token_0: token_x.clone(),
-        token_1: token_y.clone(),
+        token_0: token_x.to_string(),
+        token_1: token_y.to_string(),
         fee_tier: fee_tier.clone(),
     };
     let pool: Pool = app.query(dex.clone(), &query_pool_msg).unwrap();
@@ -221,8 +221,8 @@ fn test_create_pool_init_sqrt_price_has_closer_init_tick() {
     let token_y = app.create_token("alice", "tokeny", initial_amount);
 
     let create_pool_msg = ExecuteMsg::CreatePool {
-        token_0: token_x.clone(),
-        token_1: token_y.clone(),
+        token_0: token_x.to_string(),
+        token_1: token_y.to_string(),
         fee_tier: fee_tier.clone(),
         init_sqrt_price: init_sqrt_price.clone(),
         init_tick,
@@ -232,8 +232,8 @@ fn test_create_pool_init_sqrt_price_has_closer_init_tick() {
 
     let correct_init_tick = 3;
     let create_pool_msg = ExecuteMsg::CreatePool {
-        token_0: token_x.clone(),
-        token_1: token_y.clone(),
+        token_0: token_x.to_string(),
+        token_1: token_y.to_string(),
         fee_tier: fee_tier.clone(),
         init_sqrt_price: init_sqrt_price.clone(),
         init_tick: correct_init_tick,
@@ -242,8 +242,8 @@ fn test_create_pool_init_sqrt_price_has_closer_init_tick() {
         .unwrap();
 
     let query_pool_msg = QueryMsg::Pool {
-        token_0: token_x.clone(),
-        token_1: token_y.clone(),
+        token_0: token_x.to_string(),
+        token_1: token_y.to_string(),
         fee_tier: fee_tier.clone(),
     };
     let pool: Pool = app.query(dex.clone(), &query_pool_msg).unwrap();
@@ -265,8 +265,8 @@ fn test_create_pool_init_sqrt_price_has_closer_init_tick_spacing_over_one() {
     let (token_x, token_y) = create_tokens!(app, initial_amount);
 
     let create_pool_msg = ExecuteMsg::CreatePool {
-        token_0: token_x.clone(),
-        token_1: token_y.clone(),
+        token_0: token_x.to_string(),
+        token_1: token_y.to_string(),
         fee_tier: fee_tier.clone(),
         init_sqrt_price: init_sqrt_price.clone(),
         init_tick,
@@ -276,8 +276,8 @@ fn test_create_pool_init_sqrt_price_has_closer_init_tick_spacing_over_one() {
 
     let correct_init_tick = 3;
     let create_pool_msg = ExecuteMsg::CreatePool {
-        token_0: token_x.clone(),
-        token_1: token_y.clone(),
+        token_0: token_x.to_string(),
+        token_1: token_y.to_string(),
         fee_tier: fee_tier.clone(),
         init_sqrt_price: init_sqrt_price.clone(),
         init_tick: correct_init_tick,
@@ -286,8 +286,8 @@ fn test_create_pool_init_sqrt_price_has_closer_init_tick_spacing_over_one() {
         .unwrap();
 
     let query_pool_msg = QueryMsg::Pool {
-        token_0: token_x.clone(),
-        token_1: token_y.clone(),
+        token_0: token_x.to_string(),
+        token_1: token_y.to_string(),
         fee_tier: fee_tier.clone(),
     };
     let pool: Pool = app.query(dex.clone(), &query_pool_msg).unwrap();
@@ -324,8 +324,8 @@ fn test_create_many_pools_success() {
         );
 
         let create_pool_msg = ExecuteMsg::CreatePool {
-            token_0: token_x.clone(),
-            token_1: token_y.clone(),
+            token_0: token_x.to_string(),
+            token_1: token_y.to_string(),
             fee_tier: fee_tier.clone(),
             init_sqrt_price: init_sqrt_price.clone(),
             init_tick,

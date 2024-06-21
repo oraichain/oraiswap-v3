@@ -31,7 +31,7 @@ fn test_get_tickmap() {
     approve!(app, token_y, dex, initial_amount, "alice").unwrap();
 
     let fee_tier = FeeTier::new(Percentage::from_scale(5, 1), 1).unwrap();
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
 
@@ -97,7 +97,7 @@ fn test_get_tickmap_tick_spacing_over_one() {
     approve!(app, token_y, dex, initial_amount, "alice").unwrap();
 
     let fee_tier = FeeTier::new(Percentage::from_scale(5, 1), 10).unwrap();
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
 
@@ -178,7 +178,7 @@ fn test_get_tickmap_edge_ticks_intialized() {
     approve!(app, token_y, dex, initial_amount, "alice").unwrap();
 
     let fee_tier = FeeTier::new(Percentage::from_scale(5, 1), 1).unwrap();
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
 
@@ -316,7 +316,7 @@ fn test_get_tickmap_more_chunks_above() {
     approve!(app, token_y, dex, initial_amount, "alice").unwrap();
 
     let fee_tier = FeeTier::new(Percentage::from_scale(5, 1), 1).unwrap();
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
 
@@ -380,7 +380,7 @@ fn test_get_tickmap_more_chunks_below() {
     approve!(app, token_y, dex, initial_amount, "alice").unwrap();
 
     let fee_tier = FeeTier::new(Percentage::from_scale(5, 1), 1).unwrap();
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let init_tick = 0;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
 
@@ -449,7 +449,7 @@ fn test_get_tickmap_max_chunks_returned() {
     approve!(app, token_y, dex, initial_amount, "alice").unwrap();
 
     let fee_tier = FeeTier::new(Percentage::from_scale(5, 1), 1).unwrap();
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let init_tick = -200_000;
     let init_sqrt_price = calculate_sqrt_price(init_tick).unwrap();
 

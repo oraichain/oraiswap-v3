@@ -41,7 +41,7 @@ fn test_swap_x_to_y() {
     approve!(app, token_x, dex, initial_amount, "alice").unwrap();
     approve!(app, token_y, dex, initial_amount, "alice").unwrap();
 
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
     let lower_tick_index = -20;
     let middle_tick_index = -10;
@@ -180,7 +180,7 @@ fn test_swap_y_to_x() {
     approve!(app, token_x, dex, initial_amount, "alice").unwrap();
     approve!(app, token_y, dex, initial_amount, "alice").unwrap();
 
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
     let lower_tick_index = -10;
     let middle_tick_index = 10;
@@ -329,7 +329,7 @@ fn test_swap_not_enough_liquidity_token_x() {
     approve!(app, token_x, dex, initial_amount, "alice").unwrap();
     approve!(app, token_y, dex, initial_amount, "alice").unwrap();
 
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
     let lower_tick_index = -10;
     let middle_tick_index = 10;
@@ -415,7 +415,7 @@ fn test_swap_not_enough_liquidity_token_y() {
     approve!(app, token_x, dex, initial_amount, "alice").unwrap();
     approve!(app, token_y, dex, initial_amount, "alice").unwrap();
 
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
     let lower_tick_index = -20;
     let middle_tick_index = -10;

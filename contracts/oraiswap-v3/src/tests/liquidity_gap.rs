@@ -23,7 +23,7 @@ fn test_liquidity_gap() {
 
     let (token_x, token_y) = create_tokens!(app, initial_mint, initial_mint);
 
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
     add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
 

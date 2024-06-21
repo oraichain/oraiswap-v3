@@ -419,8 +419,8 @@ mod tests {
     #[test]
     fn test_get_closer_limit() {
         let mut deps = mock_dependencies();
-        let token_0: Addr = Addr::unchecked("token_0");
-        let token_1: Addr = Addr::unchecked("token_1");
+        let token_0: String = Addr::unchecked("token_0").to_string().to_string();
+        let token_1: String = Addr::unchecked("token_1").to_string().to_string();
         let fee_tier: FeeTier = FeeTier {
             fee: Percentage::new(1),
             tick_spacing: 1,
@@ -495,8 +495,8 @@ mod tests {
     #[test]
     fn test_flip() {
         let mut deps = mock_dependencies();
-        let token_0: Addr = Addr::unchecked("token_0");
-        let token_1: Addr = Addr::unchecked("token_1");
+        let token_0: String = Addr::unchecked("token_0").to_string();
+        let token_1: String = Addr::unchecked("token_1").to_string();
         let fee_tier: FeeTier = FeeTier {
             fee: Percentage::new(1),
             tick_spacing: 1,
@@ -574,8 +574,8 @@ mod tests {
     #[test]
     fn test_next_initialized_simple() {
         let mut deps = mock_dependencies();
-        let token_0: Addr = Addr::unchecked("token_0");
-        let token_1: Addr = Addr::unchecked("token_1");
+        let token_0: String = Addr::unchecked("token_0").to_string();
+        let token_1: String = Addr::unchecked("token_1").to_string();
         let fee_tier: FeeTier = FeeTier {
             fee: Percentage::new(1),
             tick_spacing: 1,
@@ -592,8 +592,8 @@ mod tests {
     #[test]
     fn test_next_initialized_multiple() {
         let mut deps = mock_dependencies();
-        let token_0: Addr = Addr::unchecked("token_0");
-        let token_1: Addr = Addr::unchecked("token_1");
+        let token_0: String = Addr::unchecked("token_0").to_string();
+        let token_1: String = Addr::unchecked("token_1").to_string();
         let fee_tier: FeeTier = FeeTier {
             fee: Percentage::new(1),
             tick_spacing: 1,
@@ -615,8 +615,8 @@ mod tests {
     #[test]
     fn test_next_initialized_current_is_last() {
         let mut deps = mock_dependencies();
-        let token_0: Addr = Addr::unchecked("token_0");
-        let token_1: Addr = Addr::unchecked("token_1");
+        let token_0: String = Addr::unchecked("token_0").to_string();
+        let token_1: String = Addr::unchecked("token_1").to_string();
         let fee_tier: FeeTier = FeeTier {
             fee: Percentage::new(1),
             tick_spacing: 1,
@@ -633,8 +633,8 @@ mod tests {
     #[test]
     fn test_next_initialized_just_below_limit() {
         let mut deps = mock_dependencies();
-        let token_0: Addr = Addr::unchecked("token_0");
-        let token_1: Addr = Addr::unchecked("token_1");
+        let token_0: String = Addr::unchecked("token_0").to_string();
+        let token_1: String = Addr::unchecked("token_1").to_string();
         let fee_tier: FeeTier = FeeTier {
             fee: Percentage::new(1),
             tick_spacing: 1,
@@ -651,8 +651,8 @@ mod tests {
     #[test]
     fn test_next_initialized_at_limit() {
         let mut deps = mock_dependencies();
-        let token_0: Addr = Addr::unchecked("token_0");
-        let token_1: Addr = Addr::unchecked("token_1");
+        let token_0: String = Addr::unchecked("token_0").to_string();
+        let token_1: String = Addr::unchecked("token_1").to_string();
         let fee_tier: FeeTier = FeeTier {
             fee: Percentage::new(1),
             tick_spacing: 1,
@@ -669,8 +669,8 @@ mod tests {
     #[test]
     fn test_next_initialized_further_than_limit() {
         let mut deps = mock_dependencies();
-        let token_0: Addr = Addr::unchecked("token_0");
-        let token_1: Addr = Addr::unchecked("token_1");
+        let token_0: String = Addr::unchecked("token_0").to_string();
+        let token_1: String = Addr::unchecked("token_1").to_string();
         let fee_tier: FeeTier = FeeTier {
             fee: Percentage::new(1),
             tick_spacing: 1,
@@ -687,8 +687,8 @@ mod tests {
     #[test]
     fn test_next_initialized_hitting_the_limit() {
         let deps = mock_dependencies();
-        let token_0: Addr = Addr::unchecked("token_0");
-        let token_1: Addr = Addr::unchecked("token_1");
+        let token_0: String = Addr::unchecked("token_0").to_string();
+        let token_1: String = Addr::unchecked("token_1").to_string();
         let fee_tier: FeeTier = FeeTier {
             fee: Percentage::new(1),
             tick_spacing: 1,
@@ -704,8 +704,8 @@ mod tests {
     #[test]
     fn test_next_initialized_already_at_limit() {
         let deps = mock_dependencies();
-        let token_0: Addr = Addr::unchecked("token_0");
-        let token_1: Addr = Addr::unchecked("token_1");
+        let token_0: String = Addr::unchecked("token_0").to_string();
+        let token_1: String = Addr::unchecked("token_1").to_string();
         let fee_tier: FeeTier = FeeTier {
             fee: Percentage::new(1),
             tick_spacing: 1,
@@ -721,8 +721,8 @@ mod tests {
     #[test]
     fn test_next_initialized_at_pos_63() {
         let mut deps = mock_dependencies();
-        let token_0: Addr = Addr::unchecked("token_0");
-        let token_1: Addr = Addr::unchecked("token_1");
+        let token_0: String = Addr::unchecked("token_0").to_string();
+        let token_1: String = Addr::unchecked("token_1").to_string();
         let fee_tier: FeeTier = FeeTier {
             fee: Percentage::new(1),
             tick_spacing: 1,
@@ -739,8 +739,8 @@ mod tests {
     #[test]
     fn test_prev_initialized_simple() {
         let mut deps = mock_dependencies();
-        let token_0: Addr = Addr::unchecked("token_0");
-        let token_1: Addr = Addr::unchecked("token_1");
+        let token_0: String = Addr::unchecked("token_0").to_string();
+        let token_1: String = Addr::unchecked("token_1").to_string();
         let fee_tier: FeeTier = FeeTier {
             fee: Percentage::new(1),
             tick_spacing: 1,
@@ -757,8 +757,8 @@ mod tests {
     #[test]
     fn test_prev_initialized_multiple() {
         let mut deps = mock_dependencies();
-        let token_0: Addr = Addr::unchecked("token_0");
-        let token_1: Addr = Addr::unchecked("token_1");
+        let token_0: String = Addr::unchecked("token_0").to_string();
+        let token_1: String = Addr::unchecked("token_1").to_string();
         let fee_tier: FeeTier = FeeTier {
             fee: Percentage::new(1),
             tick_spacing: 1,
@@ -780,8 +780,8 @@ mod tests {
     #[test]
     fn test_prev_initialized_current_is_last() {
         let mut deps = mock_dependencies();
-        let token_0: Addr = Addr::unchecked("token_0");
-        let token_1: Addr = Addr::unchecked("token_1");
+        let token_0: String = Addr::unchecked("token_0").to_string();
+        let token_1: String = Addr::unchecked("token_1").to_string();
         let fee_tier: FeeTier = FeeTier {
             fee: Percentage::new(1),
             tick_spacing: 1,
@@ -798,8 +798,8 @@ mod tests {
     #[test]
     fn test_prev_initialized_next_is_last() {
         let mut deps = mock_dependencies();
-        let token_0: Addr = Addr::unchecked("token_0");
-        let token_1: Addr = Addr::unchecked("token_1");
+        let token_0: String = Addr::unchecked("token_0").to_string();
+        let token_1: String = Addr::unchecked("token_1").to_string();
         let fee_tier: FeeTier = FeeTier {
             fee: Percentage::new(1),
             tick_spacing: 1,
@@ -816,8 +816,8 @@ mod tests {
     #[test]
     fn test_prev_initialized_just_below_limit() {
         let mut deps = mock_dependencies();
-        let token_0: Addr = Addr::unchecked("token_0");
-        let token_1: Addr = Addr::unchecked("token_1");
+        let token_0: String = Addr::unchecked("token_0").to_string();
+        let token_1: String = Addr::unchecked("token_1").to_string();
         let fee_tier: FeeTier = FeeTier {
             fee: Percentage::new(1),
             tick_spacing: 1,
@@ -834,8 +834,8 @@ mod tests {
     #[test]
     fn test_prev_initialized_at_limit() {
         let mut deps = mock_dependencies();
-        let token_0: Addr = Addr::unchecked("token_0");
-        let token_1: Addr = Addr::unchecked("token_1");
+        let token_0: String = Addr::unchecked("token_0").to_string();
+        let token_1: String = Addr::unchecked("token_1").to_string();
         let fee_tier: FeeTier = FeeTier {
             fee: Percentage::new(1),
             tick_spacing: 1,
@@ -852,8 +852,8 @@ mod tests {
     #[test]
     fn test_prev_initialized_farther_than_limit() {
         let mut deps = mock_dependencies();
-        let token_0: Addr = Addr::unchecked("token_0");
-        let token_1: Addr = Addr::unchecked("token_1");
+        let token_0: String = Addr::unchecked("token_0").to_string();
+        let token_1: String = Addr::unchecked("token_1").to_string();
         let fee_tier: FeeTier = FeeTier {
             fee: Percentage::new(1),
             tick_spacing: 1,
@@ -870,8 +870,8 @@ mod tests {
     #[test]
     fn test_prev_initialized_at_pos_63() {
         let mut deps = mock_dependencies();
-        let token_0: Addr = Addr::unchecked("token_0");
-        let token_1: Addr = Addr::unchecked("token_1");
+        let token_0: String = Addr::unchecked("token_0").to_string();
+        let token_1: String = Addr::unchecked("token_1").to_string();
         let fee_tier: FeeTier = FeeTier {
             fee: Percentage::new(1),
             tick_spacing: 1,
@@ -932,8 +932,8 @@ mod tests {
     #[test]
     fn test_next_and_prev_initialized() {
         let mut deps = mock_dependencies();
-        let token_0: Addr = Addr::unchecked("token_0");
-        let token_1: Addr = Addr::unchecked("token_1");
+        let token_0: String = Addr::unchecked("token_0").to_string();
+        let token_1: String = Addr::unchecked("token_1").to_string();
         let fee_tier: FeeTier = FeeTier {
             fee: Percentage::new(1),
             tick_spacing: 1,

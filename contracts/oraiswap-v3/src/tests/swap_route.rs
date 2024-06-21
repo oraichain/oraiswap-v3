@@ -59,8 +59,8 @@ fn swap_route() {
     )
     .unwrap();
 
-    let pool_key_1 = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
-    let pool_key_2 = PoolKey::new(token_y.clone(), token_z.clone(), fee_tier).unwrap();
+    let pool_key_1 = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
+    let pool_key_2 = PoolKey::new(token_y.to_string(), token_z.to_string(), fee_tier).unwrap();
 
     let liquidity_delta = Liquidity::new(2u128.pow(63) - 1);
 

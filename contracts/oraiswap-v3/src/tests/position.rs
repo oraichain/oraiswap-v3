@@ -37,7 +37,7 @@ fn test_create_position() {
     approve!(app, token_x, dex, 500, "alice").unwrap();
     approve!(app, token_y, dex, 500, "alice").unwrap();
 
-    let pool_key = PoolKey::new(token_x, token_y, fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
     create_position!(
         app,
@@ -80,7 +80,7 @@ fn test_position_same_upper_and_lower_tick() {
     approve!(app, token_x, dex, 500, "alice").unwrap();
     approve!(app, token_y, dex, 500, "alice").unwrap();
 
-    let pool_key = PoolKey::new(token_x, token_y, fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
     create_position!(
         app,
@@ -111,7 +111,7 @@ fn test_remove_position() {
 
     let (token_x, token_y) = create_tokens!(app, initial_mint, initial_mint);
 
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
     add_fee_tier!(app, dex, fee_tier, "alice").unwrap();
 
@@ -283,7 +283,7 @@ fn test_position_within_current_tick() {
     approve!(app, token_x, dex, initial_balance, "alice").unwrap();
     approve!(app, token_y, dex, initial_balance, "alice").unwrap();
 
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let lower_tick_index = min_tick_test + 10;
     let upper_tick_index = max_tick_test - 10;
 
@@ -376,7 +376,7 @@ fn test_position_below_current_tick() {
     approve!(app, token_x, dex, initial_balance, "alice").unwrap();
     approve!(app, token_y, dex, initial_balance, "alice").unwrap();
 
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let lower_tick_index = -46080;
     let upper_tick_index = -23040;
 
@@ -471,7 +471,7 @@ fn test_position_above_current_tick() {
     approve!(app, token_x, dex, initial_balance, "alice").unwrap();
     approve!(app, token_y, dex, initial_balance, "alice").unwrap();
 
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let lower_tick_index = -22980;
     let upper_tick_index = 0;
     let liquidity_delta = Liquidity::from_integer(10_000);

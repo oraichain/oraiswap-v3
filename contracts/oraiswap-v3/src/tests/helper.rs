@@ -360,8 +360,8 @@ impl MockApp {
             Addr::unchecked(sender),
             Addr::unchecked(dex),
             &msg::ExecuteMsg::CreatePool {
-                token_0: Addr::unchecked(token_x),
-                token_1: Addr::unchecked(token_y),
+                token_0: Addr::unchecked(token_x).to_string(),
+                token_1: Addr::unchecked(token_y).to_string(),
                 fee_tier,
                 init_sqrt_price,
                 init_tick,
@@ -565,8 +565,8 @@ impl MockApp {
         self.query(
             Addr::unchecked(dex),
             &msg::QueryMsg::Pool {
-                token_0: Addr::unchecked(token_x),
-                token_1: Addr::unchecked(token_y),
+                token_0: Addr::unchecked(token_x).to_string(),
+                token_1: Addr::unchecked(token_y).to_string(),
                 fee_tier,
             },
         )
@@ -927,8 +927,12 @@ pub mod macros {
             approve!($app, $token_x_address, $dex_address, mint_amount, "alice").unwrap();
             approve!($app, $token_y_address, $dex_address, mint_amount, "alice").unwrap();
 
-            let pool_key =
-                PoolKey::new($token_x_address.clone(), $token_y_address.clone(), fee_tier).unwrap();
+            let pool_key = PoolKey::new(
+                $token_x_address.to_string(),
+                $token_y_address.to_string(),
+                fee_tier,
+            )
+            .unwrap();
             let lower_tick = -1000;
             let upper_tick = 1000;
             let liquidity = Liquidity::from_integer(10_000_000_000u128);
@@ -1009,9 +1013,12 @@ pub mod macros {
             approve!($app, $token_x_address, $dex_address, mint_amount, "alice").unwrap();
             approve!($app, $token_y_address, $dex_address, mint_amount, "alice").unwrap();
 
-            let pool_key =
-                crate::PoolKey::new($token_x_address.clone(), $token_y_address.clone(), fee_tier)
-                    .unwrap();
+            let pool_key = crate::PoolKey::new(
+                $token_x_address.to_string(),
+                $token_y_address.to_string(),
+                fee_tier,
+            )
+            .unwrap();
             let lower_tick = -20;
             let upper_tick = 10;
             let liquidity = crate::math::types::liquidity::Liquidity::from_integer(1000000);
@@ -1064,8 +1071,12 @@ pub mod macros {
             approve!($app, $token_x_address, $dex_address, mint_amount, "alice").unwrap();
             approve!($app, $token_y_address, $dex_address, mint_amount, "alice").unwrap();
 
-            let pool_key =
-                PoolKey::new($token_x_address.clone(), $token_y_address.clone(), fee_tier).unwrap();
+            let pool_key = PoolKey::new(
+                $token_x_address.to_string(),
+                $token_y_address.to_string(),
+                fee_tier,
+            )
+            .unwrap();
             let lower_tick = -40;
             let upper_tick = -10;
             let liquidity = Liquidity::from_integer(1000000);
@@ -1162,9 +1173,12 @@ pub mod macros {
             let fee = Percentage::from_scale(6, 3);
             let tick_spacing = 10;
             let fee_tier = FeeTier { fee, tick_spacing };
-            let pool_key =
-                crate::PoolKey::new($token_x_address.clone(), $token_y_address.clone(), fee_tier)
-                    .unwrap();
+            let pool_key = crate::PoolKey::new(
+                $token_x_address.to_string(),
+                $token_y_address.to_string(),
+                fee_tier,
+            )
+            .unwrap();
             let lower_tick = -20;
 
             let amount = 1000;
@@ -1463,7 +1477,8 @@ pub mod macros {
             approve!($app, token_x, dex, mint_amount, "alice").unwrap();
             approve!($app, token_y, dex, mint_amount, "alice").unwrap();
 
-            let pool_key = crate::PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+            let pool_key =
+                crate::PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
             let upper_tick = 953;
             let lower_tick = -upper_tick;
 
@@ -1647,7 +1662,8 @@ pub mod macros {
                 .l
             };
 
-            let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+            let pool_key =
+                PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
             let slippage_limit_lower = pool.sqrt_price;
             let slippage_limit_upper = pool.sqrt_price;
             create_position!(

@@ -67,8 +67,8 @@ pub fn fee_tier_exist(deps: Deps, fee_tier: FeeTier) -> Result<bool, ContractErr
 
 pub fn get_pool(
     deps: Deps,
-    token_0: Addr,
-    token_1: Addr,
+    token_0: String,
+    token_1: String,
     fee_tier: FeeTier,
 ) -> Result<Pool, ContractError> {
     let pool_key = &PoolKey::new(token_0, token_1, fee_tier)?;
@@ -113,15 +113,15 @@ pub fn get_pools(
 }
 
 /// Retrieves listed pools for provided token pair
-/// - `token0`: Address of first token
-/// - `token1`: Address of second token
+/// - `token_0`: Address of first token
+/// - `token_1`: Address of second token
 pub fn get_all_pools_for_pair(
     deps: Deps,
-    token0: Addr,
-    token1: Addr,
+    token_0: String,
+    token_1: String,
 ) -> Result<Vec<PoolWithPoolKey>, ContractError> {
     let fee_tiers = get_fee_tiers(deps)?;
-    let mut pool_key = PoolKey::new(token0, token1, FeeTier::default())?;
+    let mut pool_key = PoolKey::new(token_0, token_1, FeeTier::default())?;
     let mut pools = vec![];
     for fee_tier in fee_tiers {
         pool_key.fee_tier = fee_tier;

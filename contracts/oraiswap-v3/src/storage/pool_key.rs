@@ -1,6 +1,5 @@
 use crate::{ContractError, FeeTier};
 use cosmwasm_schema::cw_serde;
-use cosmwasm_std::Addr;
 use cosmwasm_storage::to_length_prefixed_nested;
 use cw_storage_plus::KeyDeserialize;
 
@@ -45,7 +44,7 @@ impl PoolKey {
         })
     }
 
-    pub fn new(token_0: Addr, token_1: Addr, fee_tier: FeeTier) -> Result<Self, ContractError> {
+    pub fn new(token_0: String, token_1: String, fee_tier: FeeTier) -> Result<Self, ContractError> {
         if token_0 == token_1 {
             return Err(ContractError::TokensAreSame);
         }
@@ -76,14 +75,14 @@ mod tests {
 
     #[test]
     fn test_key() {
-        let token_x = Addr::unchecked("token_0");
-        let token_y = Addr::unchecked("token_1");
+        let token_x = Addr::unchecked("token_0").to_string().to_string();
+        let token_y = Addr::unchecked("token_1").to_string().to_string();
         let fee_tier = FeeTier {
             fee: Percentage::new(10),
             tick_spacing: 1,
         };
 
-        let pool_key = PoolKey::new(token_x, token_y, fee_tier).unwrap();
+        let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
         assert_eq!(
             pool_key.key(),

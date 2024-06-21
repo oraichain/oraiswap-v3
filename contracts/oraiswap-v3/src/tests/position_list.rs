@@ -66,7 +66,7 @@ fn test_add_multiple_positions() {
     approve!(app, token_x, dex, initial_balance, "alice").unwrap();
     approve!(app, token_y, dex, initial_balance, "alice").unwrap();
 
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let tick_indexes = [-9780, -42, 0, 9, 276, 32343, -50001];
     let liquidity_delta = Liquidity::from_integer(1_000_000);
     let pool_state = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
@@ -251,7 +251,7 @@ fn test_only_owner_can_modify_position_list() {
     approve!(app, token_x, dex, initial_balance, "alice").unwrap();
     approve!(app, token_y, dex, initial_balance, "alice").unwrap();
 
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let tick_indexes = [-9780, -42, 0, 9, 276, 32343, -50001];
     let liquidity_delta = Liquidity::from_integer(1_000_000);
     let pool_state = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
@@ -409,7 +409,7 @@ fn test_transfer_position_ownership() {
     approve!(app, token_x, dex, initial_balance, "alice").unwrap();
     approve!(app, token_y, dex, initial_balance, "alice").unwrap();
 
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let tick_indexes = [-9780, -42, 0, 9, 276, 32343, -50001];
     let liquidity_delta = Liquidity::from_integer(1_000_000);
     let pool_state = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
@@ -609,7 +609,7 @@ fn test_only_owner_can_transfer_position() {
     approve!(app, token_x, dex, initial_balance, "alice").unwrap();
     approve!(app, token_y, dex, initial_balance, "alice").unwrap();
 
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let tick_indexes = [-9780, -42, 0, 9, 276, 32343, -50001];
     let liquidity_delta = Liquidity::from_integer(1_000_000);
     let pool_state = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
@@ -707,7 +707,7 @@ fn test_multiple_positions_on_same_tick() {
     approve!(app, token_x, dex, initial_balance, "alice").unwrap();
     approve!(app, token_y, dex, initial_balance, "alice").unwrap();
 
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     // Three position on same lower and upper tick
     {
         let lower_tick_index = -10;

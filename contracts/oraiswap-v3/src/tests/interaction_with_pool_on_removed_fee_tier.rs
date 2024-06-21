@@ -15,7 +15,7 @@ fn test_interaction_with_pool_on_removed_fee_tier() {
     let (dex, token_x, token_y) = init_dex_and_tokens!(app);
     init_basic_pool!(app, dex, token_x, token_y);
     let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 10).unwrap();
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     // Remove Fee Tier
     {
         remove_fee_tier!(app, dex, fee_tier, "alice").unwrap();

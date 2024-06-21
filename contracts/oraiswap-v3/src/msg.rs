@@ -57,8 +57,8 @@ pub enum ExecuteMsg {
         index: u32,
     },
     CreatePool {
-        token_0: Addr,
-        token_1: Addr,
+        token_0: String,
+        token_1: String,
         fee_tier: FeeTier,
         init_sqrt_price: SqrtPrice,
         init_tick: i32,
@@ -95,8 +95,8 @@ pub enum QueryMsg {
 
     #[returns(Pool)]
     Pool {
-        token_0: Addr,
-        token_1: Addr,
+        token_0: String,
+        token_1: String,
         fee_tier: FeeTier,
     },
 
@@ -143,7 +143,7 @@ pub enum QueryMsg {
     },
 
     #[returns(Vec<PoolWithPoolKey>)]
-    PoolsForPair { token0: Addr, token1: Addr },
+    PoolsForPair { token_0: String, token_1: String },
 
     #[returns(QuoteResult)]
     Quote {

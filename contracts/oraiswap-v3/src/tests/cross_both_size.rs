@@ -20,7 +20,7 @@ fn test_cross_both_side() {
     let (dex, token_x, token_y) =
         init_dex_and_tokens!(app, mint_token, Percentage::from_scale(1, 2));
 
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier.clone()).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier.clone()).unwrap();
 
     app.add_fee_tier("alice", dex.as_str(), fee_tier.clone())
         .unwrap();
@@ -264,7 +264,7 @@ fn test_cross_both_side_not_cross_case() {
     let dex = create_dex!(app, Percentage::from_scale(1, 2));
     let (token_x, token_y) = create_tokens!(app, initial_mint, initial_mint);
 
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
     add_fee_tier!(app, dex, fee_tier, alice).unwrap();
 

@@ -90,7 +90,7 @@ fn test_swap_exact_limit() {
 
     let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 10).unwrap();
 
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
     let amount = 1000;
 

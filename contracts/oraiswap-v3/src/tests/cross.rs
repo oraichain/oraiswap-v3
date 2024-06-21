@@ -21,10 +21,10 @@ fn test_cross() {
     init_basic_pool!(app, dex, token_x, token_y);
     init_basic_position!(app, dex, token_x, token_y);
     init_cross_position!(app, dex, token_x, token_y);
-    init_cross_swap!(app, dex, token_x.clone(), token_y.clone());
+    init_cross_swap!(app, dex, token_x.to_string(), token_y.to_string());
 
     let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 10).unwrap();
-    let pool_key = PoolKey::new(token_x, token_y, fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
     let upper_tick_index = 10;
     let middle_tick_index = -10;

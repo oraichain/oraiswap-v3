@@ -72,7 +72,7 @@ fn test_limits_big_deposit_both_tokens() {
     )
     .unwrap();
 
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let slippage_limit_lower = pool.sqrt_price;
     let slippage_limit_upper = pool.sqrt_price;
     create_position!(
@@ -143,7 +143,7 @@ fn test_deposit_limits_at_upper_limit() {
     .unwrap()
     .l;
 
-    let pool_key = PoolKey::new(token_x, token_y, fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let slippage_limit_lower = pool.sqrt_price;
     let slippage_limit_upper = pool.sqrt_price;
     create_position!(
@@ -211,7 +211,7 @@ fn test_limits_big_deposit_and_swaps() {
     )
     .unwrap();
 
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let slippage_limit_lower = pool.sqrt_price;
     let slippage_limit_upper = pool.sqrt_price;
     create_position!(
@@ -290,7 +290,7 @@ fn test_limits_full_range_with_max_liquidity() {
     assert_eq!(pool.current_tick_index, init_tick);
     assert_eq!(pool.sqrt_price, calculate_sqrt_price(init_tick).unwrap());
 
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     let liquidity_delta = Liquidity::new(2u128.pow(109) - 1);
     let slippage_limit_lower = pool.sqrt_price;
     let slippage_limit_upper = pool.sqrt_price;

@@ -17,7 +17,7 @@ fn test_protocol_fee() {
     init_basic_swap!(app, dex, token_x, token_y);
 
     let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 10).unwrap();
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
 
     withdraw_protocol_fee!(app, dex, pool_key, "alice").unwrap();
 
@@ -51,8 +51,8 @@ fn test_protocol_fee_not_admin() {
     init_basic_swap!(app, dex, token_x, token_y);
 
     let pool_key = PoolKey::new(
-        token_x,
-        token_y,
+        token_x.to_string(),
+        token_y.to_string(),
         FeeTier {
             fee: Percentage::from_scale(6, 3),
             tick_spacing: 10,
@@ -74,7 +74,7 @@ fn test_withdraw_fee_not_deployer() {
     let user_address = "bob";
 
     let fee_tier = FeeTier::new(Percentage::from_scale(6, 3), 10).unwrap();
-    let pool_key = PoolKey::new(token_x.clone(), token_y.clone(), fee_tier).unwrap();
+    let pool_key = PoolKey::new(token_x.to_string(), token_y.to_string(), fee_tier).unwrap();
     change_fee_receiver!(app, dex, pool_key, user_address, "alice").unwrap();
 
     let pool = get_pool!(app, dex, token_x, token_y, fee_tier).unwrap();
