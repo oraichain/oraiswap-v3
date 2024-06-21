@@ -2,7 +2,7 @@
 use cosmwasm_std::entry_point;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg};
 use crate::state::CONFIG;
 use crate::{entrypoints::*, Config};
 
@@ -194,4 +194,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_binary(&quote_route(deps, env, amount_in, swaps)?)
         }
     }
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    Ok(Response::default())
 }
