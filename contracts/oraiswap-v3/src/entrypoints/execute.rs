@@ -8,11 +8,12 @@ use crate::token_amount::TokenAmount;
 use crate::{calculate_min_amount_out, check_tick, FeeTier, Pool, PoolKey, Position};
 
 use super::{
-    create_tick, remove_tick_and_flip_bitmap, swap_internal, swap_route_internal, TimeStampExt,
+    create_tick, denom_to_asset_info, remove_tick_and_flip_bitmap, swap_internal,
+    swap_route_internal, TimeStampExt, TokenTransfer,
 };
-use cosmwasm_std::{attr, to_binary, Addr, DepsMut, Env, MessageInfo, Response, WasmMsg};
-use cw20::Cw20ExecuteMsg;
+use cosmwasm_std::{attr, Addr, DepsMut, Env, MessageInfo, Response};
 use decimal::Decimal;
+use oraiswap::asset::Asset;
 
 /// Allows an fee receiver to withdraw collected fees.
 ///
@@ -36,24 +37,19 @@ pub fn withdraw_protocol_fee(
     let (fee_protocol_token_x, fee_protocol_token_y) = pool.withdraw_protocol_fee();
     POOLS.save(deps.storage, &pool_key_db, &pool)?;
 
-    let msgs = vec![
-        WasmMsg::Execute {
-            contract_addr: pool_key.token_x.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: pool.fee_receiver.to_string(),
-                amount: fee_protocol_token_x.into(),
-            })?,
-            funds: vec![],
-        },
-        WasmMsg::Execute {
-            contract_addr: pool_key.token_y.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: pool.fee_receiver.to_string(),
-                amount: fee_protocol_token_y.into(),
-            })?,
-            funds: vec![],
-        },
-    ];
+    let asset_0 = Asset {
+        info: denom_to_asset_info(deps.api, pool_key.token_x.as_str()),
+        amount: fee_protocol_token_x.into(),
+    };
+
+    let asset_1 = Asset {
+        info: denom_to_asset_info(deps.api, pool_key.token_y.as_str()),
+        amount: fee_protocol_token_y.into(),
+    };
+
+    let mut msgs = vec![];
+    asset_0.transfer(&mut msgs, &info)?;
+    asset_1.transfer(&mut msgs, &info)?;
 
     Ok(Response::new()
         .add_messages(msgs)
@@ -189,26 +185,19 @@ pub fn create_position(
     state::update_tick(deps.storage, &pool_key, lower_tick.index, &lower_tick)?;
     state::update_tick(deps.storage, &pool_key, upper_tick.index, &upper_tick)?;
 
-    let msgs = vec![
-        WasmMsg::Execute {
-            contract_addr: pool_key.token_x.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                owner: info.sender.to_string(),
-                recipient: env.contract.address.to_string(),
-                amount: x.into(),
-            })?,
-            funds: vec![],
-        },
-        WasmMsg::Execute {
-            contract_addr: pool_key.token_y.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                owner: info.sender.to_string(),
-                recipient: env.contract.address.to_string(),
-                amount: y.into(),
-            })?,
-            funds: vec![],
-        },
-    ];
+    let asset_0 = Asset {
+        info: denom_to_asset_info(deps.api, pool_key.token_x.as_str()),
+        amount: x.into(),
+    };
+
+    let asset_1 = Asset {
+        info: denom_to_asset_info(deps.api, pool_key.token_y.as_str()),
+        amount: y.into(),
+    };
+
+    let mut msgs = vec![];
+    asset_0.transfer_from(&mut msgs, &info, env.contract.address.to_string())?;
+    asset_1.transfer_from(&mut msgs, &info, env.contract.address.to_string())?;
 
     let event_attributes = vec![
         attr("action", "create_position"),
@@ -263,8 +252,9 @@ pub fn swap(
         ..
     } = swap_internal(
         deps.storage,
+        deps.api,
+        &info,
         &mut msgs,
-        &info.sender,
         &env.contract.address,
         env.block.time.millis(),
         &pool_key,
@@ -311,7 +301,15 @@ pub fn swap_route(
     swaps: Vec<SwapHop>,
 ) -> Result<Response, ContractError> {
     let mut msgs = vec![];
-    let amount_out = swap_route_internal(deps.storage, env, info, &mut msgs, amount_in, swaps)?;
+    let amount_out = swap_route_internal(
+        deps.storage,
+        deps.api,
+        env,
+        &info,
+        &mut msgs,
+        amount_in,
+        swaps,
+    )?;
 
     let min_amount_out = calculate_min_amount_out(expected_amount_out, slippage);
 
@@ -395,29 +393,19 @@ pub fn claim_fee(
         &lower_tick,
     )?;
 
+    let asset_0 = Asset {
+        info: denom_to_asset_info(deps.api, position.pool_key.token_x.as_str()),
+        amount: x.into(),
+    };
+
+    let asset_1 = Asset {
+        info: denom_to_asset_info(deps.api, position.pool_key.token_y.as_str()),
+        amount: y.into(),
+    };
+
     let mut msgs = vec![];
-
-    if !x.is_zero() {
-        msgs.push(WasmMsg::Execute {
-            contract_addr: position.pool_key.token_x.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: info.sender.to_string(),
-                amount: x.into(),
-            })?,
-            funds: vec![],
-        });
-    }
-
-    if !y.is_zero() {
-        msgs.push(WasmMsg::Execute {
-            contract_addr: position.pool_key.token_y.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: info.sender.to_string(),
-                amount: y.into(),
-            })?,
-            funds: vec![],
-        });
-    }
+    asset_0.transfer(&mut msgs, &info)?;
+    asset_1.transfer(&mut msgs, &info)?;
 
     Ok(Response::new()
         .add_messages(msgs)
@@ -488,29 +476,19 @@ pub fn remove_position(
     }
     let position = state::remove_position(deps.storage, &info.sender, index)?;
 
+    let asset_0 = Asset {
+        info: denom_to_asset_info(deps.api, position.pool_key.token_x.as_str()),
+        amount: amount_x.into(),
+    };
+
+    let asset_1 = Asset {
+        info: denom_to_asset_info(deps.api, position.pool_key.token_y.as_str()),
+        amount: amount_y.into(),
+    };
+
     let mut msgs = vec![];
-
-    if !amount_x.is_zero() {
-        msgs.push(WasmMsg::Execute {
-            contract_addr: position.pool_key.token_x.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: info.sender.to_string(),
-                amount: amount_x.into(),
-            })?,
-            funds: vec![],
-        });
-    }
-
-    if !amount_y.is_zero() {
-        msgs.push(WasmMsg::Execute {
-            contract_addr: position.pool_key.token_y.to_string(),
-            msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                recipient: info.sender.to_string(),
-                amount: amount_y.into(),
-            })?,
-            funds: vec![],
-        });
-    }
+    asset_0.transfer(&mut msgs, &info)?;
+    asset_1.transfer(&mut msgs, &info)?;
 
     let event_attributes = vec![
         attr("action", "remove_position"),

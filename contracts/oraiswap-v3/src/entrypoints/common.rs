@@ -1,6 +1,10 @@
-use cosmwasm_std::{to_binary, Addr, Env, MessageInfo, Storage, Timestamp, WasmMsg};
+use cosmwasm_std::{
+    to_binary, Addr, Api, BankMsg, Coin, CosmosMsg, Env, MessageInfo, StdResult, Storage,
+    Timestamp, WasmMsg,
+};
 use cw20::Cw20ExecuteMsg;
 use decimal::{CheckedOps, Decimal};
+use oraiswap::asset::{Asset, AssetInfo};
 
 use crate::{
     check_tick, compute_swap_step,
@@ -19,6 +23,78 @@ pub trait TimeStampExt {
 impl TimeStampExt for Timestamp {
     fn millis(&self) -> u64 {
         self.nanos() / 1_000_000
+    }
+}
+
+pub trait TokenTransfer {
+    fn transfer(&self, msgs: &mut Vec<CosmosMsg>, info: &MessageInfo) -> StdResult<()>;
+    fn transfer_from(
+        &self,
+        msgs: &mut Vec<CosmosMsg>,
+        info: &MessageInfo,
+        recipient: String,
+    ) -> StdResult<()>;
+}
+
+impl TokenTransfer for Asset {
+    fn transfer(&self, msgs: &mut Vec<CosmosMsg>, info: &MessageInfo) -> StdResult<()> {
+        if !self.amount.is_zero() {
+            match &self.info {
+                AssetInfo::Token { contract_addr } => {
+                    msgs.push(
+                        WasmMsg::Execute {
+                            contract_addr: contract_addr.to_string(),
+                            msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                                recipient: info.sender.to_string(),
+                                amount: self.amount,
+                            })?,
+                            funds: vec![],
+                        }
+                        .into(),
+                    );
+                }
+                AssetInfo::NativeToken { denom } => msgs.push(
+                    BankMsg::Send {
+                        to_address: info.sender.to_string(),
+                        amount: vec![Coin {
+                            amount: self.amount,
+                            denom: denom.to_string(),
+                        }],
+                    }
+                    .into(),
+                ),
+            }
+        }
+        Ok(())
+    }
+
+    fn transfer_from(
+        &self,
+        msgs: &mut Vec<CosmosMsg>,
+        info: &MessageInfo,
+        recipient: String,
+    ) -> StdResult<()> {
+        if !self.amount.is_zero() {
+            match &self.info {
+                AssetInfo::Token { contract_addr } => {
+                    msgs.push(
+                        WasmMsg::Execute {
+                            contract_addr: contract_addr.to_string(),
+                            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
+                                owner: info.sender.to_string(),
+                                recipient,
+                                amount: self.amount,
+                            })?,
+                            funds: vec![],
+                        }
+                        .into(),
+                    );
+                }
+                _ => self.assert_sent_native_token_balance(info)?,
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -183,8 +259,9 @@ pub fn calculate_swap(
 #[allow(clippy::too_many_arguments)]
 pub fn swap_internal(
     store: &mut dyn Storage,
-    msgs: &mut Vec<WasmMsg>,
-    sender: &Addr,
+    api: &dyn Api,
+    info: &MessageInfo,
+    msgs: &mut Vec<CosmosMsg>,
     contract_address: &Addr,
     current_timestamp: u64,
     pool_key: &PoolKey,
@@ -215,32 +292,28 @@ pub fn swap_internal(
         (&pool_key.token_y, &pool_key.token_x)
     };
 
-    msgs.push(WasmMsg::Execute {
-        contract_addr: token_0.to_string(),
-        msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-            owner: sender.to_string(),
-            recipient: contract_address.to_string(),
-            amount: calculate_swap_result.amount_in.into(),
-        })?,
-        funds: vec![],
-    });
-    msgs.push(WasmMsg::Execute {
-        contract_addr: token_1.to_string(),
-        msg: to_binary(&Cw20ExecuteMsg::Transfer {
-            recipient: sender.to_string(),
-            amount: calculate_swap_result.amount_out.into(),
-        })?,
-        funds: vec![],
-    });
+    let asset_0 = Asset {
+        info: denom_to_asset_info(api, token_0.as_str()),
+        amount: calculate_swap_result.amount_in.into(),
+    };
+
+    let asset_1 = Asset {
+        info: denom_to_asset_info(api, token_1.as_str()),
+        amount: calculate_swap_result.amount_out.into(),
+    };
+
+    asset_0.transfer_from(msgs, &info, contract_address.to_string())?;
+    asset_1.transfer(msgs, &info)?;
 
     Ok(calculate_swap_result)
 }
 
 pub fn swap_route_internal(
     store: &mut dyn Storage,
+    api: &dyn Api,
     env: Env,
-    info: MessageInfo,
-    msgs: &mut Vec<WasmMsg>,
+    info: &MessageInfo,
+    msgs: &mut Vec<CosmosMsg>,
     amount_in: TokenAmount,
     swaps: Vec<SwapHop>,
 ) -> Result<TokenAmount, ContractError> {
@@ -257,8 +330,9 @@ pub fn swap_route_internal(
 
         next_swap_amount = swap_internal(
             store,
+            api,
+            info,
             msgs,
-            &info.sender,
             &env.contract.address,
             current_timestamp,
             &swap_hop.pool_key,
@@ -339,4 +413,14 @@ pub fn remove_tick_and_flip_bitmap(
     state::remove_tick(storage, key, tick.index)?;
 
     Ok(())
+}
+
+pub fn denom_to_asset_info(api: &dyn Api, denom: &str) -> AssetInfo {
+    if let Ok(contract_addr) = api.addr_validate(denom) {
+        AssetInfo::Token { contract_addr }
+    } else {
+        AssetInfo::NativeToken {
+            denom: denom.to_string(),
+        }
+    }
 }
