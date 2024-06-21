@@ -28,13 +28,11 @@ thiserror = "1.0.26"
 
 cw2 = { version = "1.0.1" }
 cw20 = { version = "1.0.1" }
-cw721 = { version = "0.18.0" }
 cw20-base = { version = "1.0.1" }
 cw-storage-plus = { version = "1.0.1" }
 cw-multi-test = "0.16.6"
 cw-utils = "0.16.0"
 
-oraiswap = { git = "https://github.com/oraichain/oraiswap.git", rev = "29decac" }
 decimal-core = { path = "./packages/decimal-core" }
 decimal = { path = "./packages/decimal" }
 

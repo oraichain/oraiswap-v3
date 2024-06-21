@@ -1,13 +1,10 @@
-use cosmwasm_std::{
-    to_binary, Addr, Api, BankMsg, Coin, CosmosMsg, Env, MessageInfo, Storage, Timestamp, WasmMsg,
-};
-use cw20::Cw20ExecuteMsg;
+use cosmwasm_std::{Addr, Api, CosmosMsg, Env, MessageInfo, Storage, Timestamp};
+
 use decimal::{CheckedOps, Decimal};
-use oraiswap::asset::{Asset, AssetInfo};
 
 use crate::{
     check_tick, compute_swap_step,
-    interface::{CalculateSwapResult, SwapHop},
+    interface::{Asset, AssetInfo, CalculateSwapResult, SwapHop},
     sqrt_price::{get_max_tick, get_min_tick, SqrtPrice},
     state::{self, CONFIG, POOLS},
     token_amount::TokenAmount,
@@ -22,108 +19,6 @@ pub trait TimeStampExt {
 impl TimeStampExt for Timestamp {
     fn millis(&self) -> u64 {
         self.nanos() / 1_000_000
-    }
-}
-
-pub trait TokenTransfer {
-    fn transfer(&self, msgs: &mut Vec<CosmosMsg>, info: &MessageInfo) -> Result<(), ContractError>;
-    fn transfer_from(
-        &self,
-        msgs: &mut Vec<CosmosMsg>,
-        info: &MessageInfo,
-        recipient: String,
-    ) -> Result<(), ContractError>;
-}
-
-impl TokenTransfer for Asset {
-    fn transfer(&self, msgs: &mut Vec<CosmosMsg>, info: &MessageInfo) -> Result<(), ContractError> {
-        if !self.amount.is_zero() {
-            match &self.info {
-                AssetInfo::Token { contract_addr } => {
-                    msgs.push(
-                        WasmMsg::Execute {
-                            contract_addr: contract_addr.to_string(),
-                            msg: to_binary(&Cw20ExecuteMsg::Transfer {
-                                recipient: info.sender.to_string(),
-                                amount: self.amount,
-                            })?,
-                            funds: vec![],
-                        }
-                        .into(),
-                    );
-                }
-                AssetInfo::NativeToken { denom } => msgs.push(
-                    BankMsg::Send {
-                        to_address: info.sender.to_string(),
-                        amount: vec![Coin {
-                            amount: self.amount,
-                            denom: denom.to_string(),
-                        }],
-                    }
-                    .into(),
-                ),
-            }
-        }
-        Ok(())
-    }
-
-    fn transfer_from(
-        &self,
-        msgs: &mut Vec<CosmosMsg>,
-        info: &MessageInfo,
-        recipient: String,
-    ) -> Result<(), ContractError> {
-        if !self.amount.is_zero() {
-            match &self.info {
-                AssetInfo::Token { contract_addr } => {
-                    msgs.push(
-                        WasmMsg::Execute {
-                            contract_addr: contract_addr.to_string(),
-                            msg: to_binary(&Cw20ExecuteMsg::TransferFrom {
-                                owner: info.sender.to_string(),
-                                recipient,
-                                amount: self.amount,
-                            })?,
-                            funds: vec![],
-                        }
-                        .into(),
-                    );
-                }
-                AssetInfo::NativeToken { denom } => {
-                    match info.funds.iter().find(|x| x.denom.eq(denom)) {
-                        Some(coin) => {
-                            if coin.amount >= self.amount {
-                                let refund_amount = coin.amount - self.amount;
-                                // refund for user
-                                if !refund_amount.is_zero() {
-                                    msgs.push(
-                                        BankMsg::Send {
-                                            to_address: info.sender.to_string(),
-                                            amount: vec![Coin {
-                                                amount: refund_amount,
-                                                denom: denom.to_string(),
-                                            }],
-                                        }
-                                        .into(),
-                                    )
-                                }
-                            } else {
-                                return Err(ContractError::InvalidFunds {
-                                    transfer_amount: self.amount,
-                                });
-                            }
-                        }
-                        None => {
-                            return Err(ContractError::InvalidFunds {
-                                transfer_amount: self.amount,
-                            });
-                        }
-                    }
-                }
-            }
-        }
-
-        Ok(())
     }
 }
 
@@ -322,12 +217,12 @@ pub fn swap_internal(
     };
 
     let asset_0 = Asset {
-        info: denom_to_asset_info(api, token_0.as_str()),
+        info: AssetInfo::from_denom(api, token_0.as_str()),
         amount: calculate_swap_result.amount_in.into(),
     };
 
     let asset_1 = Asset {
-        info: denom_to_asset_info(api, token_1.as_str()),
+        info: AssetInfo::from_denom(api, token_1.as_str()),
         amount: calculate_swap_result.amount_out.into(),
     };
 
@@ -442,14 +337,4 @@ pub fn remove_tick_and_flip_bitmap(
     state::remove_tick(storage, key, tick.index)?;
 
     Ok(())
-}
-
-pub fn denom_to_asset_info(api: &dyn Api, denom: &str) -> AssetInfo {
-    if let Ok(contract_addr) = api.addr_validate(denom) {
-        AssetInfo::Token { contract_addr }
-    } else {
-        AssetInfo::NativeToken {
-            denom: denom.to_string(),
-        }
-    }
 }

@@ -6,7 +6,6 @@ use cosmwasm_std::{
 };
 use cw20::TokenInfoResponse;
 use decimal::num_traits::Zero;
-use oraiswap::create_entry_points_testing;
 use std::collections::HashMap;
 
 use cw_multi_test::{next_block, App, AppResponse, Contract, Executor};
@@ -21,6 +20,17 @@ use crate::{
     token_amount::TokenAmount,
     FeeTier, LiquidityTick, Pool, PoolKey, Position, Tick,
 };
+
+#[macro_export]
+macro_rules! create_entry_points_testing {
+    ($contract:ident) => {
+        cw_multi_test::ContractWrapper::new(
+            $contract::contract::execute,
+            $contract::contract::instantiate,
+            $contract::contract::query,
+        )
+    };
+}
 
 pub struct MockApp {
     app: App,
@@ -1739,8 +1749,6 @@ pub mod macros {
 mod tests {
     use cosmwasm_std::{testing::MOCK_CONTRACT_ADDR, Addr, Coin, Uint128};
 
-    use oraiswap::asset::AssetInfo;
-
     use super::MockApp;
 
     #[test]
@@ -1837,54 +1845,5 @@ mod tests {
                 .total_supply,
             Uint128::from(492u128)
         )
-    }
-
-    #[test]
-    fn test_asset_info() {
-        let mut app = MockApp::new(&[(
-            &MOCK_CONTRACT_ADDR.to_string(),
-            &[Coin {
-                denom: "uusd".to_string(),
-                amount: Uint128::from(123u128),
-            }],
-        )]);
-
-        app.set_token_balances(
-            "owner",
-            &[(
-                &"ASSET".to_string(),
-                &[
-                    (MOCK_CONTRACT_ADDR, 123u128),
-                    (&"addr00000".to_string(), 123u128),
-                    (&"addr00001".to_string(), 123u128),
-                    (&"addr00002".to_string(), 123u128),
-                ],
-            )],
-        )
-        .unwrap();
-
-        let token_info = AssetInfo::Token {
-            contract_addr: app.get_token_addr("ASSET").unwrap(),
-        };
-        let native_token_info = AssetInfo::NativeToken {
-            denom: "uusd".to_string(),
-        };
-
-        assert!(!token_info.eq(&native_token_info));
-        assert!(native_token_info.is_native_token());
-        assert!(!token_info.is_native_token());
-
-        assert_eq!(
-            token_info
-                .query_pool(&app.as_querier(), Addr::unchecked(MOCK_CONTRACT_ADDR))
-                .unwrap(),
-            Uint128::from(123u128)
-        );
-        assert_eq!(
-            native_token_info
-                .query_pool(&app.as_querier(), Addr::unchecked(MOCK_CONTRACT_ADDR))
-                .unwrap(),
-            Uint128::from(123u128)
-        );
     }
 }

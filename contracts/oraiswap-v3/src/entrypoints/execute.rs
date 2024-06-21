@@ -1,5 +1,5 @@
 use crate::error::ContractError;
-use crate::interface::{CalculateSwapResult, SwapHop};
+use crate::interface::{Asset, AssetInfo, CalculateSwapResult, SwapHop};
 use crate::liquidity::Liquidity;
 use crate::percentage::Percentage;
 use crate::sqrt_price::SqrtPrice;
@@ -8,12 +8,10 @@ use crate::token_amount::TokenAmount;
 use crate::{calculate_min_amount_out, check_tick, FeeTier, Pool, PoolKey, Position};
 
 use super::{
-    create_tick, denom_to_asset_info, remove_tick_and_flip_bitmap, swap_internal,
-    swap_route_internal, TimeStampExt, TokenTransfer,
+    create_tick, remove_tick_and_flip_bitmap, swap_internal, swap_route_internal, TimeStampExt,
 };
 use cosmwasm_std::{attr, Addr, DepsMut, Env, MessageInfo, Response};
 use decimal::Decimal;
-use oraiswap::asset::Asset;
 
 /// Allows an fee receiver to withdraw collected fees.
 ///
@@ -38,12 +36,12 @@ pub fn withdraw_protocol_fee(
     POOLS.save(deps.storage, &pool_key_db, &pool)?;
 
     let asset_0 = Asset {
-        info: denom_to_asset_info(deps.api, pool_key.token_x.as_str()),
+        info: AssetInfo::from_denom(deps.api, pool_key.token_x.as_str()),
         amount: fee_protocol_token_x.into(),
     };
 
     let asset_1 = Asset {
-        info: denom_to_asset_info(deps.api, pool_key.token_y.as_str()),
+        info: AssetInfo::from_denom(deps.api, pool_key.token_y.as_str()),
         amount: fee_protocol_token_y.into(),
     };
 
@@ -186,12 +184,12 @@ pub fn create_position(
     state::update_tick(deps.storage, &pool_key, upper_tick.index, &upper_tick)?;
 
     let asset_0 = Asset {
-        info: denom_to_asset_info(deps.api, pool_key.token_x.as_str()),
+        info: AssetInfo::from_denom(deps.api, pool_key.token_x.as_str()),
         amount: x.into(),
     };
 
     let asset_1 = Asset {
-        info: denom_to_asset_info(deps.api, pool_key.token_y.as_str()),
+        info: AssetInfo::from_denom(deps.api, pool_key.token_y.as_str()),
         amount: y.into(),
     };
 
@@ -394,12 +392,12 @@ pub fn claim_fee(
     )?;
 
     let asset_0 = Asset {
-        info: denom_to_asset_info(deps.api, position.pool_key.token_x.as_str()),
+        info: AssetInfo::from_denom(deps.api, position.pool_key.token_x.as_str()),
         amount: x.into(),
     };
 
     let asset_1 = Asset {
-        info: denom_to_asset_info(deps.api, position.pool_key.token_y.as_str()),
+        info: AssetInfo::from_denom(deps.api, position.pool_key.token_y.as_str()),
         amount: y.into(),
     };
 
@@ -477,12 +475,12 @@ pub fn remove_position(
     let position = state::remove_position(deps.storage, &info.sender, index)?;
 
     let asset_0 = Asset {
-        info: denom_to_asset_info(deps.api, position.pool_key.token_x.as_str()),
+        info: AssetInfo::from_denom(deps.api, position.pool_key.token_x.as_str()),
         amount: amount_x.into(),
     };
 
     let asset_1 = Asset {
-        info: denom_to_asset_info(deps.api, position.pool_key.token_y.as_str()),
+        info: AssetInfo::from_denom(deps.api, position.pool_key.token_y.as_str()),
         amount: amount_y.into(),
     };
 
