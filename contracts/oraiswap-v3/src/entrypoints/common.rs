@@ -204,7 +204,7 @@ pub fn swap_internal(
         sqrt_price_limit,
     )?;
 
-    for tick in calculate_swap_result.ticks.iter() {
+    for tick in &calculate_swap_result.ticks {
         state::update_tick(store, pool_key, tick.index, tick)?;
     }
 

@@ -109,7 +109,6 @@ pub fn execute(
         } => create_pool(
             deps,
             env,
-            info,
             token_0,
             token_1,
             fee_tier,

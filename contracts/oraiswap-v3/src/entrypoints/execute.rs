@@ -523,7 +523,6 @@ pub fn remove_position(
 pub fn create_pool(
     deps: DepsMut,
     env: Env,
-    _info: MessageInfo,
     token_0: String,
     token_1: String,
     fee_tier: FeeTier,
@@ -540,8 +539,7 @@ pub fn create_pool(
 
     check_tick(init_tick, fee_tier.tick_spacing)?;
 
-    let pool_key =
-        PoolKey::new(token_0, token_1, fee_tier).map_err(|_| ContractError::InvalidPoolKey)?;
+    let pool_key = PoolKey::new(token_0, token_1, fee_tier)?;
     let db_key = pool_key.key();
 
     if POOLS.has(deps.storage, &db_key) {
@@ -580,9 +578,11 @@ pub fn add_fee_tier(
     info: MessageInfo,
     fee_tier: FeeTier,
 ) -> Result<Response, ContractError> {
-    let caller = info.sender;
-
     let mut config = CONFIG.load(deps.storage)?;
+
+    if info.sender != config.admin {
+        return Err(ContractError::Unauthorized {});
+    }
 
     if fee_tier.tick_spacing == 0 || fee_tier.tick_spacing > 100 {
         return Err(ContractError::InvalidTickSpacing);
@@ -591,10 +591,6 @@ pub fn add_fee_tier(
     if fee_tier.fee >= Percentage::new(1000000000000) {
         // 100% -> fee invalid
         return Err(ContractError::InvalidFee);
-    }
-
-    if caller != config.admin {
-        return Err(ContractError::Unauthorized {});
     }
 
     config.fee_tiers.push(fee_tier);
@@ -618,11 +614,9 @@ pub fn remove_fee_tier(
     info: MessageInfo,
     fee_tier: FeeTier,
 ) -> Result<Response, ContractError> {
-    let caller = info.sender;
-
     let mut config = CONFIG.load(deps.storage)?;
 
-    if caller != config.admin {
+    if info.sender != config.admin {
         return Err(ContractError::Unauthorized {});
     }
 
