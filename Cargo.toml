@@ -46,3 +46,6 @@ rpath = false
 lto = true
 overflow-checks = true
 panic = 'abort'
+
+[patch.crates-io]
+curve25519-dalek = { git = 'https://github.com/dalek-cryptography/curve25519-dalek.git' }
