@@ -15,6 +15,12 @@ use crate::{
 
 use super::{calculate_swap, route, tickmap_slice, TimeStampExt};
 
+/// Retrieves the admin of contract.
+pub fn query_admin(deps: Deps) -> Result<Addr, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    Ok(config.admin)
+}
+
 /// Retrieves the protocol fee represented as a percentage.
 pub fn get_protocol_fee(deps: Deps) -> Result<Percentage, ContractError> {
     let config = CONFIG.load(deps.storage)?;

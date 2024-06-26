@@ -15,6 +15,9 @@ pub struct InstantiateMsg {
 
 #[cw_serde]
 pub enum ExecuteMsg {
+    ChangeAdmin {
+        new_admin: Addr,
+    },
     WithdrawProtocolFee {
         pool_key: PoolKey,
     },
@@ -77,6 +80,9 @@ pub struct MigrateMsg {}
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum QueryMsg {
+    #[returns(Addr)]
+    Admin {},
+
     #[returns(Percentage)]
     ProtocolFee {},
 

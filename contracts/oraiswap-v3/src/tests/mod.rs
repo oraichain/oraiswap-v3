@@ -1,4 +1,5 @@
 mod add_fee_tier;
+mod admin;
 mod change_fee_receiver;
 mod change_protocol_fee;
 mod claim;
