@@ -39,6 +39,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
+        ExecuteMsg::ChangeAdmin { new_admin } => change_admin(deps, info, new_admin),
         ExecuteMsg::WithdrawProtocolFee { pool_key } => withdraw_protocol_fee(deps, info, pool_key),
         ExecuteMsg::ChangeProtocolFee { protocol_fee } => {
             change_protocol_fee(deps, info, protocol_fee)
@@ -123,6 +124,7 @@ pub fn execute(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
+        QueryMsg::Admin {} => to_binary(&query_admin(deps)?),
         QueryMsg::ProtocolFee {} => to_binary(&get_protocol_fee(deps)?),
         QueryMsg::Position { owner_id, index } => to_binary(&get_position(deps, owner_id, index)?),
         QueryMsg::Positions {

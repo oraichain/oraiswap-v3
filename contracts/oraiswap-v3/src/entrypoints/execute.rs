@@ -13,6 +13,34 @@ use super::{
 use cosmwasm_std::{attr, Addr, DepsMut, Env, MessageInfo, Response};
 use decimal::Decimal;
 
+/// Allows an admin to adjust admin.
+///
+/// # Parameters
+/// - `new_admin`: new admin address.
+///
+/// # Errors
+/// - Reverts the call when the caller is an unauthorized user.
+///
+
+pub fn change_admin(
+    deps: DepsMut,
+    info: MessageInfo,
+    new_admin: Addr,
+) -> Result<Response, ContractError> {
+    let mut config = CONFIG.load(deps.storage)?;
+
+    if info.sender != config.admin {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    config.admin = new_admin.clone();
+    CONFIG.save(deps.storage, &config)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "change_admin")
+        .add_attribute("new_admin", new_admin))
+}
+
 /// Allows an fee receiver to withdraw collected fees.
 ///
 /// # Parameters
