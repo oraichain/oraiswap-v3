@@ -20,14 +20,14 @@ fn swap_route() {
     let (token_x, token_y, token_z) =
         create_3_tokens!(app, initial_amount, initial_amount, initial_amount);
 
-    approve!(app, token_x, dex, u64::MAX as u128, "alice").unwrap();
-    approve!(app, token_y, dex, u64::MAX as u128, "alice").unwrap();
-    approve!(app, token_z, dex, u64::MAX as u128, "alice").unwrap();
+    approve!(app, token_x, dex, initial_amount, "alice").unwrap();
+    approve!(app, token_y, dex, initial_amount, "alice").unwrap();
+    approve!(app, token_z, dex, initial_amount, "alice").unwrap();
 
     let amount = 1000;
     mint!(app, token_x, "bob", amount, "alice").unwrap();
     approve!(app, token_x, dex, amount, "bob").unwrap();
-    approve!(app, token_y, dex, u64::MAX as u128, "bob").unwrap();
+    approve!(app, token_y, dex, initial_amount, "bob").unwrap();
 
     let fee_tier = FeeTier::new(protocol_fee, 1).unwrap();
 
