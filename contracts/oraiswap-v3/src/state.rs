@@ -40,7 +40,7 @@ pub fn get_pools(
         .map(Bound::ExclusiveRaw);
 
     let pools = POOLS
-        .range(store, start, None, Order::Ascending)
+        .range_raw(store, start, None, Order::Ascending)
         .take(limit)
         .map(|item| {
             let (raw_key, pool) = item?;
