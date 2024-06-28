@@ -37,8 +37,8 @@ macro_rules! decimal_ops {
 
             #[wasm_bindgen]
             #[allow(non_snake_case)]
-            pub fn [<to $decimal >] (integer: u32, scale: u8) -> Result<BigInt, JsValue> {
-                Ok(BigInt::from($decimal::from_scale(integer, scale).get()))
+            pub fn [<to $decimal >] (integer: u64, scale: Option<u8>) -> Result<BigInt, JsValue> {
+                Ok(BigInt::from($decimal::from_scale(integer, scale.unwrap_or_else(|| $decimal::scale())).get()))
             }
         }
     };
