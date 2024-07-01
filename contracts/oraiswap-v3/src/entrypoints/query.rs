@@ -4,8 +4,8 @@ use cw_storage_plus::Bound;
 use crate::{
     get_max_chunk, get_min_chunk,
     interface::{
-        AllNftInfoResponse, Approval, ApprovedForAllResponse, OwnerOfResponse, PoolWithPoolKey,
-        QuoteResult, SwapHop, TokensResponse,
+        AllNftInfoResponse, Approval, ApprovedForAllResponse, NftInfoResponse, OwnerOfResponse,
+        PoolWithPoolKey, QuoteResult, SwapHop, TokensResponse,
     },
     percentage::Percentage,
     sqrt_price::{get_max_tick, get_min_tick, SqrtPrice},
@@ -437,9 +437,9 @@ pub fn query_all_approvals(
     Ok(ApprovedForAllResponse { operators: res? })
 }
 
-pub fn query_nft_info(deps: Deps, token_id: Binary) -> Result<Position, ContractError> {
+pub fn query_nft_info(deps: Deps, token_id: Binary) -> Result<NftInfoResponse, ContractError> {
     let pos = state::get_position_by_key(deps.storage, &token_id)?;
-    Ok(pos)
+    Ok(NftInfoResponse { extension: pos })
 }
 
 pub fn query_all_nft_info(
@@ -456,7 +456,7 @@ pub fn query_all_nft_info(
             owner,
             approvals: humanize_approvals(&env.block, &pos, include_expired),
         },
-        info: pos,
+        info: NftInfoResponse { extension: pos },
     })
 }
 

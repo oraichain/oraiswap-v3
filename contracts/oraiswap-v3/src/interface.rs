@@ -205,7 +205,7 @@ pub struct AllNftInfoResponse {
     /// Who can transfer the token
     pub access: OwnerOfResponse,
     /// Data on the token itself,
-    pub info: Position,
+    pub info: NftInfoResponse,
 }
 
 /// Cw721ReceiveMsg should be de/serialized under `Receive()` variant in a HandleMsg
@@ -240,4 +240,9 @@ impl Cw721ReceiveMsg {
 #[cw_serde]
 enum ReceiverHandleMsg {
     ReceiveNft(Cw721ReceiveMsg),
+}
+
+#[cw_serde]
+pub struct NftInfoResponse {
+    pub extension: Position,
 }

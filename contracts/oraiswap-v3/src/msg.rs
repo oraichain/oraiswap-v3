@@ -4,8 +4,8 @@ use cosmwasm_std::{Addr, Binary};
 use cw20::Expiration;
 
 use crate::interface::{
-    AllNftInfoResponse, ApprovedForAllResponse, OwnerOfResponse, PoolWithPoolKey, PositionTick,
-    QuoteResult, TokensResponse,
+    AllNftInfoResponse, ApprovedForAllResponse, NftInfoResponse, OwnerOfResponse, PoolWithPoolKey,
+    PositionTick, QuoteResult, TokensResponse,
 };
 #[allow(unused_imports)]
 use crate::{
@@ -208,6 +208,14 @@ pub enum QueryMsg {
         amount_in: TokenAmount,
         swaps: Vec<SwapHop>,
     },
+
+    ///
+    ///
+    ///  NFT methods
+    ///
+    ///
+    ///
+
     /// Return the owner of the given token, error if token does not exist
     /// Return type: OwnerOfResponse
     #[returns(OwnerOfResponse)]
@@ -228,7 +236,7 @@ pub enum QueryMsg {
     /// With MetaData Extension.
     /// Returns metadata about one particular token, based on *ERC721 Metadata JSON Schema*
     /// but directly from the contract: `NftInfoResponse`
-    #[returns(Position)]
+    #[returns(NftInfoResponse)]
     NftInfo { token_id: Binary },
     /// With MetaData Extension.
     /// Returns the result of both `NftInfo` and `OwnerOf` as one query as an optimization
