@@ -12,8 +12,9 @@ use cw_multi_test::{next_block, App, AppResponse, Contract, Executor};
 
 use crate::{
     interface::SwapHop,
+    interface::{PoolWithPoolKey, QuoteResult},
     liquidity::Liquidity,
-    msg::{self, PoolWithPoolKey, QuoteResult},
+    msg::{self},
     percentage::Percentage,
     sqrt_price::SqrtPrice,
     state::MAX_LIMIT,

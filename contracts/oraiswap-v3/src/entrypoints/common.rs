@@ -1,14 +1,17 @@
-use cosmwasm_std::{Addr, Api, CosmosMsg, Env, MessageInfo, Storage, Timestamp};
+use cosmwasm_std::{
+    Addr, Api, BlockInfo, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Storage, Timestamp,
+};
 
+use cw20::Expiration;
 use decimal::{CheckedOps, Decimal};
 
 use crate::{
     check_tick, compute_swap_step,
-    interface::{Asset, AssetInfo, CalculateSwapResult, SwapHop},
+    interface::{Approval, Asset, AssetInfo, CalculateSwapResult, SwapHop},
     sqrt_price::{get_max_tick, get_min_tick, SqrtPrice},
     state::{self, CONFIG, POOLS},
     token_amount::TokenAmount,
-    ContractError, PoolKey, Tick, UpdatePoolTick, MAX_SQRT_PRICE, MAX_TICKMAP_QUERY_SIZE,
+    ContractError, PoolKey, Position, Tick, UpdatePoolTick, MAX_SQRT_PRICE, MAX_TICKMAP_QUERY_SIZE,
     MIN_SQRT_PRICE,
 };
 
@@ -337,4 +340,143 @@ pub fn remove_tick_and_flip_bitmap(
     state::remove_tick(storage, key, tick.index)?;
 
     Ok(())
+}
+
+/// returns true iff the sender can execute approve or reject on the contract
+pub fn check_can_approve(
+    deps: Deps,
+    env: &Env,
+    info: &MessageInfo,
+    owner_raw: &[u8],
+) -> Result<(), ContractError> {
+    // owner can approve
+    let sender_raw = info.sender.as_bytes();
+    if sender_raw.eq(owner_raw) {
+        return Ok(());
+    }
+
+    // operator can approve
+    let op = state::OPERATORS.may_load(deps.storage, (owner_raw, sender_raw))?;
+    match op {
+        Some(ex) => {
+            if ex.is_expired(&env.block) {
+                Err(ContractError::Unauthorized {})
+            } else {
+                Ok(())
+            }
+        }
+        None => Err(ContractError::Unauthorized {}),
+    }
+}
+
+/// returns true if the sender can transfer ownership of the token
+pub fn check_can_send(
+    deps: Deps,
+    env: &Env,
+    info: &MessageInfo,
+    owner_raw: &[u8],
+    pos: &Position,
+) -> Result<(), ContractError> {
+    // owner can send
+    let sender_raw = info.sender.as_bytes();
+
+    if sender_raw.eq(owner_raw) {
+        return Ok(());
+    }
+
+    // any non-expired token approval can send
+    if pos
+        .approvals
+        .iter()
+        .any(|apr| apr.spender == info.sender && !apr.expires.is_expired(&env.block))
+    {
+        return Ok(());
+    }
+
+    // operator can send
+    let op = state::OPERATORS.may_load(deps.storage, (owner_raw, sender_raw))?;
+    match op {
+        Some(ex) => {
+            if ex.is_expired(&env.block) {
+                Err(ContractError::Unauthorized {})
+            } else {
+                Ok(())
+            }
+        }
+        None => Err(ContractError::Unauthorized {}),
+    }
+}
+
+pub fn update_approvals(
+    deps: DepsMut,
+    env: &Env,
+    info: &MessageInfo,
+    spender: &Addr,
+    token_id: &[u8],
+    // if add == false, remove. if add == true, remove then set with this expiration
+    add: bool,
+    expires: Option<Expiration>,
+) -> Result<Position, ContractError> {
+    let owner_raw = &token_id[..token_id.len() - 4];
+    let mut pos = state::get_position_by_key(deps.storage, token_id)?;
+    // ensure we have permissions
+    check_can_approve(deps.as_ref(), env, info, owner_raw)?;
+
+    // update the approval list (remove any for the same spender before adding)
+    pos.approvals = pos
+        .approvals
+        .into_iter()
+        .filter(|apr| apr.spender != spender)
+        .collect();
+
+    // only difference between approve and revoke
+    if add {
+        // reject expired data as invalid
+        let expires = expires.unwrap_or_default();
+        if expires.is_expired(&env.block) {
+            return Err(ContractError::Expired {});
+        }
+        let approval = Approval {
+            spender: spender.clone(),
+            expires,
+        };
+        pos.approvals.push(approval);
+    }
+
+    state::POSITIONS.save(deps.storage, token_id, &pos)?;
+
+    Ok(pos)
+}
+
+pub fn transfer_nft(
+    deps: DepsMut,
+    env: &Env,
+    info: &MessageInfo,
+    recipient: &Addr,
+    token_id: &[u8],
+) -> Result<Position, ContractError> {
+    let owner_raw = &token_id[..token_id.len() - 4];
+    let index = u32::from_be_bytes(token_id[token_id.len() - 4..].try_into().unwrap());
+    let account_id = Addr::unchecked(String::from_utf8(owner_raw.to_vec()).unwrap());
+    let mut pos = state::get_position_by_key(deps.storage, token_id)?;
+    // ensure we have permissions
+    check_can_send(deps.as_ref(), env, info, owner_raw, &pos)?;
+    // set owner and remove existing approvals
+    state::remove_position(deps.storage, &account_id, index)?;
+    // reset approvals when transfer
+    pos.approvals = vec![];
+    state::add_position(deps.storage, recipient, &pos)?;
+    Ok(pos)
+}
+
+pub fn humanize_approvals(
+    block: &BlockInfo,
+    pos: &Position,
+    include_expired: bool,
+) -> Vec<Approval> {
+    pos.approvals
+        .iter()
+        .filter(|apr| include_expired || !apr.expires.is_expired(block))
+        .map(|approval| approval.clone())
+        .collect()
 }

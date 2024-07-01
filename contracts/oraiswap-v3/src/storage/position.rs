@@ -1,5 +1,6 @@
 use super::{Pool, PoolKey, Tick};
 use crate::{
+    interface::Approval,
     math::{
         clamm::*,
         types::{
@@ -15,7 +16,7 @@ use cosmwasm_schema::cw_serde;
 use decimal::*;
 
 #[cw_serde]
-#[derive(Default, Eq)]
+#[derive(Default)]
 pub struct Position {
     pub pool_key: PoolKey,
     pub liquidity: Liquidity,
@@ -26,6 +27,9 @@ pub struct Position {
     pub last_block_number: u64,
     pub tokens_owed_x: TokenAmount,
     pub tokens_owed_y: TokenAmount,
+    /// approvals are stored here, as we clear them all upon transfer and cannot accumulate much
+    #[serde(default)]
+    pub approvals: Vec<Approval>,
 }
 
 impl Position {
@@ -177,6 +181,7 @@ impl Position {
             last_block_number: block_number,
             tokens_owed_x: TokenAmount::new(0),
             tokens_owed_y: TokenAmount::new(0),
+            approvals: vec![],
         };
 
         let (required_x, required_y) = position.modify(

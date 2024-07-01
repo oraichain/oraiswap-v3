@@ -1,5 +1,5 @@
 use crate::error::ContractError;
-use crate::interface::{Asset, AssetInfo, CalculateSwapResult, SwapHop};
+use crate::interface::{Asset, AssetInfo, CalculateSwapResult, Cw721ReceiveMsg, SwapHop};
 use crate::liquidity::Liquidity;
 use crate::percentage::Percentage;
 use crate::sqrt_price::SqrtPrice;
@@ -8,9 +8,11 @@ use crate::token_amount::TokenAmount;
 use crate::{calculate_min_amount_out, check_tick, FeeTier, Pool, PoolKey, Position};
 
 use super::{
-    create_tick, remove_tick_and_flip_bitmap, swap_internal, swap_route_internal, TimeStampExt,
+    check_can_send, create_tick, remove_tick_and_flip_bitmap, swap_internal, swap_route_internal,
+    transfer_nft, update_approvals, TimeStampExt,
 };
-use cosmwasm_std::{attr, Addr, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{attr, Addr, Binary, DepsMut, Env, MessageInfo, Response};
+use cw20::Expiration;
 use decimal::Decimal;
 
 /// Allows an admin to adjust admin.
@@ -363,11 +365,13 @@ pub fn transfer_position(
 ) -> Result<Response, ContractError> {
     let caller = info.sender;
 
-    let position = state::get_position(deps.storage, &caller, index)?;
+    let mut position = state::get_position(deps.storage, &caller, index)?;
 
     state::remove_position(deps.storage, &caller, index)?;
 
     let receiver_addr = deps.api.addr_validate(&receiver)?;
+    // reset approvals
+    position.approvals = vec![];
     state::add_position(deps.storage, &receiver_addr, &position)?;
 
     Ok(Response::new().add_attribute("action", "transfer_position"))
@@ -657,4 +661,142 @@ pub fn remove_fee_tier(
     CONFIG.save(deps.storage, &config)?;
 
     Ok(Response::new().add_attribute("action", "remove_fee_tier"))
+}
+
+pub fn handle_approve(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    spender: Addr,
+    token_id: Binary,
+    expires: Option<Expiration>,
+) -> Result<Response, ContractError> {
+    update_approvals(deps, &env, &info, &spender, &token_id, true, expires)?;
+
+    Ok(Response::new().add_attributes(vec![
+        attr("action", "approve"),
+        attr("sender", info.sender),
+        attr("spender", spender),
+    ]))
+}
+
+pub fn handle_revoke(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    spender: Addr,
+    token_id: Binary,
+) -> Result<Response, ContractError> {
+    update_approvals(deps, &env, &info, &spender, &token_id, false, None)?;
+
+    Ok(Response::new().add_attributes(vec![
+        attr("action", "revoke"),
+        attr("sender", info.sender),
+        attr("spender", spender),
+    ]))
+}
+
+pub fn handle_approve_all(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    operator: Addr,
+    expires: Option<Expiration>,
+) -> Result<Response, ContractError> {
+    // reject expired data as invalid
+    let expires = expires.unwrap_or_default();
+    if expires.is_expired(&env.block) {
+        return Err(ContractError::Expired {});
+    }
+
+    // set the operator for us
+    let sender_raw = info.sender.as_bytes();
+    let operator_raw = operator.as_bytes();
+    state::OPERATORS.save(deps.storage, (sender_raw, operator_raw), &expires)?;
+
+    Ok(Response::new().add_attributes(vec![
+        attr("action", "approve_all"),
+        attr("sender", info.sender),
+        attr("operator", operator),
+    ]))
+}
+
+pub fn handle_revoke_all(
+    deps: DepsMut,
+    _env: Env,
+    info: MessageInfo,
+    operator: Addr,
+) -> Result<Response, ContractError> {
+    let sender_raw = info.sender.as_bytes();
+    let operator_raw = operator.as_bytes();
+    state::OPERATORS.remove(deps.storage, (sender_raw, operator_raw));
+
+    Ok(Response::new().add_attributes(vec![
+        attr("action", "revoke_all"),
+        attr("sender", info.sender),
+        attr("operator", operator),
+    ]))
+}
+
+/// this is trigger when there is buy_nft action
+pub fn handle_transfer_nft(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    recipient: Addr,
+    token_id: Binary,
+) -> Result<Response, ContractError> {
+    transfer_nft(deps, &env, &info, &recipient, &token_id)?;
+
+    // need transfer_payout as well
+
+    Ok(Response::new().add_attributes(vec![
+        attr("action", "transfer_nft"),
+        attr("sender", info.sender),
+        attr("recipient", recipient),
+    ]))
+}
+
+pub fn handle_burn(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    token_id: Binary,
+) -> Result<Response, ContractError> {
+    let pos = state::get_position_by_key(deps.storage, &token_id)?;
+    let owner_raw = &token_id[..token_id.len() - 4];
+    let index = u32::from_be_bytes(token_id[token_id.len() - 4..].try_into().unwrap());
+    check_can_send(deps.as_ref(), &env, &info, owner_raw, &pos)?;
+
+    let mut res = remove_position(deps, env, info.clone(), index)?;
+    // reset attributes from remove_position method
+    res.attributes = vec![attr("action", "burn_nft"), attr("minter", info.sender)];
+    Ok(res)
+}
+
+pub fn handle_send_nft(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    contract: Addr,
+    token_id: Binary,
+    msg: Option<Binary>,
+) -> Result<Response, ContractError> {
+    // Transfer token
+    transfer_nft(deps, &env, &info, &contract, &token_id)?;
+
+    let send = Cw721ReceiveMsg {
+        sender: info.sender.clone(),
+        token_id,
+        msg,
+    };
+
+    // Send message
+    Ok(Response::new()
+        .add_message(send.into_cosmos_msg(contract.to_string())?)
+        .add_attributes(vec![
+            attr("action", "send_nft"),
+            attr("sender", info.sender),
+            attr("recipient", contract),
+        ]))
 }

@@ -156,6 +156,9 @@ pub enum ContractError {
     #[error("unauthorized")]
     Unauthorized {},
 
+    #[error("Cannot set approval that is already expired")]
+    Expired {},
+
     #[error("amount is zero")]
     AmountIsZero,
 

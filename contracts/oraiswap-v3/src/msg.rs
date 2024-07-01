@@ -1,6 +1,12 @@
+#![allow(unused_imports)]
 use cosmwasm_schema::{cw_serde, QueryResponses};
-use cosmwasm_std::Addr;
+use cosmwasm_std::{Addr, Binary};
+use cw20::Expiration;
 
+use crate::interface::{
+    AllNftInfoResponse, ApprovedForAllResponse, OwnerOfResponse, PoolWithPoolKey, PositionTick,
+    QuoteResult, TokensResponse,
+};
 #[allow(unused_imports)]
 use crate::{
     fee_growth::FeeGrowth, interface::SwapHop, liquidity::Liquidity, percentage::Percentage,
@@ -71,6 +77,43 @@ pub enum ExecuteMsg {
     },
     RemoveFeeTier {
         fee_tier: FeeTier,
+    },
+    /// Transfer is a base message to move a token to another account without triggering actions
+    TransferNft {
+        recipient: Addr,
+        token_id: Binary,
+    },
+    Burn {
+        token_id: Binary,
+    },
+    /// Send is a base message to transfer a token to a contract and trigger an action
+    /// on the receiving contract.
+    SendNft {
+        contract: Addr,
+        token_id: Binary,
+        msg: Option<Binary>,
+    },
+    /// Allows operator to transfer / send the token from the owner's account.
+    /// If expiration is set, then this allowance has a time/height limit
+    Approve {
+        spender: Addr,
+        token_id: Binary,
+        expires: Option<Expiration>,
+    },
+    /// Remove previously granted Approval
+    Revoke {
+        spender: Addr,
+        token_id: Binary,
+    },
+    /// Allows operator to transfer / send any token from the owner's account.
+    /// If expiration is set, then this allowance has a time/height limit
+    ApproveAll {
+        operator: Addr,
+        expires: Option<Expiration>,
+    },
+    /// Remove previously granted ApproveAll permission
+    RevokeAll {
+        operator: Addr,
     },
 }
 
@@ -165,26 +208,51 @@ pub enum QueryMsg {
         amount_in: TokenAmount,
         swaps: Vec<SwapHop>,
     },
-}
-
-#[cw_serde]
-pub struct PositionTick {
-    pub index: i32,
-    pub fee_growth_outside_x: FeeGrowth,
-    pub fee_growth_outside_y: FeeGrowth,
-    pub seconds_outside: u64,
-}
-
-#[cw_serde]
-pub struct PoolWithPoolKey {
-    pub pool: Pool,
-    pub pool_key: PoolKey,
-}
-
-#[cw_serde]
-pub struct QuoteResult {
-    pub amount_in: TokenAmount,
-    pub amount_out: TokenAmount,
-    pub target_sqrt_price: SqrtPrice,
-    pub ticks: Vec<Tick>,
+    /// Return the owner of the given token, error if token does not exist
+    /// Return type: OwnerOfResponse
+    #[returns(OwnerOfResponse)]
+    OwnerOf {
+        token_id: Binary,
+        /// unset or false will filter out expired approvals, you must set to true to see them
+        include_expired: Option<bool>,
+    },
+    /// List all operators that can access all of the owner's tokens.
+    #[returns(ApprovedForAllResponse)]
+    ApprovedForAll {
+        owner: Addr,
+        /// unset or false will filter out expired approvals, you must set to true to see them
+        include_expired: Option<bool>,
+        start_after: Option<Addr>,
+        limit: Option<u32>,
+    },
+    /// With MetaData Extension.
+    /// Returns metadata about one particular token, based on *ERC721 Metadata JSON Schema*
+    /// but directly from the contract: `NftInfoResponse`
+    #[returns(Position)]
+    NftInfo { token_id: Binary },
+    /// With MetaData Extension.
+    /// Returns the result of both `NftInfo` and `OwnerOf` as one query as an optimization
+    #[returns(AllNftInfoResponse)]
+    AllNftInfo {
+        token_id: Binary,
+        /// unset or false will filter out expired approvals, you must set to true to see them
+        include_expired: Option<bool>,
+    },
+    /// With Enumerable extension.
+    /// Returns all tokens owned by the given address, [] if unset.
+    /// Return type: TokensResponse.
+    #[returns(TokensResponse)]
+    Tokens {
+        owner: Addr,
+        start_after: Option<u32>,
+        limit: Option<u32>,
+    },
+    /// With Enumerable extension.
+    /// Requires pagination. Lists all token_ids controlled by the contract.
+    /// Return type: TokensResponse.
+    #[returns(TokensResponse)]
+    AllTokens {
+        start_after: Option<Binary>,
+        limit: Option<u32>,
+    },
 }

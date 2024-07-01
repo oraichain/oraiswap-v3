@@ -1,19 +1,22 @@
-use cosmwasm_std::{Addr, Deps, Env};
+use cosmwasm_std::{Addr, Binary, Deps, Env, Order, StdResult};
+use cw_storage_plus::Bound;
 
 use crate::{
     get_max_chunk, get_min_chunk,
-    interface::SwapHop,
-    msg::{PoolWithPoolKey, QuoteResult},
+    interface::{
+        AllNftInfoResponse, Approval, ApprovedForAllResponse, OwnerOfResponse, PoolWithPoolKey,
+        QuoteResult, SwapHop, TokensResponse,
+    },
     percentage::Percentage,
     sqrt_price::{get_max_tick, get_min_tick, SqrtPrice},
-    state::{self, CONFIG},
+    state::{self, CONFIG, MAX_LIMIT},
     tick_to_position,
     token_amount::TokenAmount,
     ContractError, FeeTier, LiquidityTick, Pool, PoolKey, Position, PositionTick, Tick, CHUNK_SIZE,
     LIQUIDITY_TICK_LIMIT, POSITION_TICK_LIMIT,
 };
 
-use super::{calculate_swap, route, tickmap_slice, TimeStampExt};
+use super::{calculate_swap, humanize_approvals, route, tickmap_slice, TimeStampExt};
 
 /// Retrieves the admin of contract.
 pub fn query_admin(deps: Deps) -> Result<Addr, ContractError> {
@@ -389,4 +392,100 @@ pub fn quote_route(
 ) -> Result<TokenAmount, ContractError> {
     let amount_out = route(deps.storage, env, amount_in, swaps)?;
     Ok(amount_out)
+}
+
+pub fn query_owner_of(
+    deps: Deps,
+    env: Env,
+    token_id: Binary,
+    include_expired: bool,
+) -> Result<OwnerOfResponse, ContractError> {
+    let owner =
+        Addr::unchecked(String::from_utf8(token_id[..token_id.len() - 4].to_vec()).unwrap());
+    let pos = state::get_position_by_key(deps.storage, &token_id)?;
+    Ok(OwnerOfResponse {
+        owner,
+        approvals: humanize_approvals(&env.block, &pos, include_expired),
+    })
+}
+
+pub fn query_all_approvals(
+    deps: Deps,
+    env: Env,
+    owner: Addr,
+    include_expired: bool,
+    start_after: Option<Addr>,
+    limit: Option<u32>,
+) -> Result<ApprovedForAllResponse, ContractError> {
+    let limit = limit.unwrap_or(MAX_LIMIT).min(MAX_LIMIT) as usize;
+    let start = start_after
+        .map(|x| x.as_bytes().to_vec())
+        .map(Bound::ExclusiveRaw);
+
+    let owner_raw = owner.as_bytes();
+    let res: StdResult<Vec<_>> = state::OPERATORS
+        .prefix(&owner_raw)
+        .range_raw(deps.storage, start, None, Order::Ascending)
+        .filter(|r| include_expired || r.is_err() || !r.as_ref().unwrap().1.is_expired(&env.block))
+        .take(limit)
+        .map(|item| {
+            let (spender_raw, expires) = item?;
+            let spender = Addr::unchecked(String::from_utf8(spender_raw)?);
+            Ok(Approval { spender, expires })
+        })
+        .collect();
+    Ok(ApprovedForAllResponse { operators: res? })
+}
+
+pub fn query_nft_info(deps: Deps, token_id: Binary) -> Result<Position, ContractError> {
+    let pos = state::get_position_by_key(deps.storage, &token_id)?;
+    Ok(pos)
+}
+
+pub fn query_all_nft_info(
+    deps: Deps,
+    env: Env,
+    token_id: Binary,
+    include_expired: bool,
+) -> Result<AllNftInfoResponse, ContractError> {
+    let owner =
+        Addr::unchecked(String::from_utf8(token_id[..token_id.len() - 4].to_vec()).unwrap());
+    let pos = state::get_position_by_key(deps.storage, &token_id)?;
+    Ok(AllNftInfoResponse {
+        access: OwnerOfResponse {
+            owner,
+            approvals: humanize_approvals(&env.block, &pos, include_expired),
+        },
+        info: pos,
+    })
+}
+
+pub fn query_tokens(
+    deps: Deps,
+    owner: Addr,
+    start_after: Option<u32>,
+    limit: Option<u32>,
+) -> Result<TokensResponse, ContractError> {
+    let tokens = state::get_all_position_keys(deps.storage, &owner, limit, start_after)
+        .into_iter()
+        .map(Binary::from)
+        .collect();
+
+    Ok(TokensResponse { tokens })
+}
+
+pub fn query_all_tokens(
+    deps: Deps,
+    start_after: Option<Binary>,
+    limit: Option<u32>,
+) -> Result<TokensResponse, ContractError> {
+    let limit = limit.unwrap_or(MAX_LIMIT).min(MAX_LIMIT) as usize;
+    let start = start_after.map(|x| x.to_vec()).map(Bound::ExclusiveRaw);
+
+    let tokens: Vec<_> = state::POSITIONS
+        .keys_raw(deps.storage, start, None, Order::Ascending)
+        .take(limit)
+        .map(Binary::from)
+        .collect();
+    Ok(TokensResponse { tokens })
 }
