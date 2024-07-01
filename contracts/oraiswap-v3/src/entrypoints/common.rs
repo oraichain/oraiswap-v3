@@ -454,7 +454,7 @@ pub fn transfer_nft(
     info: &MessageInfo,
     recipient: &Addr,
     token_id: &[u8],
-) -> Result<Position, ContractError> {
+) -> Result<(), ContractError> {
     let owner_raw = &token_id[..token_id.len() - 4];
     let index = u32::from_be_bytes(token_id[token_id.len() - 4..].try_into().unwrap());
     let account_id = Addr::unchecked(String::from_utf8(owner_raw.to_vec())?);
@@ -466,7 +466,7 @@ pub fn transfer_nft(
     // reset approvals when transfer
     pos.approvals = vec![];
     state::add_position(deps.storage, recipient, &pos)?;
-    Ok(pos)
+    Ok(())
 }
 
 pub fn humanize_approvals(
