@@ -400,8 +400,7 @@ pub fn query_owner_of(
     token_id: Binary,
     include_expired: bool,
 ) -> Result<OwnerOfResponse, ContractError> {
-    let owner =
-        Addr::unchecked(String::from_utf8(token_id[..token_id.len() - 4].to_vec()).unwrap());
+    let owner = Addr::unchecked(String::from_utf8(token_id[..token_id.len() - 4].to_vec())?);
     let pos = state::get_position_by_key(deps.storage, &token_id)?;
     Ok(OwnerOfResponse {
         owner,
@@ -448,8 +447,7 @@ pub fn query_all_nft_info(
     token_id: Binary,
     include_expired: bool,
 ) -> Result<AllNftInfoResponse, ContractError> {
-    let owner =
-        Addr::unchecked(String::from_utf8(token_id[..token_id.len() - 4].to_vec()).unwrap());
+    let owner = Addr::unchecked(String::from_utf8(token_id[..token_id.len() - 4].to_vec())?);
     let pos = state::get_position_by_key(deps.storage, &token_id)?;
     Ok(AllNftInfoResponse {
         access: OwnerOfResponse {

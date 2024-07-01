@@ -457,7 +457,7 @@ pub fn transfer_nft(
 ) -> Result<Position, ContractError> {
     let owner_raw = &token_id[..token_id.len() - 4];
     let index = u32::from_be_bytes(token_id[token_id.len() - 4..].try_into().unwrap());
-    let account_id = Addr::unchecked(String::from_utf8(owner_raw.to_vec()).unwrap());
+    let account_id = Addr::unchecked(String::from_utf8(owner_raw.to_vec())?);
     let mut pos = state::get_position_by_key(deps.storage, token_id)?;
     // ensure we have permissions
     check_can_send(deps.as_ref(), env, info, owner_raw, &pos)?;
