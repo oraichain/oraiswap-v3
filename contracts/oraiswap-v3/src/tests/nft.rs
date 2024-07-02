@@ -266,7 +266,6 @@ fn test_burn_nft() {
     // Remove position
     let sender = Addr::unchecked("alice");
     let token_id = state::position_key(&sender, remove_position_index).into();
-    // remove_position!(app, dex, remove_position_index, "alice").unwrap();
     app.execute(
         sender,
         dex.clone(),
