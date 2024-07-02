@@ -20,6 +20,16 @@ pub struct InstantiateMsg {
 }
 
 #[cw_serde]
+pub struct NftExtensionMsg {
+    pub pool_key: PoolKey,
+    pub lower_tick: i32,
+    pub upper_tick: i32,
+    pub liquidity_delta: Liquidity,
+    pub slippage_limit_lower: SqrtPrice,
+    pub slippage_limit_upper: SqrtPrice,
+}
+
+#[cw_serde]
 pub enum ExecuteMsg {
     ChangeAdmin {
         new_admin: Addr,
@@ -82,6 +92,11 @@ pub enum ExecuteMsg {
     TransferNft {
         recipient: Addr,
         token_id: Binary,
+    },
+    /// Mint a new NFT, can only be called by the contract minter
+    Mint {
+        /// Any custom extension used by this contract
+        extension: NftExtensionMsg,
     },
     Burn {
         token_id: Binary,

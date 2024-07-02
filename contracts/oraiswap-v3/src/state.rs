@@ -126,9 +126,9 @@ pub fn get_tick(
     Ok(tick)
 }
 
-pub fn position_key(account_id: &Addr, positions_length: u32) -> Vec<u8> {
+pub fn position_key(account_id: &Addr, index: u32) -> Vec<u8> {
     let mut db_key = account_id.as_bytes().to_vec();
-    db_key.extend_from_slice(&positions_length.to_be_bytes());
+    db_key.extend_from_slice(&index.to_be_bytes());
     db_key
 }
 

@@ -768,10 +768,8 @@ pub fn handle_burn(
     let index = u32::from_be_bytes(token_id[token_id.len() - 4..].try_into().unwrap());
     check_can_send(deps.as_ref(), &env, &info, owner_raw, &pos)?;
 
-    let mut res = remove_position(deps, env, info.clone(), index)?;
-    // reset attributes from remove_position method
-    res.attributes = vec![attr("action", "burn_nft"), attr("minter", info.sender)];
-    Ok(res)
+    // remain action to help sync backend
+    remove_position(deps, env, info.clone(), index)
 }
 
 pub fn handle_send_nft(
@@ -799,4 +797,29 @@ pub fn handle_send_nft(
             attr("sender", info.sender),
             attr("recipient", contract),
         ]))
+}
+
+pub fn handle_mint(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    pool_key: PoolKey,
+    lower_tick: i32,
+    upper_tick: i32,
+    liquidity_delta: Liquidity,
+    slippage_limit_lower: SqrtPrice,
+    slippage_limit_upper: SqrtPrice,
+) -> Result<Response, ContractError> {
+    // remain action to help sync backend
+    create_position(
+        deps,
+        env,
+        info,
+        pool_key,
+        lower_tick,
+        upper_tick,
+        liquidity_delta,
+        slippage_limit_lower,
+        slippage_limit_upper,
+    )
 }

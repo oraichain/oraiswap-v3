@@ -118,8 +118,6 @@ pub fn execute(
         ),
         ExecuteMsg::AddFeeTier { fee_tier } => add_fee_tier(deps, env, info, fee_tier),
         ExecuteMsg::RemoveFeeTier { fee_tier } => remove_fee_tier(deps, env, info, fee_tier),
-
-        // cw721 implementation
         ExecuteMsg::Approve {
             spender,
             token_id,
@@ -142,6 +140,17 @@ pub fn execute(
             token_id,
             msg,
         } => handle_send_nft(deps, env, info, contract, token_id, msg),
+        ExecuteMsg::Mint { extension } => handle_mint(
+            deps,
+            env,
+            info,
+            extension.pool_key,
+            extension.lower_tick,
+            extension.upper_tick,
+            extension.liquidity_delta,
+            extension.slippage_limit_lower,
+            extension.slippage_limit_upper,
+        ),
     }
 }
 

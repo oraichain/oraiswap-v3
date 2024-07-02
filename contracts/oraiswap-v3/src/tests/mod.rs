@@ -15,6 +15,7 @@ mod limits;
 mod liquidity_gap;
 mod max_tick_cross;
 mod multiple_swap;
+mod nft;
 mod position;
 mod position_list;
 mod position_slippage;
