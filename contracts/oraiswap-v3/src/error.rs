@@ -1,3 +1,5 @@
+use std::string::FromUtf8Error;
+
 use cosmwasm_std::{StdError, Uint128};
 use thiserror::Error;
 
@@ -5,6 +7,9 @@ use thiserror::Error;
 pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
+
+    #[error("{0}")]
+    FromUtf8(#[from] FromUtf8Error),
 
     #[error("invalid tick spacing")]
     InvalidTickSpacing,
@@ -155,6 +160,9 @@ pub enum ContractError {
 
     #[error("unauthorized")]
     Unauthorized {},
+
+    #[error("Cannot set approval that is already expired")]
+    Expired {},
 
     #[error("amount is zero")]
     AmountIsZero,

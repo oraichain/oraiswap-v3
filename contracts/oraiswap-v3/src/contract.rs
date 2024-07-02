@@ -118,6 +118,30 @@ pub fn execute(
         ),
         ExecuteMsg::AddFeeTier { fee_tier } => add_fee_tier(deps, env, info, fee_tier),
         ExecuteMsg::RemoveFeeTier { fee_tier } => remove_fee_tier(deps, env, info, fee_tier),
+
+        // cw721 implementation
+        ExecuteMsg::Approve {
+            spender,
+            token_id,
+            expires,
+        } => handle_approve(deps, env, info, spender, token_id, expires),
+        ExecuteMsg::Revoke { spender, token_id } => {
+            handle_revoke(deps, env, info, spender, token_id)
+        }
+        ExecuteMsg::ApproveAll { operator, expires } => {
+            handle_approve_all(deps, env, info, operator, expires)
+        }
+        ExecuteMsg::RevokeAll { operator } => handle_revoke_all(deps, env, info, operator),
+        ExecuteMsg::TransferNft {
+            recipient,
+            token_id,
+        } => handle_transfer_nft(deps, env, info, recipient, token_id),
+        ExecuteMsg::Burn { token_id } => handle_burn(deps, env, info, token_id),
+        ExecuteMsg::SendNft {
+            contract,
+            token_id,
+            msg,
+        } => handle_send_nft(deps, env, info, contract, token_id, msg),
     }
 }
 
@@ -193,6 +217,46 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         )?),
         QueryMsg::QuoteRoute { amount_in, swaps } => {
             to_binary(&quote_route(deps, env, amount_in, swaps)?)
+        }
+        QueryMsg::OwnerOf {
+            token_id,
+            include_expired,
+        } => to_binary(&query_owner_of(
+            deps,
+            env,
+            token_id,
+            include_expired.unwrap_or(false),
+        )?),
+        QueryMsg::ApprovedForAll {
+            owner,
+            include_expired,
+            start_after,
+            limit,
+        } => to_binary(&query_all_approvals(
+            deps,
+            env,
+            owner,
+            include_expired.unwrap_or(false),
+            start_after,
+            limit,
+        )?),
+        QueryMsg::NftInfo { token_id } => to_binary(&query_nft_info(deps, token_id)?),
+        QueryMsg::AllNftInfo {
+            token_id,
+            include_expired,
+        } => to_binary(&query_all_nft_info(
+            deps,
+            env,
+            token_id,
+            include_expired.unwrap_or(false),
+        )?),
+        QueryMsg::Tokens {
+            owner,
+            start_after,
+            limit,
+        } => to_binary(&query_tokens(deps, owner, start_after, limit)?),
+        QueryMsg::AllTokens { start_after, limit } => {
+            to_binary(&query_all_tokens(deps, start_after, limit)?)
         }
     }
 }

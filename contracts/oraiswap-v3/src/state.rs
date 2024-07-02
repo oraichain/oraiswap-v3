@@ -1,9 +1,10 @@
 use cosmwasm_std::{Addr, Order, StdResult, Storage};
+use cw20::Expiration;
 use cw_storage_plus::{Bound, Item, Map};
 
 use crate::{
     flip_bit_at_position, get_bit_at_position, get_search_limit,
-    msg::PoolWithPoolKey,
+    interface::PoolWithPoolKey,
     sqrt_price::{calculate_sqrt_price, SqrtPrice},
     tick_to_position, Config, ContractError, Pool, PoolKey, Position, Tick, CHUNK_SIZE, MAX_TICK,
 };
@@ -21,6 +22,8 @@ pub const POSITIONS: Map<&[u8], Position> = Map::new("positions");
 pub const TICKS: Map<&[u8], Tick> = Map::new("ticks");
 
 pub const BITMAP: Map<&[u8], u64> = Map::new("bitmap");
+
+pub const OPERATORS: Map<(&[u8], &[u8]), Expiration> = Map::new("operators");
 
 pub const MAX_LIMIT: u32 = 100;
 
@@ -192,8 +195,12 @@ pub fn get_position(
     index: u32,
 ) -> Result<Position, ContractError> {
     let db_key = position_key(account_id, index);
+    get_position_by_key(store, &db_key)
+}
+
+pub fn get_position_by_key(store: &dyn Storage, db_key: &[u8]) -> Result<Position, ContractError> {
     let position = POSITIONS
-        .load(store, &db_key)
+        .load(store, db_key)
         .map_err(|_| ContractError::PositionNotFound)?;
 
     Ok(position)
@@ -210,6 +217,20 @@ pub fn get_all_positions(
     let to_idx = get_position_length(store, account_id).min(from_idx + limit.unwrap_or(MAX_LIMIT));
     (from_idx..to_idx)
         .map(|index| get_position(store, account_id, index))
+        .collect()
+}
+
+pub fn get_all_position_keys(
+    store: &dyn Storage,
+    account_id: &Addr,
+    limit: Option<u32>,
+    offset: Option<u32>,
+) -> Vec<Vec<u8>> {
+    let from_idx = offset.unwrap_or(0);
+    // maximum 100 items
+    let to_idx = get_position_length(store, account_id).min(from_idx + limit.unwrap_or(MAX_LIMIT));
+    (from_idx..to_idx)
+        .map(|index| position_key(account_id, index))
         .collect()
 }
 
